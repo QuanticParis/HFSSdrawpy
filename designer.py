@@ -1236,7 +1236,7 @@ def ShiftPortStraigth(iName,iIn,iStraight):
 	return iIn_2
 	
 	
-def drawWave2(iName, iIn, iOut, iNbWaves, iShift=0,iOnesideShift=0,Lres=None, iStraight=None, cis=True):
+def drawWave2(iName, iIn, iOut, iNbWaves, iShift=0,iOnesideShift=0,Lres=None, iStraight=None):
 	'''
 	Draws a meander 
 	
@@ -1263,125 +1263,48 @@ def drawWave2(iName, iIn, iOut, iNbWaves, iShift=0,iOnesideShift=0,Lres=None, iS
 
 	_, _, track, gap = iIn
 	
-	Dist=(pos_out-pos_in).rot(ori_in)
-	
+	test=(pos_out-pos_in).rot(ori_in.abs())
 	if Lres is not None:
-		if Dist.y >= 0:
-			signY=1.
-		elif Dist.y < 0:
-			signY=-1.
-		iShift=signY*(Lres-2*iStraight-abs(Dist.x)-abs(Dist.y)*(2*iNbWaves+1))/(4.*iNbWaves)
-		
-		
-	if ori_in*ori_out == 0.:
-		for i in range(int(2*iNbWaves+1)):
-			if i==0:
-				waveIn = iIn
-				waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+1)/(2.*iNbWaves+0.5),((i+1)%2)).rot(ori_in).abs())+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in).abs(),
-						   -ori_in, track, gap]
-			elif i==int(2*iNbWaves):
-				waveIn=waveOut
-				waveIn[ORI]=ori_in
-				waveOut = iOut 	#[pos_in + (pos_out-pos_in)*(Vector(i/(2*n+1),(i+1)%2).rot(ori_in))+Vector(0,(2*((i+1)%2)-1)*extra).rot(ori_in)),
-								# ori_in, track, gap]
-			else:
-				waveIn=waveOut
-				waveIn[ORI]=ori_in
-				waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+1)/(2.*iNbWaves+0.5),((i+1)%2)).rot(ori_in).abs())+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in).abs(),
-							-ori_in, track, gap]							
-			drawCable(iName+"_waveN"+str(i),waveIn, waveOut)
-			#oDesktop.PauseScript(str(ori_in*ori_out)+"0")
-			
-	
-	
-	else:
-		for i in range(int(2*iNbWaves+1)):
-			if i==0:
-				waveIn = iIn
-				waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+1)/(2.*iNbWaves+1),((i+1)%2)).rot(ori_in).abs())+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in).abs(),
-						   -ori_in, track, gap]
-			elif i==int(2*iNbWaves):
-				waveIn=waveOut
-				waveIn[ORI]=ori_in
-				waveOut = iOut 	#[pos_in + (pos_out-pos_in)*(Vector(i/(2*n+1),(i+1)%2).rot(ori_in))+Vector(0,(2*((i+1)%2)-1)*extra).rot(ori_in)),
-								# ori_in, track, gap]
-			else:
-				waveIn=waveOut
-				waveIn[ORI]=ori_in
-				waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+1)/(2.*iNbWaves+1),((i+1)%2)).rot(ori_in).abs())+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in).abs(),
-							-ori_in, track, gap]							
-			drawCable(iName+"_waveN"+str(i),waveIn, waveOut)
-		
-				
-			#oDesktop.PauseScript(str(ori_in*ori_out)+"1")
-			#CreateBondwire(iName+"_bondwire", iOut)
+		if iStraight is not None:
+			if test.y >= 0:
+				iShift=(Lres-abs(test.x)-abs(test.y)*(2*iNbWaves+1))/(4*iNbWaves)
+			elif test.y < 0:
+				iShift=-(Lres-abs(test.x)-abs(test.y)*(2*iNbWaves+1))/(4*iNbWaves)
+		else:
+			if test.y >= 0:
+				iShift=(Lres-2*iStraight-abs(test.x)-abs(test.y)*(2*iNbWaves+1))/(4*iNbWaves)
+			elif test.y < 0:
+				iShift=-(Lres-2*iStraight-abs(test.x)-abs(test.y)*(2*iNbWaves+1))/(4*iNbWaves)
+
+
+	for i in range(2*iNbWaves+1):
+		if i==0:
+			waveIn = iIn
+			waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+1)/(2.*iNbWaves+1.),((i+1)%2)).rot(ori_in.abs()))+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in.abs()),
+					   ori_out, track, gap]
+					   #+Vector(0,(2*((i+1)%2)-1)*iShift).rot(ori_in)
+		elif i==2*iNbWaves:
+			#oDesktop.PauseScript(str("test2"))
+			waveIn=waveOut
+			waveIn[ORI]=ori_in
+			waveOut = iOut 	#[pos_in + (pos_out-pos_in)*(Vector(i/(2*n+1),(i+1)%2).rot(ori_in))+Vector(0,(2*((i+1)%2)-1)*extra).rot(ori_in)),
+							# ori_in, track, gap]
+		else:
+			#oDesktop.PauseScript(str("test"))
+			waveIn=waveOut
+			waveIn[ORI]=ori_in
+
+			waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+1)/(2.*iNbWaves+1.),((i+1)%2)).rot(ori_in.abs()))+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in.abs()),
+						ori_out, track, gap]			
+		#+Vector(0,(2*((i+1)%2)-1)*2*iShift).rot(ori_in)
+		#waveOut[ORI]=-waveOut[ORI]
+		drawCable(iName+"_waveN"+str(i),waveIn, waveOut)
+		#oDesktop.PauseScript(str(ori_in))
+
+	#CreateBondwire(iName+"_bondwire", iOut)
 		
 	return [iIn, iOut]	
 
-	
-	
-def drawWaveCis(iName, iIn, iOut, iNbWaves, iShift=0,iOnesideShift=0,Lres=None, iStraight=None, cis=True):
-	'''
-	Draws a meander 
-	
-	Inputs:
-	-------
-	iIn: input port, imposes track and gap size
-	iOut: output port, None, calculated to match other inputs
-	iNbWaves: (int) if iNbWaves = 1, draws one period. If iNbWaves=1+N, draws 1+(N/2) periods
-			   e.g iNbWaves = 3, draws one period + 2 half periods, so 2 periods
-	iShift: Overshoot on the meanders
-	
-	Outputs:
-	--------
-	'''
-
-	if iStraight is not None:
-		
-		iIn=ShiftPortStraigth(iName+'_straight1',iIn,iStraight)
-		iOut=ShiftPortStraigth(iName+'_straight2',iOut,iStraight)
-	
-	pos_in, ori_in = Vector(iIn[POS]), Vector(iIn[ORI])
-
-	pos_out, ori_out = Vector(iOut[POS]), Vector(iOut[ORI])
-
-	_, _, track, gap = iIn
-	
-	Dist=(pos_out-pos_in).rot(ori_in)
-	
-	if Lres is not None:
-		if Dist.y >= 0:
-			signY=1.
-		elif Dist.y < 0:
-			signY=-1.
-		iShift=signY*(Lres-2*iStraight-abs(Dist.x)-abs(Dist.y)*(2*iNbWaves+1))/(4.*iNbWaves)
-		
-		
-	elif cis== True:
-		if Dist.y >= 0:
-			ori_in=ori_in.orth().abs()
-		elif Dist.y < 0:
-			ori_in=-ori_in.orth().abs()
-		for i in range(int(2*iNbWaves+1)):
-			if i==0:
-				waveIn = iIn
-				waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+0.5)/(2.*iNbWaves),((i+1)%2)).rot(ori_in).abs())+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in).abs(),
-						   -ori_in, track, gap]
-			elif i==int(2*iNbWaves):
-				waveIn=waveOut
-				waveIn[ORI]=ori_in
-				waveOut = iOut 	#[pos_in + (pos_out-pos_in)*(Vector(i/(2*n+1),(i+1)%2).rot(ori_in))+Vector(0,(2*((i+1)%2)-1)*extra).rot(ori_in)),
-								# ori_in, track, gap]
-			else:
-				waveIn=waveOut
-				waveIn[ORI]=ori_in
-				waveOut = [pos_in + (pos_out-pos_in).dot(Vector((i+0.5)/(2.*iNbWaves),((i+1)%2)).rot(ori_in).abs())+Vector(0,(2*((i+1)%2)-1)*iShift+iOnesideShift).rot(ori_in).abs(),
-							-ori_in, track, gap]							
-			drawCable(iName+"_waveN"+str(i),waveIn, waveOut)
-			#oDesktop.PauseScript(str(ori_in*ori_out)+"0")
-	return [iIn, iOut]	
-	
-	
 
 def drawJSJunc(iName, iIn, iOut, iSize, iWidth, iLength, iInduct=0.1):
 	'''
@@ -1828,87 +1751,72 @@ TransmonIn_W,TransmonIn_B,TransmonIn_C=drawIBMTansmon(
 																	)
 																	
 
-# drawCable("Control_cable", QubitOut, TransmonIn_C,extrabonds=3)
+drawCable("Control_cable", QubitOut, TransmonIn_C,extrabonds=3)
 
 																	
 TW_capa_width=LitExp("$TW_capa_width", 2*track,VarDef=True)
-# TB_capa_width=LitExp("$TB_capa_width", 2*track,VarDef=True)
-# TC_capa_width=LitExp("$TC_capa_width", track+0.01,VarDef=True)
+TB_capa_width=LitExp("$TB_capa_width", 2*track,VarDef=True)
+TC_capa_width=LitExp("$TC_capa_width", track+0.01,VarDef=True)
 
 TW_capa_length=LitExp("$TW_capa_length", 0.05,VarDef=True)
-# TB_capa_length=LitExp("$TB_capa_length", 0.05,VarDef=True)
-# TC_capa_length=LitExp("$TC_capa_length", 0.005,VarDef=True)
+TB_capa_length=LitExp("$TB_capa_length", 0.05,VarDef=True)
+TC_capa_length=LitExp("$TC_capa_length", 0.005,VarDef=True)
 												
 drawHalfCapa("TransmonWasteCapa",TransmonIn_W,TW_capa_width,0.05,TW_capa_length)
-# drawHalfCapa("TransmonBufferCapa",TransmonIn_B,TB_capa_width,0.05,TB_capa_length)
-# drawHalfCapa("TransmonControlCapa",TransmonIn_C,TC_capa_width,0.05,TC_capa_length)
+drawHalfCapa("TransmonBufferCapa",TransmonIn_B,TB_capa_width,0.05,TB_capa_length)
+drawHalfCapa("TransmonControlCapa",TransmonIn_C,TC_capa_width,0.05,TC_capa_length)
 
 
 WasteCapaLength, WasteCapaSize = LitExp("$WasteCapa_length", 0.1,VarDef=True), LitExp("$WasteCapa_size", 0.02,VarDef=True)
-# BufferCapaLength, BufferCapaSize = LitExp("$BufferCapa_length", 0.1,VarDef=True), LitExp("$BufferCapa_size", 0.02,VarDef=True)
-PurcellCapaLength, PurcellCapaSize = LitExp("$PurcellCapa_length", 0.5,VarDef=True), LitExp("$PurcellCapa_size", 0.02,VarDef=True)
-
+BufferCapaLength, BufferCapaSize = LitExp("$BufferCapa_length", 0.1,VarDef=True), LitExp("$BufferCapa_size", 0.02,VarDef=True)
 
 WasteCapaIn, WasteCapaOut = WasteOut, [None, None, track, gap]
-# BufferCapaIn, BufferCapaOut = BufferOut, [None, None, track, gap]
-PurcellCapaIn, PurcellCapaOut = FluxOut, [None, None, track, gap]
-
-
+BufferCapaIn, BufferCapaOut = BufferOut, [None, None, track, gap]
 
 WasteCapaIn, WasteCapaOut = drawCapa("WasteCapa", WasteCapaIn, WasteCapaOut, WasteCapaLength, track/2, WasteCapaSize)
-# BufferCapaIn, BufferCapaOut = drawCapa("BufferCapa", BufferCapaIn, BufferCapaOut, BufferCapaLength, track/2, BufferCapaSize)
-PurcellCapaIn, PurcellCapaOut = drawCapa("PurcellCapa", PurcellCapaIn, PurcellCapaOut, PurcellCapaLength, track/2, PurcellCapaSize)
-
+BufferCapaIn, BufferCapaOut = drawCapa("BufferCapa", BufferCapaIn, BufferCapaOut, BufferCapaLength, track/2, BufferCapaSize)
 
 W_resLength=LitExp("$W_resLength", 9,VarDef=True)
 W_resShift=LitExp("$W_resShift", 0.,VarDef=True)
 
-# B_resLength=LitExp("$B_resLength", 9.5,VarDef=True)
-# B_resShift=LitExp("$B_resShift", 0.,VarDef=True)
+B_resLength=LitExp("$B_resLength", 9.5,VarDef=True)
+B_resShift=LitExp("$B_resShift", 0.,VarDef=True)
 
 
 
 
-# #drawWave2("BufferMeander", BufferCapaOut, TransmonIn_B, 3, 0.35,B_resShift, Lres=B_resLength, iStraight=0.3)
-# #Number of meanders, Shift, total length (shift is ignored if not None)
+#drawWave2("BufferMeander", BufferCapaOut, TransmonIn_B, 3, 0.35,B_resShift, Lres=B_resLength, iStraight=0.3)
+#Number of meanders, Shift, total length (shift is ignored if not None)
 
 
-# pos1, ori = Vector(BufferCapaOut[POS]), Vector(BufferCapaOut[ORI])
-# pos2 = Vector(TransmonIn_B[POS])
-# _, _, inTrack, inGap = BufferCapaOut
-# BufferSQUID_In = [0.5*(pos1+pos2), ori, inTrack, inGap]
+pos1, ori = Vector(BufferCapaOut[POS]), Vector(BufferCapaOut[ORI])
+pos2 = Vector(TransmonIn_B[POS])
+_, _, inTrack, inGap = BufferCapaOut
+BufferSQUID_In = [0.5*(pos1+pos2), ori, inTrack, inGap]
 
-# LSQUID=LitExp("$LSQUID", 0.1,VarDef=True)
-# BufferSQUID_In,BufferSQUID_Out,FluxLine_In,_=drawSQUID("BufferSQUID", BufferSQUID_In,BufferSQUID_In,0.01,0.01,0.05,0.01,iInduct=LSQUID)
-# #(iName, iIn, iOut, iSize, iWidth, iLength, iSpace, iInduct=0.1)
+LSQUID=LitExp("$LSQUID", 0.1,VarDef=True)
+BufferSQUID_In,BufferSQUID_Out,FluxLine_In,_=drawSQUID("BufferSQUID", BufferSQUID_In,BufferSQUID_In,0.01,0.01,0.05,0.01,iInduct=LSQUID)
+#(iName, iIn, iOut, iSize, iWidth, iLength, iSpace, iInduct=0.1)
 
-# pos, ori = Vector(FluxLine_In[POS]), Vector(FluxLine_In[ORI])
-# FluxLine_In = [pos, ori, track/4., gap/4.]
-# FluxLine_In=drawFlux("fluxline", FluxLine_In, 0.02, 0.02)
-# # drawFlux(iName, iIn, iSize, iMargin, iGndGap=None):
+pos, ori = Vector(FluxLine_In[POS]), Vector(FluxLine_In[ORI])
+FluxLine_In = [pos, ori, track/4., gap/4.]
+FluxLine_In=drawFlux("fluxline", FluxLine_In, 0.02, 0.02)
+# drawFlux(iName, iIn, iSize, iMargin, iGndGap=None):
 
-# pos, ori = Vector(FluxLine_In[POS]), Vector(FluxLine_In[ORI])
-# _, _, inTrack, inGap = FluxLine_In
-# FluxLine_Out = [pos, ori, track, gap]
+pos, ori = Vector(FluxLine_In[POS]), Vector(FluxLine_In[ORI])
+_, _, inTrack, inGap = FluxLine_In
+FluxLine_Out = [pos, ori, track, gap]
 
-# FluxLine_In, FluxLine_Out = drawAdaptor("fluxline_adapt",FluxLine_In,FluxLine_Out)
-# #drawAdaptor(iName, iIn, iOut, iSlope=1):
+FluxLine_In, FluxLine_Out = drawAdaptor("fluxline_adapt",FluxLine_In,FluxLine_Out)
+#drawAdaptor(iName, iIn, iOut, iSlope=1):
 
-# drawCable("Flux_cable", FluxLine_Out, memoryOut, extrabonds=3)
+drawCable("Flux_cable", FluxLine_Out, memoryOut, extrabonds=3)
 
-# drawWave2("BufferMeander1", BufferCapaOut,BufferSQUID_In, 1, 0.35,B_resShift, Lres=B_resLength/2., iStraight=0.3)
-# drawWave2("BufferMeander2",  TransmonIn_B, BufferSQUID_Out, 1, 0.35,B_resShift, Lres=B_resLength/2., iStraight=0.3)
+drawWave2("BufferMeander1", BufferCapaOut,BufferSQUID_In, 1, 0.35,B_resShift, Lres=B_resLength/2., iStraight=0.3)
+drawWave2("BufferMeander2",  TransmonIn_B, BufferSQUID_Out, 1, 0.35,B_resShift, Lres=B_resLength/2., iStraight=0.3)
 
+drawWave2("WasteMeander", WasteCapaOut, TransmonIn_W, 3, 0.35, W_resShift,Lres=W_resLength, iStraight=0.3) 	
 
-pos, ori = Vector(WasteCapaOut[POS]), Vector(WasteCapaOut[ORI])
-WasteCapaOut = [pos, -ori.orth(), track, gap]
-
-#drawWave2("WasteMeander", TransmonIn_W, WasteCapaOut, 3, 0.35, W_resShift,Lres=W_resLength, iStraight=0.3) 	
-
-
-pos, ori = Vector(WasteCapaOut[POS]), Vector(WasteCapaOut[ORI])
-WasteCapaOut = [pos, -ori, track, gap]
-drawWave2("PurcellMeander", WasteCapaOut, PurcellCapaOut, 3, 0.35, 0.,Lres=None, iStraight=0.3) 	
 
 
 
