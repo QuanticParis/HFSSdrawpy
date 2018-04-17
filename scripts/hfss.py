@@ -1184,8 +1184,6 @@ class HfssModeler(COMWrapper):
         return Polyline(new_name, self)
 
     def rename_obj(self, name, obj):
-        print(obj)
-        print(name)
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
                                     			["NAME:PropServers", str(obj)],
