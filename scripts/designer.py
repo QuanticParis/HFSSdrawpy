@@ -204,7 +204,7 @@ class Circuit(object):
     modeler = None
     design = None
 
-    trackObjects, gapObjects, bondwireObjects = [], [], []
+    trackObjects, gapObjects, bondwireObjects, maskObjects = [], [], [], []
     ports = {}
 
     def __init__(self, design, modeler):
@@ -606,14 +606,18 @@ class KeyElt(Circuit):
                        gap,
                        Jinduc,
                        nport=1,
-                       fillet=None):
+                       fillet=None,
+                       maskbox=False):
 
         cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
         cutout_size = Vector(cutout_size)
         pad_size = Vector(pad_size)
 
         self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec(cutout_size)))
-
+        
+        if maskbox:
+            self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec(cutout_size)))
+        
         mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
         self.modeler.assign_mesh_length(mesh, 2*track, suff='')
 

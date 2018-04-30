@@ -1143,7 +1143,8 @@ class HfssModeler(COMWrapper):
         name = str(obj)+'_'+suff
 #        print(obj)
         params = ["NAME:"+name]
-        params += ["RefineInside:=", True, "Enabled:=", True]
+        params += ["RefineInside:=", False, "Enabled:=", True]
+        ######## RefineInside Should be False for planar object
         params += ["Objects:=", [str(obj)]]
         params += ["RestrictElem:=", False,
 			         "RestrictLength:=",  True,
