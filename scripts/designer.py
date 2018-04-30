@@ -437,6 +437,12 @@ class KeyElt(Circuit):
         for coor in coor_list[1:]:
             points.append(points[-1] + self.rot(*coor))
         return points
+    
+    def append_absolute_points(self, coor_list):
+        points=[]
+        for coor in coor_list:
+            points.append(self.pos + self.rot(*coor))
+        return points
 
     def refx_points(self, coor_list, offset=0):
         points=[]
@@ -599,7 +605,8 @@ class KeyElt(Circuit):
                        track,
                        gap,
                        Jinduc,
-                       nport=1):
+                       nport=1,
+                       fillet=None):
 
         cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
         cutout_size = Vector(cutout_size)
@@ -608,7 +615,7 @@ class KeyElt(Circuit):
         self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec(cutout_size)))
 
         mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
-        self.modeler.assign_mesh_length(mesh,1/2*min(cutout_size), suff='')
+        self.modeler.assign_mesh_length(mesh, 2*track, suff='')
 
 
         track_J=Jwidth*4.
@@ -619,6 +626,17 @@ class KeyElt(Circuit):
 
         right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size))
         left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size))
+        
+        if fillet is not None:
+            right_pad.fillet(fillet,3)
+            right_pad.fillet(fillet,2)
+            right_pad.fillet(fillet,1)
+            right_pad.fillet(fillet,0)
+            
+            left_pad.fillet(fillet,3)
+            left_pad.fillet(fillet,2)
+            left_pad.fillet(fillet,1)
+            left_pad.fillet(fillet,0)
 
         pads = self.unite([right_pad, left_pad, junction_pad], name=self.name+'_pads')
         self.trackObjects.append(pads)
@@ -641,7 +659,7 @@ class KeyElt(Circuit):
         elif nport==5:
             self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track, gap]
             self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track, gap]
-            self.ports[self.name+'_3a'] = [self.coor(Vector(pad_spacing/2+pad_size[0],-cutout_size[1]/2)), -self.ori.orth(),track,gap]
+            self.ports[self.name+'_3a'] = [self.coor(Vector(pad_spacing/2+pad_size[0],-cutout_size[1]/2)), -self.ori.orth(),track/2,gap/2]
 
 #        self.draw_rect_center(self.name+"check1", self.coor(cutout_size.px()/2)+self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
 #        self.draw_rect_center(self.name+"check2", self.coor(-cutout_size.px()/2)-self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
@@ -669,7 +687,7 @@ class KeyElt(Circuit):
               +--+  +--+
               |  |  |  |
             +-+  |  |  +-+
-        iIn |    |  |    | iOut
+        iIn |    ||      | iOut
             +-+  |  |  +-+
               |  |  |  |
               +--+  +--+
@@ -700,10 +718,127 @@ class KeyElt(Circuit):
         self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([pad_spacing + 2*pad_size[0]+2*iGap, pad_size[1] + 2*iGap])))
 
         self.draw(self.name+"_mesh", points)
-        self.modeler.assign_mesh_length(self.name+"_mesh",1/2*pad_size[1])
+        self.modeler.assign_mesh_length(self.name+"_mesh",iTrack)
 
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
+        
+        
+    def draw_capa_interdigitated(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet):
+        '''
+        Inputs:
+        -------
+        name: string name of object
+        iIn: (position, direction, track, gap) defines the input port
+        iOut: (position, direction, track, gap) defines the output port
+               position and direction are None: this is calculated from
+               other parameters
+        iLength: (float) length of pads
+        iWidth: (float) width of pads
+        iSize: (float) spacing between pads (see drawing)
+
+        Outputs:
+        --------
+        retIn: same as iIn, with flipped vector
+        retOut: calculated output port to match all input dimensions
+
+
+              +--+  +--+
+              |  |  |  |
+            +-+  |  |  +-+
+        iIn |    |  |    | iOut
+            +-+  |  |  +-+
+              |  |  |  |
+              +--+  +--+
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        teeth_size = Vector(teeth_size)
+        portOut1 = [self.pos+self.ori*(teeth_size[0]+iTrack+iGap), self.ori, iTrack, iGap]
+        portOut2 = [self.pos-self.ori*(teeth_size[0]+iTrack+iGap), -self.ori, iTrack, iGap]
+
+
+        N_teeth=2*N_period+1
+        raw_points = [(teeth_size[0], -N_teeth*teeth_size[1])]
+        raw_points.append((teeth_size[0], (-N_teeth+1)*teeth_size[1]))
+        for i in range(-N_teeth+1,N_teeth-1,4):
+            raw_points.append((-teeth_size[0], i*teeth_size[1]))
+            raw_points.append((-teeth_size[0], (i+2)*teeth_size[1]))
+            raw_points.append((teeth_size[0], (i+2)*teeth_size[1]))
+            raw_points.append((teeth_size[0], (i+4)*teeth_size[1]))
+        raw_points.append((-teeth_size[0], (N_teeth-1)*teeth_size[1]))
+        raw_points.append((-teeth_size[0], N_teeth*teeth_size[1]))
+
+
+#        raw_points = [(teeth_size[0], -3*teeth_size[1]),
+#                      (teeth_size[0], -2*teeth_size[1]),
+#                      (-teeth_size[0], -2*teeth_size[1]),
+#                      (-teeth_size[0], 0*teeth_size[1]),
+#                      (teeth_size[0], 0*teeth_size[1]),
+#                      (teeth_size[0], 2*teeth_size[1]),
+#                      (-teeth_size[0], 2*teeth_size[1]),
+#                      (-teeth_size[0], 3*teeth_size[1])]
+        points = self.append_absolute_points(raw_points)
+        connection = self.draw(self.name+"_capagap", points, closed=False)
+        
+        
+        connection.fillets(fillet)
+        raw_points=[(-gap_size-teeth_size[0],N_teeth*teeth_size[1]),(gap_size-teeth_size[0],N_teeth*teeth_size[1])]
+        points=self.append_absolute_points(raw_points)
+        capagap_starter = self.draw(self.name+'_width', points, closed=False)
+        
+        capagap = connection.sweep_along_path(capagap_starter)
+        
+   
+        
+        raw_points = [(-teeth_size[0]-iTrack, -N_teeth*teeth_size[1]),
+                      (-teeth_size[0]-iTrack,-iTrack/2),
+                      (-teeth_size[0]-iTrack-iGap,-iTrack/2),
+                      (-teeth_size[0]-iTrack-iGap, iTrack/2),
+                      (-teeth_size[0]-iTrack, iTrack/2),
+                      (-teeth_size[0]-iTrack, N_teeth*teeth_size[1]),
+                      (teeth_size[0]+iTrack,  N_teeth*teeth_size[1]),
+                      (teeth_size[0]+iTrack,iTrack/2),
+                      (teeth_size[0]+iTrack+iGap,iTrack/2),
+                      (teeth_size[0]+iTrack+iGap,-iTrack/2),
+                      (teeth_size[0]+iTrack, -iTrack/2),
+                      (teeth_size[0]+iTrack, -N_teeth*teeth_size[1])]
+        points = self.append_absolute_points(raw_points)
+        pads = self.draw(self.name+"_pads", points)
+        pads.fillet(fillet,11)
+        pads.fillet(fillet,6)
+        pads.fillet(fillet,5)
+        pads.fillet(fillet,0)
+        
+        pads_sub = self.subtract(pads, [capagap])
+        
+        
+        raw_points = [(-teeth_size[0]-iTrack-iGap, -N_teeth*teeth_size[1]-iGap),
+                      (teeth_size[0]+iTrack+iGap, -N_teeth*teeth_size[1]-iGap),
+                      (teeth_size[0]+iTrack+iGap, N_teeth*teeth_size[1]+iGap),
+                      (-teeth_size[0]-iTrack-iGap, N_teeth*teeth_size[1]+iGap)]
+        points = self.append_absolute_points(raw_points)
+        gap = self.draw(self.name+"_gap", points)
+        #gap.fillet(fillet,3)
+        #gap.fillet(fillet,2)
+        #gap.fillet(fillet,1)
+        #gap.fillet(fillet,0)
+        self.draw(self.name+"_mesh", points)
+        self.modeler.assign_mesh_length(self.name+"_mesh",iTrack)
+
+
+        self.trackObjects.append(pads_sub)
+
+        self.gapObjects.append(gap)
+        #self.gapObjects.append(capagap)
+        #self.draw(self.name+"_mesh", points)
+        #self.modeler.assign_mesh_length(self.name+"_mesh",1/2*pad_size[1])
+
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+    
 
     def draw_squid(self, iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid=None, iTrackJ=None, Lj_down='1nH', Lj_up=None,  typePump='down', doublePump=False, iSlope=1, iSlopePump=0.5): #for now assume left and right tracks are the same width
         '''
@@ -781,7 +916,7 @@ class KeyElt(Circuit):
 
         self.gapObjects.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([3*(squid_size[0]+2*adapt_dist), iTrack+2*iGap])))
 
-        adapt_dist_pump = (iTrackPump - 2*iTrackSquid)/2/iSlopePump
+        adapt_dist_pump = (2*iTrackPump - 2*iTrackSquid)/2/iSlopePump
 
         raw_points_adapt_pump_a = [(3/2*(squid_size[0]+2*adapt_dist),-iTrack/2-iGap-iTrackSquid),
                                  (-(squid_size[0]+2*adapt_dist)+iTrackSquid,0),
@@ -956,7 +1091,7 @@ class ConnectElt(KeyElt, Circuit):
         self.iOut = retOut
 #        return [retIn, retOut]
 
-    def draw_half_capa(self, iLength, iWidth, iGap, add_gap=False):
+    def draw_half_capa(self, iLength, iWidth, iGap, add_gap=False,fillet=None):
         '''
         Inputs:
         -------
@@ -993,8 +1128,16 @@ class ConnectElt(KeyElt, Circuit):
                                      (-iWidth, 0),
                                      (0, (iLength-self.inTrack)/2),
                                      (-iGap, 0)])
-
-        self.trackObjects.append(self.draw(self.name+"_pad", points))
+        halfcapa=self.draw(self.name+"_pad", points)
+        if fillet is not None:
+            halfcapa.fillet(fillet,6)
+            halfcapa.fillet(fillet,5)
+            halfcapa.fillet(fillet,4)
+            halfcapa.fillet(fillet,3)
+            halfcapa.fillet(fillet,2)
+            halfcapa.fillet(fillet,1)
+            
+        self.trackObjects.append(halfcapa)
 
 #        CreateBondwire(name+"_bondwire", iIn)
 
@@ -1435,10 +1578,15 @@ class ConnectElt(KeyElt, Circuit):
             return 0
         if abs(A-B)==1:
             if A<B:
-                if A%2==1:
-                    return self.val(fillet*np.pi/2)
+#                if A%2==1:
+#                    return self.val(fillet*np.pi/2)
+#                else:
+#                    return self.val((points[A]-points[B]).norm())
+
+                if A==0 or B==len(points)-1:
+                    return self.val((points[A]-points[B]).norm())-self.val(fillet*(2-np.pi/2))
                 else:
-                    return self.val((points[A]-points[B]).norm())
+                    return self.val((points[A]-points[B]).norm())-self.val(fillet*(1-np.pi/4))
             else:
                 return self.length(points, B, A, fillet)
         if abs(A-B)>1:
@@ -1447,6 +1595,28 @@ class ConnectElt(KeyElt, Circuit):
             else:
                 return self.length(points, B, A, fillet)
 
+
+#    def length_exp(self, points, A, B, fillet): # A and B are integer point indices
+#        if A<0 or A>=len(points):
+#            raise ValueError('First index should be within the point list')
+#        if B<0 or B>=len(points):
+#            raise ValueError('Second index should be within the point list')
+#        if A==B:
+#            return 0
+#        if abs(A-B)==1:
+#            if A<B:
+#                if A==0 or B==len(points)-1:
+#  
+#                    return (points[A]-points[B]).norm()-(2-np.pi/2)*fillet
+#                else:
+#                    return (points[A]-points[B]).norm()-(1-np.pi/4)*fillet
+#            else:
+#                return self.length(points, B, A, fillet)
+#        if abs(A-B)>1:
+#            if A<B:
+#                return self.length(points, A, B-1, fillet) + self.length(points, B-1, B, fillet)
+#            else:
+#                return self.length(points, B, A, fillet)
 
     def cable_starter(self, width = 'track'): # width can also be 'gap'
         if width=='track' or width=='Track':
@@ -1458,7 +1628,7 @@ class ConnectElt(KeyElt, Circuit):
         return self.draw(self.name+'_width'+width, points, closed=False)
 
 
-    def draw_cable(self, fillet="0.3mm", is_bond=True, is_meander=False, to_meander = [1,0,1,0,1,0,1,0,1,0], meander_length=0):
+    def draw_cable(self, fillet="0.3mm", is_bond=True, is_meander=False, to_meander = [1,0,1,0,1,0,1,0,1,0], meander_length=0, ismesh=False):
         '''
         Draws a CPW transmission line between iIn and iOut
 
@@ -1502,10 +1672,14 @@ class ConnectElt(KeyElt, Circuit):
 
         connection = self.draw(self.name+"_track", points, closed=False)
 
+
+
         cable_length = self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length)
         print('{0}_length = {1:.3f} mm'.format(self.name, cable_length*1000))
 #        if self.name=='capa_cable':
 #            print(points)
+        
+
         connection.fillets(fillet)
 
         connection_gap = connection.copy(self.name+"_gap")
@@ -1514,6 +1688,9 @@ class ConnectElt(KeyElt, Circuit):
         gap_starter = self.cable_starter('gap')
 
         track = connection.sweep_along_path(track_starter)
+        
+        if ismesh is True:
+            self.modeler.assign_mesh_length(track,2*self.inTrack)
 
         if track_adaptor is not None:
             self.trackObjects.pop()
