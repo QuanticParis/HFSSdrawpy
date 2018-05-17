@@ -28,6 +28,7 @@ Assumption
 - assume to have list and not tuples for polylines
 - TODO, do not do Lj+'1nH' for now, but can do bx+'1mm'
 '''
+eps = 0.00000001
 
 def way(vec):
     if vec[1] != 0:
@@ -708,7 +709,240 @@ class KeyElt(Circuit):
             self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track, gap]
             self.ports[self.name+'_3a'] = [self.coor(Vector(pad_spacing/2+pad_size[0],-cutout_size[1]/2)), -self.ori.orth(),track/2,gap/2]
 
-    def draw_capa(self, iTrack, iGap, pad_spacing, pad_size, is_mask=False):
+#        self.draw_rect_center(self.name+"check1", self.coor(cutout_size.px()/2)+self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
+#        self.draw_rect_center(self.name+"check2", self.coor(-cutout_size.px()/2)-self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
+#        self.draw_rect_center(self.name+"check3", self.coor(Vector(pad_spacing/2+pad_size[0],cutout_size[1]/2))+self.ori.orth()*pad_size[1]/20, self.rot(*pad_size)/10)
+
+
+    def draw_ZR_transmon(self,
+                        cutout_size,
+                        pad_spacing,
+                        pad_size_right,
+                        track_right,
+                        gap_right,
+                        length_right,
+                        spacing_right,
+                        short_right,
+                        Jwidth,
+                        Jinduc,
+                        pad_size_left=None,
+                        track_left=None,
+                        gap_left=None,
+                        length_left=None,
+                        spacing_left=None,
+                        short_left=None,
+                        fillet=None,
+                        maskbox=False):
+        
+        # Short should be 0 for no short
+
+        parsed = parse_entry((cutout_size,
+                              pad_spacing,
+                              pad_size_right,
+                              track_right,
+                              gap_right,
+                              length_right,
+                              spacing_right,
+                              short_right,
+                              Jwidth,
+                              Jinduc,
+                              pad_size_left,
+                              track_left,
+                              gap_left,
+                              length_left, 
+                              spacing_left, 
+                              short_left))
+                        
+        (cutout_size,
+         pad_spacing,
+         pad_size_right,
+         track_right,
+         gap_right,
+         length_right,
+         spacing_right,
+         short_right,
+         Jwidth,
+         Jinduc,
+         pad_size_left,
+         track_left,
+         gap_left,
+         length_left,
+         spacing_left,
+         short_left) = parsed
+         
+        if pad_size_left is None:
+            pad_size_left=pad_size_right
+        if track_left is None:
+            track_left=track_right
+        if gap_left is None:
+            gap_left=gap_right
+        if length_left is None:
+            length_left=length_right
+        if spacing_left is None:
+            spacing_left=spacing_right
+        if short_left is None:
+            short_left=short_right
+        
+        cutout_size = Vector(cutout_size)
+        pad_size_left = Vector(pad_size_left)
+        pad_size_right = Vector(pad_size_right)
+
+        cutout = self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec(cutout_size))
+        
+        
+        if maskbox:
+            mask = self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec(cutout_size))
+        
+        mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
+        self.modeler.assign_mesh_length(mesh, 4*Jwidth, suff='')
+
+
+        track_J=Jwidth*4.
+        pos_junction = self.coor([0,0])
+        junction = self.key_elt(self.name+'_junction', pos_junction, self.ori)
+        junction_pad = junction.draw_JJ(track_J, (cutout_size[1]-track_J)/2, Jwidth, pad_spacing, iInduct=Jinduc, add_port=False)
+        self.trackObjects.pop()
+        
+
+        raw_points = [(pad_spacing/2, -pad_size_right[1]/2),
+                      (pad_size_right[0], 0),
+                      (0, pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2),
+                      (-pad_size_right[0]+length_right, 0),
+                      (0, (spacing_right+short_right+gap_right+track_right/2)*2),
+                      (pad_size_right[0]-length_right, 0),
+                      (0, pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2),
+                      (-pad_size_right[0], 0)]
+        points = self.append_points(raw_points)
+        right_pad = self.draw(self.name+"_pad1", points) 
+            
+        raw_points = [(-pad_spacing/2, -pad_size_left[1]/2),
+                      (-pad_size_left[0], 0),
+                      (0, pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2),
+                      (pad_size_left[0]-length_left, 0),
+                      (0, (spacing_left+short_left+gap_left+track_left/2)*2),
+                      (-pad_size_left[0]+length_left, 0),
+                      (0, pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2),
+                      (pad_size_left[0], 0)]
+        points = self.append_points(raw_points)
+        left_pad = self.draw(self.name+"_pad2", points)
+        
+        right_track = self.draw_rect(self.name+"_track1", self.coor([cutout_size[0]/2,-track_right/2]), self.coor_vec([-(cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), track_right]))
+        left_track = self.draw_rect(self.name+"_track2", self.coor([-cutout_size[0]/2,-track_left/2]), self.coor_vec([(cutout_size[0]/2-pad_spacing/2-length_left-gap_left-short_left-spacing_left), track_left]))
+        
+        if short_right!=0:
+            raw_points = [(cutout_size[0]/2,-track_right/2-gap_right),
+                          (-(cutout_size[0]/2-pad_spacing/2-length_right-short_right-spacing_right), 0),
+                          (0, 2*gap_right+track_right),
+                          ((cutout_size[0]/2-pad_spacing/2-length_right-short_right-spacing_right), 0),
+                          (0, short_right),
+                          (-(cutout_size[0]/2-pad_spacing/2-length_right-spacing_right), 0),
+                          (0, -(2*gap_right+track_right+2*short_right)),
+                          ((cutout_size[0]/2-pad_spacing/2-length_right-spacing_right), 0)]
+            points = self.append_points(raw_points)
+            right_short = self.draw(self.name+"_short1", points) 
+            
+        if short_left!=0:
+            raw_points = [(-cutout_size[0]/2,-track_left/2-gap_left),
+                          ((cutout_size[0]/2-pad_spacing/2-length_left-short_left-spacing_left), 0),
+                          (0, 2*gap_left+track_left),
+                          (-(cutout_size[0]/2-pad_spacing/2-length_left-short_left-spacing_left), 0),
+                          (0, short_left),
+                          ((cutout_size[0]/2-pad_spacing/2-length_left-spacing_left), 0),
+                          (0, -(2*gap_left+track_left+2*short_left)),
+                          (-(cutout_size[0]/2-pad_spacing/2-length_left-spacing_left), 0)]
+            points = self.append_points(raw_points)
+            left_short = self.draw(self.name+"_short2", points) 
+            
+        if fillet is not None:
+            right_track.fillet(track_right/2-eps,2)
+            right_track.fillet(track_right/2-eps,1)
+            
+            left_track.fillet(track_left/2-eps,2)
+            left_track.fillet(track_left/2-eps,1)
+            
+            if short_right!=0:
+                right_short.fillet(track_right/2+gap_right+short_right-eps,6)
+                right_short.fillet(track_right/2+gap_right+short_right-eps,5)
+                right_short.fillet(track_right/2+gap_right-eps,2)
+                right_short.fillet(track_right/2+gap_right-eps,1)
+                
+                right_quarter_up = self.draw_quarter_circle('quarter_up1', (pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4, [cutout_size[0]/2,track_right/2+gap_right+short_right], ori=[-1,1])
+                right_quarter_down = self.draw_quarter_circle('quarter_down1', (pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4, [cutout_size[0]/2,-(track_right/2+gap_right+short_right)], ori=[-1,-1])
+                right_short = self.unite([right_short, right_quarter_up, right_quarter_down])
+                
+            if short_left!=0:
+                left_short.fillet(track_left/2+gap_left+short_left-eps,6)
+                left_short.fillet(track_left/2+gap_left+short_left-eps,5)
+                left_short.fillet(track_left/2+gap_left-eps,2)
+                left_short.fillet(track_left/2+gap_left-eps,1)
+                
+                left_quarter_up = self.draw_quarter_circle('quarter_up2', (pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4, [-cutout_size[0]/2,track_left/2+gap_left+short_left], ori=[1,1])
+                left_quarter_down = self.draw_quarter_circle('quarter_down2', (pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4, [-cutout_size[0]/2,-(track_left/2+gap_left+short_left)], ori=[1,-1])
+                left_short = self.unite([left_short, left_quarter_up, left_quarter_down])
+                
+            right_pad.fillet(pad_size_right[0]/4,7)
+            right_pad.fillet((pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4,6)
+            right_pad.fillet((pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4,5)
+            right_pad.fillet(track_right/2+gap_right+short_right+spacing_right-eps,4)
+            right_pad.fillet(track_right/2+gap_right+short_right+spacing_right-eps,3)
+            right_pad.fillet((pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4,2)
+            right_pad.fillet((pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4,1)
+            right_pad.fillet(pad_size_right[0]/4,0)
+            
+            left_pad.fillet(pad_size_left[0]/4,7)
+            left_pad.fillet((pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4,6)
+            left_pad.fillet((pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4,5)
+            left_pad.fillet(track_left/2+gap_left+short_left+spacing_left-eps,4)
+            left_pad.fillet(track_left/2+gap_left+short_left+spacing_left-eps,3)
+            left_pad.fillet((pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4,2)
+            left_pad.fillet((pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4,1)
+            left_pad.fillet(pad_size_left[0]/4,0)
+            
+            cutout.fillet(cutout_size[1]/6,[0,1,2,3])
+            
+            if maskbox:
+                mask.fillet(cutout_size[1]/6,[0,1,2,3])
+            
+            
+#            right_pad.fillet(fillet,3)
+#            right_pad.fillet(fillet,2)
+#            right_pad.fillet(fillet,1)
+#            right_pad.fillet(fillet,0)
+#            
+#            left_pad.fillet(fillet,3)
+#            left_pad.fillet(fillet,2)
+#            left_pad.fillet(fillet,1)
+#            left_pad.fillet(fillet,0)
+            
+        self.gapObjects.append(cutout)
+        if maskbox:
+            self.maskObjects.append(mask)
+            
+        to_unite = [right_pad, left_pad, junction_pad, right_track, left_track]
+        if short_right!=0:
+            to_unite.append(right_short)
+        if short_left!=0:
+            to_unite.append(left_short)
+        pads = self.unite(to_unite, name=self.name+'_pads')
+        self.trackObjects.append(pads)
+        
+        portOut1 = [self.coor([cutout_size[0]/2,0]), self.coor_vec([1,0]), track_right, gap_right]
+        self.ports[self.name+'_1'] = portOut1
+        portOut2 = [self.coor([-cutout_size[0]/2,0]), self.coor_vec([-1,0]), track_left, gap_left]
+        self.ports[self.name+'_2'] = portOut2
+
+    def draw_quarter_circle(self, name, fillet, coor, ori=Vector([1,1])):
+        ori=Vector(ori)
+        temp = self.draw_rect(self.name+"_"+name, self.coor(coor), self.coor_vec(ori*2*fillet))
+        temp_fillet = self.draw_rect(self.name+"_"+name+'f', self.coor(coor), self.coor_vec(ori*2*fillet))
+        temp_fillet.fillet(fillet, 0)
+        
+        quarter = self.subtract(temp, [temp_fillet])
+        return quarter
+    
+#    def 
+    
+    def draw_capa(self, iTrack, iGap, pad_spacing, pad_size):
         '''
         Inputs:
         -------
@@ -767,34 +1001,43 @@ class KeyElt(Circuit):
 
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
+
+    def draw_capa_inline(self, iTrack, iGap, capa_length, pad_spacing, n_pad=1):
+
+        iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry((iTrack, iGap, capa_length, pad_spacing, n_pad))
+
+        drawn_pads = []
+        if n_pad==1:
+            pass
+        else:
+            pad_width = (iTrack-(n_pad-1)*pad_spacing)/n_pad
+            pad_length = capa_length-pad_spacing
+            curr_height = -iTrack/2
+            pad_size = Vector([pad_length, pad_width])
+            for ii in range(int(n_pad/2)):
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii)+'b', self.coor([-capa_length/2+pad_spacing, curr_height+pad_width+pad_spacing]), self.coor_vec(pad_size)))
+                curr_height = curr_height+2*(pad_width+pad_spacing)
+            if n_pad%2!=0:
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii+1), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
+                
+        portOut1 = [self.pos+self.ori*capa_length/2, self.ori, iTrack, iGap]
+        portOut2 = [self.pos-self.ori*capa_length/2, -self.ori, iTrack, iGap]
+
+        pads = self.unite(drawn_pads, name=self.name+'_pads')
         
+        self.trackObjects.append(pads)
+
+        self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([capa_length, iTrack + 2*iGap])))
+        
+        self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec([capa_length, iTrack]))
+        self.modeler.assign_mesh_length(self.name+"_mesh",iTrack)
+
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
         
     def draw_capa_interdigitated(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, is_mask=False):
         '''
-        Inputs:
-        -------
-        name: string name of object
-        iIn: (position, direction, track, gap) defines the input port
-        iOut: (position, direction, track, gap) defines the output port
-               position and direction are None: this is calculated from
-               other parameters
-        iLength: (float) length of pads
-        iWidth: (float) width of pads
-        iSize: (float) spacing between pads (see drawing)
-
-        Outputs:
-        --------
-        retIn: same as iIn, with flipped vector
-        retOut: calculated output port to match all input dimensions
-
-
-              +--+  +--+
-              |  |  |  |
-            +-+  |  |  +-+
-        iIn |    |  |    | iOut
-            +-+  |  |  +-+
-              |  |  |  |
-              +--+  +--+
         '''
         iTrack, iGap = parse_entry((iTrack, iGap))
         fillet = parse_entry(fillet)

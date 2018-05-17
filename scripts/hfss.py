@@ -1153,13 +1153,17 @@ class HfssModeler(COMWrapper):
 
     def _fillet(self, radius, vertex_index, obj):
         vertices = self._modeler.GetVertexIDsFromObject(obj)
+        if isinstance(vertex_index, list):
+            to_fillet = [int(vertices[v]) for v in vertex_index]
+        else:
+            to_fillet = [int(vertices[vertex_index])]
 #        print(vertices)
 #        print(radius)
         self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
                               ["NAME:Parameters",
                                ["NAME:FilletParameters",
                                 "Edges:=", [],
-                                "Vertices:=", [int(vertices[vertex_index])],
+                                "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
 
