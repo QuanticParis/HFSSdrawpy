@@ -83,27 +83,27 @@ c.in_left.draw_connector(c.track, c.gap, bond_length, bond_slope)
 c.flux_left.draw_connector(c.track, c.gap, bond_length, bond_slope)
 
 
-c.set_variable('offsetX_capa_right', '1mm')
+c.set_variable('offsetX_capa_right', '2mm')
 c.set_variable('offsetY_capa_right', '3mm')
 c.set_variable("capa_right_spacing", '0.01mm')
 c.set_variable("capa_right_width", c.track/2)
-c.set_variable("capa_right_length", 3*c.track)
+c.set_variable("capa_right_length", '0.45mm')
 c.key_elt('capa_right', [c.chip_width-c.offsetX_capa_right, c.chip_length-c.offsetY_capa_right], [-1,0])
-c.capa_right.draw_capa(c.track, c.gap, c.capa_right_spacing, [c.capa_right_width, c.capa_right_length])
+c.capa_right.draw_capa_inline(c.track, c.gap, c.capa_right_length, c.capa_right_spacing, n_pad=5)
 
 c.set_variable('offsetX_capa_left', '1mm')
 c.set_variable('offsetY_capa_left', '3mm')
 c.set_variable("capa_left_spacing", c.capa_right_spacing)
 c.set_variable("capa_left_width", c.track/2)
-c.set_variable("capa_left_length", 3*c.track)
+c.set_variable("capa_left_length", '0.45mm')
 c.key_elt('capa_left', [c.chip_width-c.offsetX_capa_left, c.offsetY_capa_left], [-1,0])
-c.capa_left.draw_capa(c.track, c.gap, c.capa_left_spacing, [c.capa_left_width, c.capa_left_length])                                                 #nport
+c.capa_left.draw_capa_inline(c.track, c.gap, c.capa_left_length, c.capa_left_spacing, n_pad=5)                                                 #nport
 
-c.set_variable('length_right', '6mm')
+c.set_variable('length_right', '5.5mm')
 c.key_elt('end_right', c.capa_right.pos-[c.length_right, 0], [1,0])
 c.end_right.draw_end_cable(c.track, c.gap, typeEnd = 'open')
 
-c.set_variable('length_left', '7mm')
+c.set_variable('length_left', '6.5mm')
 c.key_elt('end_left', c.capa_left.pos-[c.length_left, 0], [1,0])
 c.end_left.draw_end_cable(c.track, c.gap, typeEnd = 'open')
 
@@ -129,13 +129,13 @@ c.flux_cable_right.draw_cable(fillet=c.fillet)
 c.connect_elt('flux_cable_left', 'flux_left', 'squid_left_pump')
 c.flux_cable_left.draw_cable(fillet=c.fillet)
 
-c.set_variable('meander_length_right', '0.6mm')
+c.set_variable('meander_length_right', '0.56mm')
 c.connect_elt('res1_right', 'capa_right_1', 'squid_right_2')
 c.res1_right.draw_cable(fillet=c.fillet, is_meander=True, to_meander=[1, 1], meander_length=c.meander_length_right)
 c.connect_elt('res2_right', 'end_right', 'squid_right_1')
 c.res2_right.draw_cable(fillet=c.fillet, is_meander=True, to_meander=[1, 1], meander_length=c.meander_length_right)
 
-c.set_variable('meander_length_left', '0.6mm')
+c.set_variable('meander_length_left', '0.653mm')
 c.connect_elt('res1_left', 'capa_left_1', 'squid_left_2')
 c.res1_left.draw_cable(fillet=c.fillet, is_meander=True, to_meander=[1, 1], meander_length=c.meander_length_left)
 c.connect_elt('res2_left', 'end_left', 'squid_left_1')
