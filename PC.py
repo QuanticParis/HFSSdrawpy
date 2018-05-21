@@ -84,9 +84,11 @@ c = Circuit(design, modeler)
 
 ### Circuit
 
-c.key_elt('trm', ['5mm','5.5mm'], [1,0])
-c.trm.draw_ZR_transmon(['1.52mm', '0.8mm'], '0.12mm', ['0.5mm', '0.5mm'], '84um', '50um', '0.2mm', '30um', '0mm', '0.01mm', '12nH', pad_size_left=['0.6mm', '0.5mm'], track_left='3um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='10um', fillet=True)#, pad_size_right=['0.5mm', '0.5mm'], track_right='84um', gap_right='50um', length_right'0.2mm', spacing_right='30um', short_right='0mm', 
+#c.key_elt('trm', ['5mm','5.5mm'], [1,0])
+#c.trm.draw_ZR_transmon(['1.52mm', '0.8mm'], '0.12mm', ['0.5mm', '0.5mm'], '84um', '50um', '0.2mm', '30um', '0mm', '0.01mm', '12nH', pad_size_left=['0.6mm', '0.5mm'], track_left='3um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='10um', fillet=True)#, pad_size_right=['0.5mm', '0.5mm'], track_right='84um', gap_right='50um', length_right'0.2mm', spacing_right='30um', short_right='0mm', 
 
+c.key_elt('array', ['0','0'], [1,0])
+c.array.draw_snail_array('600nm', '9um', 3, '1um', 1, 20, '400nm', ['10um', '10um'])
 #    def draw_ZR_tansmon(self,
 #                        cutout_size,
 #                        pad_spacing,

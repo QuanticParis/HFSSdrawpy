@@ -941,7 +941,39 @@ class KeyElt(Circuit):
         return quarter
     
 #    def 
-    
+    def draw_snail_array(self, width_track, width_top, n_top, width_bot, n_bot, N, width_bridge, squid_size):
+        parsed = parse_entry((width_track, width_top, width_bot,
+                              n_top,
+                              N,
+                              width_bridge,
+                              squid_size))
+        (width_track, width_top, width_bot, n, N, width_bridge, squid_size) = parsed
+        squid_size = Vector(squid_size)
+        
+        width_snail = squid_size[0]+4*width_track
+        if N%2==1:
+            x_pos=-(N//2)*width_snail
+        else:
+            x_pos=-(N//2-1/2)*width_snail
+
+        for jj in range(int(N)):
+            snail=[]
+            snail.append(self.draw_rect(self.name+'_left', self.coor([x_pos-squid_size[0]/2-width_track, -squid_size[1]/2-width_bot]), self.coor_vec([width_track, squid_size[1]+width_top+width_bot])))
+            snail.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -squid_size[1]/2-width_bot]), self.coor_vec([width_track, squid_size[1]+width_top+width_bot])))
+            for width, n, way in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
+                if n==1:
+                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way*squid_size[1]/2]), self.coor_vec([(squid_size[0]-width_bridge)/2, way*width])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way*squid_size[1]/2]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way*width])))
+                elif n>1:
+                    length_island = (squid_size[0]-n*width_bridge)/(n-1)
+                    for ii in range(n_top-1):
+                        snail.append(self.draw_rect(self.name+'_islandtop_'+str(ii), self.coor([x_pos-squid_size[0]/2+width_bridge+ii*(length_island+width_bridge), way*squid_size[1]/2]), self.coor_vec([length_island, way*width])) )
+            snail.append(self.draw_rect(self.name+'_connect_left', self.coor([x_pos-squid_size[0]/2-width_track, -width_track]), self.coor_vec([-width_track, 2*width_track])))
+            snail.append(self.draw_rect(self.name+'_connect_right', self.coor([x_pos+squid_size[0]/2+width_track, -width_track]), self.coor_vec([width_track, 2*width_track])))
+            
+            self.unite(snail, name=self.name+'_snail_'+str(jj))
+            x_pos = x_pos+width_snail
+        
     def draw_capa(self, iTrack, iGap, pad_spacing, pad_size):
         '''
         Inputs:
