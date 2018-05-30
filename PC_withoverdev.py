@@ -44,8 +44,8 @@ c = Circuit(design, modeler)
 
 KeyElt.is_mask = False
 KeyElt.gap_mask = parse_entry('20um')
-KeyElt.is_overdev = True
-KeyElt.overdev = parse_entry('3um')
+KeyElt.is_overdev = False
+KeyElt.overdev = parse_entry('0um')
 
 #######################
 ### DRAWING STARTS HERE 
@@ -92,9 +92,9 @@ c.in_readout.draw_connector(c.track, c.gap, bond_length, bond_slope)
 c.in_flux_bot.draw_connector(c.track_flux, c.gap_flux, bond_length, bond_slope)
 
 ### Key ELements
-
+c.set_variable('Lj', '12nH')
 c.key_elt('trm', ['5mm','5.5mm'], [1,0])
-c.trm.draw_ZR_transmon(['1.52mm', '0.8mm'], '0.12mm', ['0.5mm', '0.5mm'], '84um', '50um', '0.2mm', '30um', '0mm', '0.01mm', '12nH', pad_size_left=['0.6mm', '0.5mm'], track_left='3um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='10um', fillet=True)#, pad_size_right=['0.5mm', '0.5mm'], track_right='84um', gap_right='50um', length_right'0.2mm', spacing_right='30um', short_right='0mm', 
+c.trm.draw_ZR_transmon(['1.52mm', '0.8mm'], '0.12mm', ['0.5mm', '0.5mm'], '84um', '50um', '0.2mm', '30um', '0mm', '0.01mm', c.Lj, pad_size_left=['0.6mm', '0.5mm'], track_left='3um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='10um', fillet=True)#, pad_size_right=['0.5mm', '0.5mm'], track_right='84um', gap_right='50um', length_right'0.2mm', spacing_right='30um', short_right='0mm', 
 
 c.set_variable('x_T', '3.8mm')
 c.set_variable('y_T', '5.5mm')
@@ -121,7 +121,7 @@ c.end_drive_buffer.draw_end_cable(c.track, c.gap, typeEnd='open', fillet=True)
 c.key_elt('end_drive_mem', [c.x_T-'0.4mm',c.y_T+'0.25mm'], [0,1])
 c.end_drive_mem.draw_end_cable(c.track, c.gap, typeEnd='open', fillet=True)
 
-c.set_variable('gap_capa_readout', '40um')  
+c.set_variable('gap_capa_readout', '10um')  
 c.key_elt('capa_readout', [con5,'0.9mm'], [0,1])
 c.capa_readout.draw_capa_inline(c.track, c.gap, '80um', c.gap_capa_readout , n_pad=1)
 
@@ -148,7 +148,7 @@ c.mem.draw_cable(is_bond=True, fillet=c.fillet)
 c.connect_elt('drive_mem', 'in_mem', 'end_drive_mem')
 c.drive_mem.draw_cable(is_bond=True, fillet=c.fillet)
 
-c.set_variable('constrain_ro', '1.9mm')
+c.set_variable('constrain_ro', '1.932mm')
 c.key_elt('constr_readout', c.in_readout.pos+Vector([c.constrain_ro, '4mm']), [0,1])
 c.constr_readout.create_port(c.track, c.gap)
 c.connect_elt('readout', 'capa_readout_1', 'trm_1')

@@ -133,19 +133,41 @@ KeyElt.overdev = parse_entry('0.9um')
 #    c.pads.draw_dose_test2(['100um', '100um'], '50um', width,width, '400e-9')
 #    c.key_elt('padz', ['400um',pos], [1,0])
 #    c.padz.draw_dose_test2(['100um', '100um'], '50um', width,width, '0e-9')
-    
-c.key_elt('pads', ['400um','400um'], [1,0])
-c.pads.draw_dose_test(['100um', '100um'], '108um', '3um', '400nm',3)
-c.key_elt('pads', ['400um','800um'], [1,0])
-c.pads.draw_dose_test(['100um', '100um'], '108um', '3um', '00um',3)
 
-c.key_elt('pads', ['400um','1200um'], [1,0])
-c.pads.draw_dose_test(['100um', '100um'], '108um', '3um', '400nm',1)
-c.key_elt('pads', ['400um','1600um'], [1,0])
-c.pads.draw_dose_test(['100um', '100um'], '108um', '3um', '00um',1)
+for ii, val in enumerate(np.arange(1, 10.1, 1)):
+    pos_x = str(ii//10*400)+'um'
+    pos_y = str(ii%10*200)+'um'
+    c.key_elt('pads', [pos_x,pos_y], [1,0])
+    width = str(val)+'um'
+    c.pads.draw_dose_test_junction(['100um', '100um'], '50um', width, '500nm', n_bridge=1, spacing_bridge='2um')#(pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0)
 
+for ii, val in enumerate(np.arange(1, 10.1, 1)):
+    pos_x = str(ii//10*400+400)+'um'
+    pos_y = str(ii%10*200)+'um'
+    c.key_elt('pads', [pos_x,pos_y], [1,0])
+    width = str(val)+'um'
+    c.pads.draw_dose_test_junction(['100um', '100um'], '50um', width, '1000nm', n_bridge=1, spacing_bridge='2um')#(pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0)
 
+for ii, val in enumerate(np.arange(1, 10.1, 1)):
+    pos_x = str(ii//10*400+800)+'um'
+    pos_y = str(ii%10*200)+'um'
+    c.key_elt('pads', [pos_x,pos_y], [1,0])
+    width = str(val)+'um'
+    c.pads.draw_dose_test_junction(['100um', '100um'], '50um', width, '1500nm', n_bridge=1, spacing_bridge='2um')#(pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0)
 
+for ii, val in enumerate(np.arange(1, 10.1, 1)):
+    pos_x = str(ii//10*400+1200)+'um'
+    pos_y = str(ii%10*200)+'um'
+    c.key_elt('pads', [pos_x,pos_y], [1,0])
+    width = str(val)+'um'
+    c.pads.draw_dose_test_junction(['100um', '100um'], '50um', width, '2000nm', n_bridge=1, spacing_bridge='2um')#(pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0)
+
+for ii, val in enumerate(np.arange(1, 10.1, 1)):
+    pos_x = str(ii//10*400+1600)+'um'
+    pos_y = str(ii%10*200)+'um'
+    c.key_elt('pads', [pos_x,pos_y], [1,0])
+    width = str(val)+'um'
+    c.pads.draw_dose_test_junction(['100um', '100um'], '50um', width, '2500nm', n_bridge=1, spacing_bridge='2um')#(pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0)
 
 #c.set_variable('x_T', '3.8mm')
 #c.set_variable('y_T', '5.5mm')

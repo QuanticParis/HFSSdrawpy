@@ -44,8 +44,8 @@ c = Circuit(design, modeler)
 
 KeyElt.is_mask = False
 KeyElt.gap_mask = parse_entry('20um')
-KeyElt.is_overdev = True
-KeyElt.overdev = parse_entry('3um')
+KeyElt.is_overdev = False
+KeyElt.overdev = parse_entry('0um')
 
 #######################
 ### DRAWING STARTS HERE 
@@ -92,40 +92,42 @@ c.in_readout.draw_connector(c.track, c.gap, bond_length, bond_slope)
 c.in_flux_bot.draw_connector(c.track_flux, c.gap_flux, bond_length, bond_slope)
 
 ### Key ELements
-
+c.set_variable('Lj', '12nH')
 c.key_elt('trm', ['5mm','5.5mm'], [1,0])
-c.trm.draw_ZR_transmon(['1.52mm', '0.8mm'], '0.12mm', ['0.5mm', '0.5mm'], '84um', '50um', '0.2mm', '30um', '0mm', '0.01mm', '12nH', pad_size_left=['0.6mm', '0.5mm'], track_left='3um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='10um', fillet=True)#, pad_size_right=['0.5mm', '0.5mm'], track_right='84um', gap_right='50um', length_right'0.2mm', spacing_right='30um', short_right='0mm', 
+c.trm.draw_ZR_transmon(['1.52mm', '0.8mm'], '0.12mm', ['0.5mm', '0.5mm'], '84um', '50um', '0.2mm', '30um', '0mm', '0.01mm', c.Lj, pad_size_left=['0.6mm', '0.5mm'], track_left='3um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='10um', fillet=True)#, pad_size_right=['0.5mm', '0.5mm'], track_right='84um', gap_right='50um', length_right'0.2mm', spacing_right='30um', short_right='0mm', 
 
 c.set_variable('x_T', '3.8mm')
 c.set_variable('y_T', '5.5mm')
 c.key_elt('T', [c.x_T,c.y_T], [1,0])
 c.T.draw_T(c.track_mem, c.gap_mem)
 #
-
+#
 c.set_variable('squid_width', '50um')
 c.set_variable('squid_length', '50um')
 c.key_elt('squid', [con2+c.squid_width/2+c.track_mem, '5.5mm'], [-1,0])
 c.squid.draw_squid_protect(c.track_mem, c.gap_mem, [c.squid_width, c.squid_length], c.track_flux, c.gap_flux, iTrackSquid=c.track_mem, iTrackJ=None, Lj_down='20nH', Lj_up=None,  typePump='down', doublePump=True, iSlope=1, iSlopePump=0.5, fillet=None)
 
-
+#
 c.key_elt('end_mem', ['4.8mm','2.5mm'], [0,-1])
 c.end_mem.draw_end_cable(c.track_mem, c.gap_mem, typeEnd='short', fillet=True)
-#
-c.key_elt('end_buffer', ['1.71mm','3.1mm'], [0,1])
+##
+c.set_variable('y_end_buffer', '2.7mm')
+c.key_elt('end_buffer', ['1.71mm',c.y_end_buffer], [0,1])
 c.end_buffer.draw_end_cable(c.track_mem, c.gap_mem, typeEnd='short', fillet=True)
 #
-
+#
 c.key_elt('end_drive_buffer', c.squid.pos+Vector(['-0.15mm','0.08mm']), [-1,0])
 c.end_drive_buffer.draw_end_cable(c.track, c.gap, typeEnd='open', fillet=True)
 
 c.key_elt('end_drive_mem', [c.x_T-'0.4mm',c.y_T+'0.25mm'], [0,1])
 c.end_drive_mem.draw_end_cable(c.track, c.gap, typeEnd='open', fillet=True)
 
-c.set_variable('gap_capa_readout', '40um')  
+c.set_variable('gap_capa_readout', '8um')  
 c.key_elt('capa_readout', [con5,'0.9mm'], [0,1])
-c.capa_readout.draw_capa_inline(c.track, c.gap, '80um', c.gap_capa_readout , n_pad=1)
+c.capa_readout.draw_capa_inline(c.track, c.gap, '80um', c.gap_capa_readout , n_pad=2)
 
 ### Connect ELements
+c.set_variable('fillet', '500um')
 
 c.connect_elt('squid_T', 'squid_2', 'T_2')
 c.squid_T.draw_cable(is_bond=True)
@@ -139,9 +141,10 @@ c.flux_top.draw_cable(is_bond=True)
 c.connect_elt('flux_bot', 'squid_pump2', 'in_flux_bot')
 c.flux_bot.draw_cable(is_bond=True)
 
-c.set_variable('fillet', '500um')
+
 c.connect_elt('buffer', 'squid_1', 'end_buffer')
 c.buffer.draw_cable(is_bond=True, fillet=c.fillet)
+
 c.connect_elt('mem', 'T_3', 'end_mem')
 c.mem.draw_cable(is_bond=True, fillet=c.fillet)
 

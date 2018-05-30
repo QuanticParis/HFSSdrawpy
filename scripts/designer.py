@@ -90,7 +90,6 @@ class Vector(list):
     def __init__(self, vec, vec_y=None):
         if vec_y is not None:
             vec = [vec, vec_y]
-        print(vec)
         super().__init__(parse_entry(vec))
 
     def check(self, elt):
@@ -473,7 +472,7 @@ class KeyElt(Circuit):
         return self.rot(*vec)
     
     def create_port(self, iTrack, iGap):
-        portOut = [self.coor([0,0]), self.coor_vec([1,0]), iTrack, iGap]
+        portOut = [self.coor([0,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name] = portOut
 
     def draw_fluxtrappingholes(self, chip_length,chip_width,margin,hole_spacing,hole_size):
@@ -525,24 +524,24 @@ class KeyElt(Circuit):
 
         adaptDist = (self.pcb_track/2-iTrack/2)/iSlope
 
-        portOut = [self.coor([adaptDist+self.pcb_gap+iBondLength,0]), self.coor_vec([1,0]), iTrack, iGap]
+        portOut = [self.coor([adaptDist+self.pcb_gap+iBondLength,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
 #        print(self.pos, self.ori)
 #        print(adaptDist)
 #        print(self.pos+self.ori*(adaptDist+iGap+iBondLength), self.ori)
-        points = self.append_points([(self.pcb_gap, self.pcb_track/2),
-                                     (iBondLength, 0),
+        points = self.append_points([(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev),
+                                     (iBondLength+self.overdev, 0),
                                      (adaptDist, iTrack/2-self.pcb_track/2),
-                                     (0, -iTrack),
+                                     (0, -iTrack-2*self.overdev),
                                      (-adaptDist, iTrack/2-self.pcb_track/2),
-                                     (-iBondLength, 0)])
+                                     (-iBondLength-self.overdev, 0)])
         self.trackObjects.append(self.draw(self.name+"_track", points))
 
-        points = self.append_points([(self.pcb_gap/2, self.pcb_gap+self.pcb_track/2),
-                             (self.pcb_gap/2+iBondLength, 0),
+        points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev),
+                             (self.pcb_gap/2+iBondLength-self.overdev, 0),
                              (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (0, -2*iGap-iTrack),
+                             (0, -2*iGap-iTrack+2*self.overdev),
                              (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (-(self.pcb_gap/2+iBondLength), 0)])
+                             (-(self.pcb_gap/2+iBondLength)+self.overdev, 0)])
         self.gapObjects.append(self.draw(self.name+"_gap", points))
 
         if self.is_mask:
@@ -556,13 +555,15 @@ class KeyElt(Circuit):
 
 
         if(iLineTest==False):
-            points = self.append_points([(self.pcb_gap/2, 0.5*self.pcb_track),
-                                         (self.pcb_gap/2, 0),
-                                         (0, -self.pcb_track),
-                                         (-self.pcb_gap/2, 0)])
+            points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_track/2+self.overdev),
+                                         (self.pcb_gap/2-2*self.overdev, 0),
+                                         (0, -self.pcb_track-2*self.overdev),
+                                         (-self.pcb_gap/2+2*self.overdev, 0)])
             ohm = self.draw(self.name+"_ohm", points)
             self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
-
+#            self.trackObjects.append(ohm)
+#            points = self.append_points([(self.pcb_gap/2+self.overdev,0),(self.pcb_gap/2-2*self.overdev,0)])
+#            self.draw(self.name+'_line', points, closed=False)
 
         self.ports[self.name] = portOut
 
@@ -856,9 +857,9 @@ class KeyElt(Circuit):
         if self.is_overdev:
             added_gap_left = self.draw_rect(self.name+'_added_gap_left', self.coor([-cutout_size[0]/2, -(track_left+2*gap_left)/2+self.overdev]), self.coor_vec([self.overdev, (track_left+2*gap_left)-2*self.overdev]))
             added_gap_right = self.draw_rect(self.name+'_added_gap_right', self.coor([cutout_size[0]/2, -(track_right+2*gap_right)/2+self.overdev]), self.coor_vec([-self.overdev, (track_right+2*gap_right)-2*self.overdev]))
-            
-            added_track_left = self.draw_rect(self.name+'_added_gap_left', self.coor([-cutout_size[0]/2, -(track_left)/2-self.overdev]), self.coor_vec([self.overdev, (track_left)+2*self.overdev]))
-            added_track_right = self.draw_rect(self.name+'_added_gap_right', self.coor([cutout_size[0]/2, -(track_right)/2-self.overdev]), self.coor_vec([-self.overdev, (track_right)+2*self.overdev]))
+
+            added_track_left = self.draw_rect(self.name+'_added_track_left', self.coor([-cutout_size[0]/2, -(track_left)/2-self.overdev]), self.coor_vec([self.overdev, (track_left)+2*self.overdev]))
+            added_track_right = self.draw_rect(self.name+'_added_track_right', self.coor([cutout_size[0]/2, -(track_right)/2-self.overdev]), self.coor_vec([-self.overdev, (track_right)+2*self.overdev]))
             to_unite = to_unite+[added_track_left, added_track_right]
             
             cutout = self.unite([cutout, added_gap_left, added_gap_right])
@@ -959,14 +960,14 @@ class KeyElt(Circuit):
             curr_height = -iTrack/2
             pad_size = Vector([pad_length, pad_width])
             for ii in range(int(n_pad/2)):
-                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
-                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii)+'b', self.coor([-capa_length/2+pad_spacing, curr_height+pad_width+pad_spacing]), self.coor_vec(pad_size)))
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii), self.coor([-capa_length/2, curr_height-self.overdev]), self.coor_vec(pad_size+Vector([self.overdev, 2*self.overdev]))))
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii)+'b', self.coor([-capa_length/2+pad_spacing-self.overdev, curr_height+pad_width+pad_spacing-self.overdev]), self.coor_vec(pad_size+Vector([self.overdev, 2*self.overdev]))))
                 curr_height = curr_height+2*(pad_width+pad_spacing)
             if n_pad%2!=0:
                 drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii+1), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
                 
-        portOut1 = [self.pos+self.ori*capa_length/2, self.ori, iTrack, iGap]
-        portOut2 = [self.pos-self.ori*capa_length/2, -self.ori, iTrack, iGap]
+        portOut1 = [self.pos+self.ori*capa_length/2, self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        portOut2 = [self.pos-self.ori*capa_length/2, -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
 
         pads = self.unite(drawn_pads, name=self.name+'_pads')
         
@@ -976,8 +977,8 @@ class KeyElt(Circuit):
         if self.is_mask:
             self.maskObjects.append(self.draw_rect_center(self.name+"_mask", self.coor([0,0]), self.coor_vec([capa_length, iTrack + 2*iGap +2*self.gap_mask])))
         
-        self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec([capa_length, iTrack]))
-        self.modeler.assign_mesh_length(self.name+"_mesh",iTrack)
+        self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec([capa_length, iTrack+2*self.overdev]))
+        self.modeler.assign_mesh_length(self.name+"_mesh",iTrack/2)
 
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
@@ -1404,8 +1405,8 @@ class KeyElt(Circuit):
             
     def draw_T(self, iTrack, iGap):
         
-        if not self.is_overdev:
-            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,0]), self.coor_vec([2*iGap+iTrack-2*self.overdev, 2*iGap+iTrack-2*self.overdev]))
+        if not self.is_overdev or self.val(self.overdev<0):
+            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,self.overdev/2]), self.coor_vec([2*iGap+iTrack, 2*iGap+iTrack-self.overdev]))
             self.gapObjects.append(cutout)
         else:
             points = self.append_points([(-(iGap+iTrack/2),-iTrack/2-iGap+self.overdev),
@@ -1527,23 +1528,23 @@ class KeyElt(Circuit):
         snail_array = self.connect_elt(self.name+'_junction', in_array, out_array)
         snail_track = snail_array._connect_snails2([10e-6,10e-6], 9e-6, 3, 3e-6, 1, N, bridge, 2.2e-6)#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
-    def draw_dose_test2(self, pad_size, pad_spacing, iTrack, spacing, bridge):
-        pad_size, pad_spacing,iTrack, spacing, bridge = parse_entry((pad_size, pad_spacing, iTrack, spacing, bridge))
+    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0):
+        pad_size, pad_spacing,width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
         pad_size = Vector(pad_size)
         
         self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2, -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]]))
         self.draw_rect(self.name+'_right', self.coor([pad_spacing/2, pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]]))
         
-        portOut1 = [self.coor([pad_spacing/2, 0]), -self.ori, iTrack, 0]
-        portOut2 = [self.coor([-pad_spacing/2, 0]), self.ori, iTrack, 0]
+        portOut1 = [self.coor([pad_spacing/2, 0]), -self.ori, width, 0]
+        portOut2 = [self.coor([-pad_spacing/2, 0]), self.ori, width, 0]
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
         
         in_array = portOut2
         out_array = portOut1
         jcts = self.connect_elt(self.name+'_junction', in_array, out_array)
-#        snail_track = jcts._connect_jct(3, spacing, bridge)#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
-        jcts._connect_jct2(bridge)
+        print(n_bridge)
+        jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge)
         
 class ConnectElt(KeyElt, Circuit):
 
@@ -1583,8 +1584,9 @@ class ConnectElt(KeyElt, Circuit):
         elif isinstance(iOut, list):
             iOutPort = parse_entry(iOut)
             self.outTrack, self.outGap = iOutPort[-2], iOutPort[-1]
-            self.posOut = Vector(iOutPort[POS])
-            self.oriOut = Vector(iOutPort[ORI])
+            if len(iOut)>2:
+                self.posOut = Vector(iOutPort[POS])
+                self.oriOut = Vector(iOutPort[ORI])
             self.isOut = False
         elif iOut is None:
             pass
@@ -2235,7 +2237,7 @@ class ConnectElt(KeyElt, Circuit):
         self.to_bond=[]
         adaptor_length=0
         track_adaptor = None
-        if(self.val(self.inTrack) != self.val(self.outTrack) or self.val(self.inGap) != self.val(self.outGap)):
+        if (not equal_float(self.val(self.inTrack), self.val(self.outTrack))) or (not equal_float(self.val(self.inGap), self.val(self.outGap))):
             if self.val(self.inTrack+self.inGap) > self.val(self.outTrack+self.outGap):
                 adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.inTrack, self.inGap])
                 iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
@@ -2283,7 +2285,7 @@ class ConnectElt(KeyElt, Circuit):
             
             if is_bond:
                 self.draw_bond((self.inTrack+self.inGap*2)*1.5)
-                
+        
         if track_adaptor is not None:
             self.trackObjects.pop()
             self.gapObjects.pop()
@@ -2294,6 +2296,7 @@ class ConnectElt(KeyElt, Circuit):
                 masks = [*masks, mask_adaptor]
                 
         if len(tracks)>1:
+            print(tracks)
             track = self.unite(tracks, self.name+'_track')
             self.trackObjects.append(track)
             gap = self.unite(gaps, self.name+'_gap')
@@ -2527,31 +2530,28 @@ class ConnectElt(KeyElt, Circuit):
 #            self.unite(snail, name=self.name+'_snail_'+str(jj))
             x_pos = x_pos+width_snail
             
-    def _connect_jct(self, n, spacing_bridge, width_bridge):
-        width_track = self.inTrack # assume both are equal
-        print(width_track)
+    def _connect_jct(self, width_bridge, n=1, spacing_bridge=0, assymetry=0.25e-6, overlap=5e-6):
+        width = self.inTrack # assume both are equal
         spacing = (self.posOut-self.pos).norm()
-        print(spacing)
         self.pos = (self.pos+self.posOut)/2
+        n = int(n)
         
-        self.draw_rect_center(self.name+'_middle', self.coor([0,0]), self.coor_vec([spacing_bridge, width_track]))
-        self.draw_rect(self.name+'_left', self.coor([-spacing_bridge/2-width_bridge,-width_track/2-0.1e-6]), self.coor_vec([-(spacing-2*width_bridge-spacing_bridge)/2-5e-6, width_track+0.2e-6]))
-        self.draw_rect(self.name+'_right', self.coor([spacing_bridge/2 + width_bridge,-width_track/2-0.1e-6]), self.coor_vec([(spacing-2*width_bridge-spacing_bridge)/2+5e-6, width_track+0.2e-6]))
-
-    def _connect_jct2(self, width_bridge):
-        width_track = self.inTrack # assume both are equal
-        print(width_track)
-        spacing = (self.posOut-self.pos).norm()
-        print(spacing)
-        self.pos = (self.pos+self.posOut)/2
+        tot_width = n*width_bridge+(n-1)*spacing_bridge
         
-#        self.draw_rect_center(self.name+'_middle', self.coor([0,0]), self.coor_vec([spacing_bridge, width_track]))
-        self.draw_rect(self.name+'_left', self.coor([-width_bridge/2,-width_track/2-0.1e-6]), self.coor_vec([-(spacing-width_bridge)/2-5e-6, width_track+0.2e-6]))
-        self.draw_rect(self.name+'_right', self.coor([width_bridge/2,-width_track/2]), self.coor_vec([(spacing-width_bridge)/2+5e-6, width_track]))
-
+        self.draw_rect(self.name+'_left', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap, width+2*assymetry]))
+        print(n)
+        if n%2==0:
+            _width_right = width+2*assymetry
+            print('was here')
+        else:
+            _width_right = width
+        self.draw_rect(self.name+'_right', self.coor([tot_width/2,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap, _width_right]))
         
-        
-        
-        
-        
-        
+        x_pos = -(tot_width)/2+width_bridge
+        for ii in range(n-1):
+            if ii%2==1:
+                _width_loc = width+2*assymetry
+            else:
+                _width_loc = width
+            self.draw_rect(self.name+'_middle', self.coor([x_pos,-_width_loc/2]), self.coor_vec([spacing_bridge, _width_loc]))
+            x_pos = x_pos+spacing_bridge+width_bridge
