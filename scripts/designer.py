@@ -6761,6 +6761,53 @@ class ConnectElt(KeyElt, Circuit):
         self.iOut = retOut
 #        return [retIn, retOut]
 
+    def draw_half_capa(self, iLength, iWidth, iGap, add_gap=False,fillet=None):
+        '''
+        Inputs:
+        -------
+        name: string name of object
+        iIn: (position, direction, track, gap) defines the input port
+        iOut: (position, direction, track, gap) defines the output port
+               position and direction are None: this is calculated from
+               other parameters
+        iLength: (float) length of pads
+        iWidth: (float) width of pads
+
+        Outputs:
+        --------
+        retIn: same as iIn, with flipped vector
+        retOut: calculated output port to match all input dimensions
+
+            igap iWidth
+                 +--+
+                 |  |
+            +----+  | iLength
+        iIn |       |
+            +----+  |
+                 |  |
+                 +--+
+        '''
+        iLength, iWidth, iGap = parse_entry((iLength, iWidth, iGap))
+        self.ori = -self.ori
+
+        points = self.append_points([(0, self.inTrack/2),
+                                     (iGap-self.overdev, 0),
+                                     (0, (iLength-self.inTrack)/2+self.overdev),
+                                     (iWidth+2*self.overdev, 0),
+                                     (0, -iLength-2*self.overdev),
+                                     (-iWidth-2*self.overdev, 0),
+                                     (0, (iLength-self.inTrack)/2+self.overdev),
+                                     (-iGap+self.overdev, 0)])
+        halfcapa=self.draw(self.name+"_pad", points)
+        if fillet is not None:
+            halfcapa.fillet(fillet-self.overdev,6)
+            halfcapa.fillet(fillet+self.overdev,5)
+            halfcapa.fillet(fillet+self.overdev,4)
+            halfcapa.fillet(fillet+self.overdev,3)
+            halfcapa.fillet(fillet+self.overdev,2)
+            halfcapa.fillet(fillet-self.overdev,1)
+            
+        self.trackObjects.append(halfcapa)
 
 #        CreateBondwire(name+"_bondwire", iIn)
     def find_slanted_path(self):
