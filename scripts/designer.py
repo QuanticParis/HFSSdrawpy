@@ -282,6 +282,32 @@ class Circuit(object):
         iObj.make_rlc_boundary(axis, r=r, l=l, c=c, name=iSuff)
 
 
+    def assign_lumped_RLC_ArbitratryLine(self, iObj, iVal, start, end, iSuff="LumpRLC"):
+        """
+        Inputs:
+        -------
+        iObj (Rect): name of the object e.g. 'transmon_junction'
+        iVal (str or VarStr,)*3: resistance, inductance and capacitance value
+                                        e.g. (R1, Lj, '50fF')
+        start (str or VarStr,)*3: 3D coordinate of the start of the current line
+        end (str or VarStr,)*3: 3D coordinate of the end of the current line
+        iSuff (str): suffix to add to iObj name
+        Returns:
+        --------
+        takes existing name object and assigns boundary condition lumped RLC, L=iVal nH, R=0, C=0, along current_line
+        """
+        r, l, c = iVal
+        
+        start = [self.modeler.eval_var_str(s, unit="meter") for s in start]
+        end = [self.modeler.eval_var_str(s, unit="meter") for s in end]
+        
+        name = str(iObj)+'_'+iSuff
+        
+        self.modeler._make_lumped_rlc(r, l, c, start, end, ["Objects:=", [iObj]], name=name)
+
+
+
+
     def unite(self, iObjs, name=None):
         '''
         Performs the unions of the elements of iObjects
@@ -309,7 +335,7 @@ class Circuit(object):
         self.modeler.assign_perfect_E(iObj, name=iSuff)
 
 
-    def subtract(self, iObjBlank, iObjTools):
+    def subtract(self, iObjBlank, iObjTools, keep_originals=False):
         '''
         suBTracts iObjectTools from iObjectBlanc
 
@@ -319,7 +345,7 @@ class Circuit(object):
         iObjectTools (list) : HFSS object name e.g. ['readout_box', 'res_gap']
 
         '''
-        iObjBlank = self.modeler.subtract(iObjBlank, iObjTools, keep_originals=False)
+        iObjBlank = self.modeler.subtract(iObjBlank, iObjTools, keep_originals=keep_originals)
         return iObjBlank
 
 
@@ -384,6 +410,16 @@ class Circuit(object):
         box = self.modeler.draw_box_corner(pos, iSize, material=iMaterial, name=name)
         self.__dict__[box] = box
         return box
+
+    def draw_cylinder(self, name, pos, iSize, axis, iMaterial='vaccum'):
+        box = self.modeler.draw_cylinder(pos, iSize[0], iSize[1], axis, material=iMaterial, name=name)
+        self.__dict__[box] = box
+        return box
+    
+    def draw_disk(self, name, pos, iSize, axis):
+        disk = self.modeler.draw_disk(pos, iSize, axis, name=name)
+        self.__dict__[disk] = disk
+        return disk
 
     def draw_rect_center(self, name, pos, iSize):
         pos = [pos[0], pos[1], 0]
@@ -1018,6 +1054,30 @@ class KeyElt(Circuit):
 
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
+
+    def draw_capa_inline(self, iTrack, iGap, capa_length, pad_spacing, n_pad=1):
+
+        iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry((iTrack, iGap, capa_length, pad_spacing, n_pad))
+
+        drawn_pads = []
+        if n_pad==1:
+            pass
+        else:
+            pad_width = (iTrack-(n_pad-1)*pad_spacing)/n_pad
+            pad_length = capa_length-pad_spacing
+            curr_height = -iTrack/2
+            pad_size = Vector([pad_length, pad_width])
+            for ii in range(int(n_pad/2)):
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii)+'b', self.coor([-capa_length/2+pad_spacing, curr_height+pad_width+pad_spacing]), self.coor_vec(pad_size)))
+                curr_height = curr_height+2*(pad_width+pad_spacing)
+            if n_pad%2!=0:
+                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii+1), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
+                
+        portOut1 = [self.pos+self.ori*capa_length/2, self.ori, iTrack, iGap]
+        portOut2 = [self.pos-self.ori*capa_length/2, -self.ori, iTrack, iGap]
+
+        pads = self.unite(drawn_pads, name=self.name+'_pads')
         
 
     def draw_capa_inline(self, iTrack, iGap, capa_length, pad_spacing, n_pad=1, iTrack_capa=None, iGap_capa=None, premesh=True, tight=False): #iGap_capa is added gap

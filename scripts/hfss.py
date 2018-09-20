@@ -979,6 +979,26 @@ class HfssModeler(COMWrapper):
                    'new box named \'%s\'' % (kwargs['name'], name))
             print(msg)
         return Box(name, self, pos, size)
+    
+    
+#    def draw_cylinder(self, pos, size, **kwargs):
+#        pos = parse_entry(pos)
+#        size = parse_entry(size)
+#        name = self._modeler.CreateCylinder(
+#            ["NAME:CylinderParameters",
+#             "XCenter:=", pos[0], # '('+str(pos[0])+')'+self.unit,
+#             "YCenter:=", pos[1], # '('+str(pos[1])+')'+self.unit,
+#             "ZCenter:=", pos[2], # '('+str(pos[2])+')'+self.unit,
+#             "Radius:=", size[0], # '('+str(size[0])+')'+self.unit,
+#             "Height:=", size[1],
+#             "WhichAxis:=", "Z"], # '('+str(size[1])+')'+self.unit,
+#            self._attributes_array(**kwargs)
+#        )
+#        if name != kwargs['name']:
+#            msg = ('Warning: \'%s\' already exists, '
+#                   'new box named \'%s\'' % (kwargs['name'], name))
+#            print(msg)
+#        return Box(name, self, pos, size)
 
     def draw_box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
@@ -1053,6 +1073,18 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis,
              "NumSides:=", 0],
             self._attributes_array(**kwargs))
+
+    def draw_disk(self, pos, radius, axis, **kwargs):
+            assert axis in "XYZ"
+            return self._modeler.CreateEllipse(
+                ["NAME:EllipsdeParameters",
+                 "XCenter:=", pos[0],
+                 "YCenter:=", pos[1],
+                 "ZCenter:=", pos[2],
+                 "MajRadius:=", radius,
+                 "Ratio:=", 1,
+                 "WhichAxis:=", axis],
+                self._attributes_array(**kwargs))
 
     def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
@@ -1166,6 +1198,25 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
+            
+     
+    def _fillet_edges(self, radius, edge_index, obj):
+        edges = self._modeler.GetEdgeIDsFromObject(obj)
+        print(edges)
+        if isinstance(edge_index, list):
+            to_fillet = [int(edges[e]) for e in edge_index]
+        else:
+            to_fillet = [int(edges[edge_index])]
+#        print(vertices)
+#        print(radius)
+        self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
+                              ["NAME:Parameters",
+                               ["NAME:FilletParameters",
+                                "Edges:=", to_fillet,
+                                "Vertices:=", [],
+                                "Radius:=", radius,
+                                "Setback:=", "0mm"]])   
+            
 
     def _fillets(self, radius, vertices, obj):
         self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
