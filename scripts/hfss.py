@@ -1139,8 +1139,8 @@ class HfssModeler(COMWrapper):
             name = str(obj)+'_'+name
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [obj], "InfGroundPlane:=", False])
 
-    def assign_mesh_length(self, obj, length, suff = '_mesh'):
-        name = str(obj)+'_'+suff
+    def assign_mesh_length(self, obj, length):#, suff = '_mesh'):
+        name = str(obj)
 #        print(obj)
         params = ["NAME:"+name]
         params += ["RefineInside:=", False, "Enabled:=", True]
@@ -1242,8 +1242,15 @@ class HfssModeler(COMWrapper):
             else:
                 return str(name)
         return self.parent.eval_var_str(name, unit=unit)
-
-
+    
+    def delete_all_objects(self):
+        objects = []
+        for ii in range(int(self._modeler.GetNumObjects())):
+            objects.append(self._modeler.GetObjectName(str(ii)))
+#        print(objects)
+        self._modeler.Delete(self._selections_array(*objects))
+        
+        
 class ModelEntity(str, HfssPropertyObject):
     prop_tab = "Geometry3DCmdTab"
     model_command = None
@@ -1636,4 +1643,37 @@ def get_report_arrays(name):
     d = get_active_design()
     r = HfssReport(d, name)
     return r.get_arrays()
+
+def load_HFSS_project(proj_name, project_path, extension = '.aedt'):  # aedt is for 2016 version
+    ''' proj_name == None => get active.
+        (make sure 2 run as admin)
+    '''
+
+    # Checks
+    assert os.path.isdir(project_path),   "ERROR! project_path is not a valid directory. Check the path, and especially \\ charecters."
+
+    project_path +=  proj_name + extension
+
+    if os.path.isfile(project_path):
+        print('\tFile path to HFSS project found.')
+    else:
+        raise Exception("ERROR! Valid directory, but invalid project filename. Not found! Please check your filename.\n%s\n" % project_path )
+
+    if os.path.isfile(project_path+'.lock'):
+        print('\t\tFile is locked. If connection fails, delete the .lock file.'    )
+
+    app     = HfssApp()
+    print("\tOpened HfssApp.")
+    desktop = app.get_app_desktop()
+    print( "\tOpened Hfss desktop.")
+    if proj_name is not None:
+        if proj_name in desktop.get_project_names():
+            desktop.set_active_project(proj_name)
+            project = desktop.get_active_project()
+        else:
+            project = desktop.open_project(project_path)
+    else:
+        project = desktop.get_active_project()
+    print("\tOpened link to HFSS user project.")
+    return app, desktop, project
 
