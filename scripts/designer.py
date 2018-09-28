@@ -211,13 +211,12 @@ class Circuit(object):
     all_points = []
     all_points_val = []
 
-    def __init__(self, design, modeler):
+    def __init__(self, design=None, modeler=None):
+        if design is not None and modeler is not None:
+            Circuit.modeler = modeler
+            Circuit.design = design
 
-        Circuit.modeler = modeler
-        Circuit.design = design
-
-        self.modeler.set_units('mm')
-
+            self.modeler.set_units('mm')
         '''
         trackObjects (list of strings) e.g. ['readout_track', 'transmon_pad']
         gapObjects (list of strings) e.g. ['readout_box', 'transmon_box']
@@ -318,7 +317,10 @@ class Circuit(object):
         Returns:
         string: name of the merged object: iObjects[0]
         '''
-        iObj = self.modeler.unite(iObjs, name=name)
+        if len(iObjs)>1:
+            iObj = self.modeler.unite(iObjs, name=name)
+        else:
+            iObj = iObjs[0]
         return iObj
 
 
@@ -470,6 +472,7 @@ class Circuit(object):
         self.__dict__[name] = obj
         return obj
 
+
 class KeyElt(Circuit):
 
     pcb_track = parse_entry('300um')
@@ -553,7 +556,8 @@ class KeyElt(Circuit):
     def coor_vec(self, vec): # Change of coordinate for a vector
         return self.rot(*vec)
     
-    def create_port(self, iTrack, iGap):
+    def create_port(self, iTrack=0, iGap=0):
+        iTrack, iGap = parse_entry((iTrack, iGap))
         portOut = [self.coor([0,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name] = portOut
 
@@ -988,7 +992,7 @@ class KeyElt(Circuit):
             zone = self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size))
             self.modeler.assign_mesh_length(zone, mesh_length)
         
-    def draw_capa(self, iTrack, iGap, pad_spacing, pad_size):
+    def draw_capa(self, iTrack, iGap, pad_spacing, pad_size, half=False):
         '''
         Inputs:
         -------
@@ -1015,11 +1019,16 @@ class KeyElt(Circuit):
               |  |  |  |
               +--+  +--+
         '''
+        _pos = self.pos
+        if half:
+            self.pos = self.pos - self.ori*(pad_spacing/2+pad_size[0]+iGap)
+            self.pos2 = self.pos
         iTrack, iGap, pad_spacing, pad_size = parse_entry((iTrack, iGap, pad_spacing, pad_size))
         pad_size = Vector(pad_size)
 
         portOut1 = [self.pos+self.ori*(pad_spacing/2+pad_size[0]+iGap), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
-        portOut2 = [self.pos-self.ori*(pad_spacing/2+pad_size[0]+iGap), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        if not half:
+            portOut2 = [self.pos-self.ori*(pad_spacing/2+pad_size[0]+iGap), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
 
         raw_points = [(pad_spacing/2-self.overdev, pad_size[1]/2+self.overdev),
                       (pad_size[0]+2*self.overdev, 0),
@@ -1032,18 +1041,28 @@ class KeyElt(Circuit):
         points = self.append_points(raw_points)
         right_pad = self.draw(self.name+"_pad1", points)
 
-        points = self.append_points(self.refy_points(raw_points))
-        left_pad = self.draw(self.name+"_pad2", points)
+        if not half:
+            points = self.append_points(self.refy_points(raw_points))
+            left_pad = self.draw(self.name+"_pad2", points)
 
-        pads = self.unite([right_pad, left_pad], name=self.name+'_pads')
+        padlist = [right_pad]
+        if not half:
+            padlist.append(left_pad)
+        pads = self.unite(padlist, name=self.name+'_pads')
         self.trackObjects.append(pads)
 
-        cutout = self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([pad_spacing + 2*pad_size[0]+2*iGap-2*self.overdev, pad_size[1] + 2*iGap-2*self.overdev]))
+        jj = 2 if not half else 1
+        pos_cutout = self.pos if not half else self.pos+self.ori*(pad_spacing/4+pad_size[0]/2+iGap/2)
+        cutout = self.draw_rect_center(self.name+"_cutout", pos_cutout, self.coor_vec([pad_spacing*jj/2 + jj*pad_size[0]+jj*iGap-jj*self.overdev, pad_size[1] + 2*iGap-2*self.overdev]))
         
         if self.is_overdev:
             sub_1 = self.draw_rect(self.name + '_sub_1', self.coor([pad_spacing/2+pad_size[0]+iGap, -iTrack/2-iGap+self.overdev]), self.coor_vec([-self.overdev, iTrack+2*iGap-2*self.overdev]))
-            sub_2 = self.draw_rect(self.name + '_sub_1', self.coor([-pad_spacing/2-pad_size[0]-iGap, -iTrack/2-iGap+self.overdev]), self.coor_vec([self.overdev, iTrack+2*iGap-2*self.overdev]))
-            cutout = self.unite([cutout, sub_1, sub_2])
+            if not half:
+                sub_2 = self.draw_rect(self.name + '_sub_1', self.coor([-pad_spacing/2-pad_size[0]-iGap, -iTrack/2-iGap+self.overdev]), self.coor_vec([self.overdev, iTrack+2*iGap-2*self.overdev]))
+            cutout_list = [cutout, sub_1]
+            if not half:
+                cutout_list.append(sub_2)
+            cutout = self.unite(cutout_list)
         
         self.gapObjects.append(cutout)
         if self.is_mask:
@@ -1053,33 +1072,11 @@ class KeyElt(Circuit):
             self.modeler.assign_mesh_length(self.name+"_mesh",iTrack)
 
         self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
+        if not half:
+            self.ports[self.name+'_2'] = portOut2
 
-    def draw_capa_inline(self, iTrack, iGap, capa_length, pad_spacing, n_pad=1):
-
-        iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry((iTrack, iGap, capa_length, pad_spacing, n_pad))
-
-        drawn_pads = []
-        if n_pad==1:
-            pass
-        else:
-            pad_width = (iTrack-(n_pad-1)*pad_spacing)/n_pad
-            pad_length = capa_length-pad_spacing
-            curr_height = -iTrack/2
-            pad_size = Vector([pad_length, pad_width])
-            for ii in range(int(n_pad/2)):
-                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
-                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii)+'b', self.coor([-capa_length/2+pad_spacing, curr_height+pad_width+pad_spacing]), self.coor_vec(pad_size)))
-                curr_height = curr_height+2*(pad_width+pad_spacing)
-            if n_pad%2!=0:
-                drawn_pads.append(self.draw_rect(self.name+"_pad"+str(ii+1), self.coor([-capa_length/2, curr_height]), self.coor_vec(pad_size)))
-                
-        portOut1 = [self.pos+self.ori*capa_length/2, self.ori, iTrack, iGap]
-        portOut2 = [self.pos-self.ori*capa_length/2, -self.ori, iTrack, iGap]
-
-        pads = self.unite(drawn_pads, name=self.name+'_pads')
+        self.pos = _pos
         
-
     def draw_capa_inline(self, iTrack, iGap, capa_length, pad_spacing, n_pad=1, iTrack_capa=None, iGap_capa=None, premesh=True, tight=False): #iGap_capa is added gap
         
         iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry((iTrack, iGap, capa_length, pad_spacing, n_pad))
@@ -2052,7 +2049,6 @@ class KeyElt(Circuit):
         self.ports[self.name+'_3'] = portOut3
         
     def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
-        
         if typeEnd=='open' or typeEnd=='Open':
             cutout = self.draw_rect(self.name+'_cutout', self.coor([iGap,-(iTrack+2*iGap)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*iGap-2*self.overdev]))
             if fillet is not None:
@@ -2337,57 +2333,6 @@ class ConnectElt(KeyElt, Circuit):
         self.iOut = retOut
 #        return [retIn, retOut]
 
-    def draw_half_capa(self, iLength, iWidth, iGap, add_gap=False,fillet=None):
-        '''
-        Inputs:
-        -------
-        name: string name of object
-        iIn: (position, direction, track, gap) defines the input port
-        iOut: (position, direction, track, gap) defines the output port
-               position and direction are None: this is calculated from
-               other parameters
-        iLength: (float) length of pads
-        iWidth: (float) width of pads
-
-        Outputs:
-        --------
-        retIn: same as iIn, with flipped vector
-        retOut: calculated output port to match all input dimensions
-
-            igap iWidth
-                 +--+
-                 |  |
-            +----+  | iLength
-        iIn |       |
-            +----+  |
-                 |  |
-                 +--+
-        '''
-        iLength, iWidth, iGap = parse_entry((iLength, iWidth, iGap))
-        self.ori = -self.ori
-
-        points = self.append_points([(0, self.inTrack/2),
-                                     (iGap-self.overdev, 0),
-                                     (0, (iLength-self.inTrack)/2+self.overdev),
-                                     (iWidth+2*self.overdev, 0),
-                                     (0, -iLength-2*self.overdev),
-                                     (-iWidth-2*self.overdev, 0),
-                                     (0, (iLength-self.inTrack)/2+self.overdev),
-                                     (-iGap+self.overdev, 0)])
-        halfcapa=self.draw(self.name+"_pad", points)
-        if fillet is not None:
-            halfcapa.fillet(fillet-self.overdev,6)
-            halfcapa.fillet(fillet+self.overdev,5)
-            halfcapa.fillet(fillet+self.overdev,4)
-            halfcapa.fillet(fillet+self.overdev,3)
-            halfcapa.fillet(fillet+self.overdev,2)
-            halfcapa.fillet(fillet-self.overdev,1)
-        
-        if is_mesh:
-            if not self.is_litho:
-                self.modeler.assign_mesh_length(halfcapa, iWidth)
-            
-        self.trackObjects.append(halfcapa)
 
 #        CreateBondwire(name+"_bondwire", iIn)
     def find_slanted_path(self):
