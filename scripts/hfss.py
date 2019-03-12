@@ -1123,6 +1123,16 @@ class HfssModeler(COMWrapper):
              "TranslateVectorZ:=", vector[2]]
         )
 
+
+    def separate_bodies(self, name):
+        self._modeler.SeparateBody(["NAME:Selections",
+                                		"Selections:=", name,
+                                		"NewPartsModelFlag:="	, "Model"
+                                	], 
+                                	[
+                                		"CreateGroupsForNewObjects:=", False
+                                	])
+
 #    def make_perfect_E(self, *objects):
 #        print(self._boundaries.GetBoundaries())
 #        name = increment_name("PerfE", self._boundaries.GetBoundaries())
@@ -1187,6 +1197,19 @@ class HfssModeler(COMWrapper):
                                 		"TwistAngle:="		, "0deg"])
         return Polyline(new_name, self)
     
+    
+    def sweep_along_vector(self, names, vector):
+        self._modeler.SweepAlongVector(self._selections_array(*names), 
+                                        	["NAME:VectorSweepParameters",
+                                        		"DraftAngle:="		, "0deg",
+                                        		"DraftType:="		, "Round",
+                                        		"CheckFaceFaceIntersection:=", False,
+                                        		"SweepVectorX:="	, vector[0],
+                                        		"SweepVectorY:="	, vector[1],
+                                        		"SweepVectorZ:="	, vector[2]
+                                        	])
+                                        
+                                            
     def thicken_sheet(self, sheet, thickness, bothsides=False):
         self._modeler.ThickenSheet([
                                 		"NAME:Selections", "Selections:=", sheet,
@@ -1303,7 +1326,10 @@ class HfssModeler(COMWrapper):
 #        print(objects)
         self._modeler.Delete(self._selections_array(*objects))
         
-        
+    def get_matched_object_name(self, name):
+        return self._modeler.GetMatchedObjectName(name+'*')
+    
+    
 class ModelEntity(str, HfssPropertyObject):
     prop_tab = "Geometry3DCmdTab"
     model_command = None

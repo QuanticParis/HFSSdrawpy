@@ -434,7 +434,6 @@ class Circuit(object):
         iObject = self.modeler._sweep_along_path(path_length, iObject)
         return iObject
     
-    
     def thicken_sheet(self, iSheet, iThickness): 
         '''
         creates 3D structure from 2D one (new and more specific version of the sweep_along_path function)
@@ -445,7 +444,14 @@ class Circuit(object):
         iThickness (list) : height of 3D structure
 
         '''
-        iObject = self.modeler.thicken_sheet(iSheet, iThickness, bothsides=False)
+        iThickness = parse_entry((iThickness,))
+        self.modeler.separate_bodies(iSheet)
+        iSheet_matched = self.modeler.get_matched_object_name(iSheet)
+        print(iSheet_matched)
+        self.modeler.sweep_along_vector(iSheet_matched, ['0','0',iThickness])
+        self.unite(iSheet_matched)
+        
+
           
         
     def mirrorZ(self, iObject):
