@@ -1123,7 +1123,6 @@ class HfssModeler(COMWrapper):
              "TranslateVectorZ:=", vector[2]]
         )
 
-
 #    def make_perfect_E(self, *objects):
 #        print(self._boundaries.GetBoundaries())
 #        name = increment_name("PerfE", self._boundaries.GetBoundaries())
@@ -1187,7 +1186,35 @@ class HfssModeler(COMWrapper):
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
         return Polyline(new_name, self)
-
+    
+    def thicken_sheet(self, sheet, thickness, bothsides=False):
+        self._modeler.ThickenSheet([
+                                		"NAME:Selections", "Selections:=", sheet,
+                                		"NewPartsModelFlag:="	, "Model"
+                                	], 
+                                	[
+                                		"NAME:SheetThickenParameters",
+                                		"Thickness:="		, thickness,
+                                		"BothSides:="		, bothsides
+                                	])
+                
+    def mirrorZ(self, obj):
+        self._modeler.Mirror([
+                        		"NAME:Selections", "Selections:=", obj,
+                        		"NewPartsModelFlag:="	, "Model"
+                        	  ], 
+                        	  [
+                        		"NAME:MirrorParameters",
+                        		"MirrorBaseX:="		, "0mm",
+                        		"MirrorBaseY:="		, "0mm",
+                        		"MirrorBaseZ:="		, "0mm",
+                        		"MirrorNormalX:="	, "0mm",
+                        		"MirrorNormalY:="	, "0mm",
+                        		"MirrorNormalZ:="	, "1mm"
+                        	  ])
+        return obj
+    
+    
     def rename_obj(self, name, obj):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
@@ -1195,10 +1222,25 @@ class HfssModeler(COMWrapper):
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
         return name
 
+
     def copy(self, obj):
         self._modeler.Copy(["NAME:Selections", "Selections:=", obj])
         new_obj = self._modeler.Paste()
         return new_obj[0]
+    
+    
+    def duplicate_along_line(self, obj, vec):
+        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
+                                          "NewPartsModelFlag:="	, "Model"], 
+                                        	["NAME:DuplicateToAlongLineParameters",
+                                    		"CreateNewObjects:="	, True,
+                                    		"XComponent:="		, vec[0],
+                                    		"YComponent:="		, vec[1],
+                                    		"ZComponent:="		, vec[2],
+                                    		"NumClones:="		, "2"], 
+                                        	["NAME:Options",
+                                        	"DuplicateAssignments:=", False], 
+                                        	["CreateGroupsForNewObjects:=", False	])
 
 
     def _make_lumped_rlc(self, r, l, c, start, end, obj_arr, name="LumpLRC"):
@@ -1223,6 +1265,17 @@ class HfssModeler(COMWrapper):
                    "FullResistance:=", "50ohm", "FullReactance:=", "0ohm"]
 
         self._boundaries.AssignLumpedPort(params)
+        
+    def make_material(self, obj, material):
+        self._modeler.ChangeProperty(["NAME:AllTabs",
+                                		["NAME:Geometry3DAttributeTab",
+                                			["NAME:PropServers", obj],
+                                			["NAME:ChangedProps",
+                                				["NAME:Material","Value:=", material]
+                                			]
+                                		]
+                                	])
+                
 
     def get_face_ids(self, obj):
         return self._modeler.GetFaceIDs(obj)
