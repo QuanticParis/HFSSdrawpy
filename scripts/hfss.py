@@ -1126,8 +1126,10 @@ class HfssModeler(COMWrapper):
         )
         if name is None:
             return names[0]
-        else:
+        elif names[0]!=name:
             return names[0].rename(name)
+        else:
+            return names[0]
 
     def intersect(self, names, keep_originals=False):
         self._modeler.Intersect(
