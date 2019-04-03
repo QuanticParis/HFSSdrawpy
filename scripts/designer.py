@@ -593,20 +593,6 @@ class Circuit(object):
                                 [self.val(corner2[0]), self.val(corner2[1])]]
         return rect
     
-    def draw_dc_gap(self, layer_name, length, positions, widths, border):
-        
-        length, positions, widths, border = parse_entry((length, positions, widths, border))
-        
-        low = np.argmin(positions)
-        high = np.argmax(positions)
-        width_cutout = positions[high]-positions[low]+widths[high]/2+widths[low]/2+2*border
-        cutout = self.draw_rect(layer_name+'_'+self.name+'_gap', \
-                                self.coor([-length/2, positions[low]-widths[low]/2-border]), \
-                                self.coor_vec([length, width_cutout]))
-        self.layers[layer_name]['gapObjects'].append(cutout)
-        
-        return cutout, width_cutout
-    
     def get_extent(self, margin=0):
         margin = parse_entry(margin)
         
@@ -629,7 +615,8 @@ class Circuit(object):
         obj = ConnectElt(name=name, iIn=iIn, iOut=iOut, layer=layer)
         self.__dict__[name] = obj
         return obj
-    
+
+#    
 
 #    def connect_DC_elt(self, name, iIn, layer_In, iOut, layer_Out, layer_toBE):
 #        iIn_list = []
@@ -2572,57 +2559,120 @@ class KeyElt(Circuit):
         print(n_bridge)
         jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge)
         
+    def size_dc_gap(self, length, positions, widths, border):
         
-    def draw_fine_structure(self, layer_name, length, positions, widths, out=1, border='50um'):
+        length, positions, widths, border = parse_entry((length, positions, widths, border))
+        
+        low = np.argmin(positions)
+        high = np.argmax(positions)
+        pos_cutout = self.coor([-length/2, positions[low]-widths[low]/2-border])
+        width_cutout = positions[high]-positions[low]+widths[high]/2+widths[low]/2+2*border
+        vec_cutout = self.coor_vec([length, width_cutout])
+#        
+#        cutout = self.draw_rect(layer_name+'_'+self.name+'_gap', \
+#                                self.coor([-length/2, positions[low]-widths[low]/2-border]), \
+#                                self.coor_vec([length, width_cutout]))
+#        self.layers[layer_name]['gapObjects'].append(cutout)
+#        
+        return pos_cutout, width_cutout, vec_cutout
+    
+    def draw_fine_structure(self, layer_name, length, positions, widths, dc_gap, out=1):
         ''' out = 1 or -1 gives the orientation of the port relative to the key_elmt '''
         if len(positions) is not len(widths):
             raise ValueError('position and width lists do not have same length')
             
-        length, positions, widths, border = parse_entry((length, positions, widths, border))
+        length, positions, widths, dc_gap = parse_entry((length, positions, widths, dc_gap))
         
-        name_list = []
+        fines = []
+        fine_gaps = []
         for ii in range(len(positions)):
-            if ii is 0:
-                name = layer_name+'_'+self.name
-                name_list.append(name)
-            else:
-                name = layer_name+'_'+self.name+'_'+str(ii)
-                name_list.append(name)
-            self.draw_rect(name, self.coor([-length/2, positions[ii]-widths[ii]/2]), \
-                                 self.coor_vec([length, widths[ii]]))
-        self.unite(name_list)
-        self.layers[layer_name]['trackObjects'].append(name_list[0])
-            
-        _, width_cutout = self.draw_dc_gap(layer_name, length, positions, widths, border)
+            fines.append(self.draw_rect('fine'+str(ii), self.coor([-length/2, positions[ii]-widths[ii]/2]), \
+                                 self.coor_vec([length, widths[ii]])))
+            fine_gaps.append(self.draw_rect('gap'+str(ii), self.coor([-length/2, positions[ii]-widths[ii]/2-dc_gap]), \
+                                 self.coor_vec([length, widths[ii]+2*dc_gap])))
+        self.unite(fines, name=layer_name+'_'+self.name+'_track')
+        self.unite(fine_gaps, name=layer_name+'_'+self.name+'_gap')
+        self.layers[layer_name]['trackObjects'].append(fines[0])
+        self.layers[layer_name]['gapObjects'].append(fine_gaps[0])
         
-        portOut = [self.coor([out*length/2, 0]), out*self.ori, width_cutout, positions, widths]
+        cutout_list = [widths[ii]+2*dc_gap for ii in range(len(positions))]
+
+        portOut = [self.coor([out*length/2, 0]), out*self.ori, cutout_list, positions, widths, len(positions)]
         self.ports_dc[self.name] = portOut
         
         
-    def draw_gold_DC(self, positions, border='50um'):
+    def draw_dc_gold(self, positions, dc_gap):
         x_contact = ['50um' for i in range(len(positions))]
         y_contact = ['50um' for i in range(len(positions))]
-        x_contact, y_contact, positions, border = parse_entry((x_contact, y_contact, positions, border))
+        x_contact, y_contact, positions, dc_gap = parse_entry((x_contact, y_contact, positions, dc_gap))
         
-        name_list = []
+        conts = []
+        cont_gaps = []
         for ii in range(len(positions)):
-            if ii is 0:
-                name = 'gold_'+self.name
-                name_list.append(name)
-            else:
-                name = 'gold_'+self.name+'_'+str(ii)
-                name_list.append(name)
-            self.draw_rect(name, self.coor([-x_contact[ii]/2, positions[ii]-y_contact[ii]/2]), \
-                                 self.coor_vec([x_contact[ii], y_contact[ii]]))
-        self.unite(name_list)
-        self.layers['gold']['trackObjects'].append(name_list[0])
+            conts.append(self.draw_rect('contact'+str(ii), \
+                                        self.coor([-x_contact[ii]/2, positions[ii]-y_contact[ii]/2]), \
+                                        self.coor_vec([x_contact[ii], y_contact[ii]])))
+            cont_gaps.append(self.draw_rect('gap'+str(ii), \
+                                        self.coor([-x_contact[ii]/2, positions[ii]-y_contact[ii]/2-dc_gap]), \
+                                        self.coor_vec([x_contact[ii], y_contact[ii]+2*dc_gap])))
+        self.unite(conts, name='gold_'+self.name+'_track')
+        self.unite(cont_gaps, name='gold_'+self.name+'_gap')
+        self.layers['gold']['trackObjects'].append(conts[0])
+        self.layers['gold']['gapObjects'].append(cont_gaps[0])
             
-        _, width_cutout = self.draw_dc_gap('gold', x_contact[0], positions, y_contact, border)   
+#        pos_cutout, width_cutout, vec_cutout = self.size_dc_gap(x_contact[0], positions, y_contact, border)
+#        cutout = self.draw_rect('gold_'+self.name+'_gap', pos_cutout, vec_cutout)
+#        self.layers['gold']['gapObjects'].append(cutout)
             
-        portOut1 = [self.coor([x_contact[0]/2, 0]), self.ori, width_cutout, positions, y_contact] #portOut TBC
-        portOut2 = [self.coor([-x_contact[0]/2, 0]), -self.ori, width_cutout, positions, y_contact] #portIn TBC
+        cutout_list = [y_contact[ii]+2*dc_gap for ii in range(len(positions))]
+        
+        portOut1 = [self.coor([x_contact[0]/2, 0]), self.ori, cutout_list, positions, y_contact, len(positions)] #portOut TBC
+        portOut2 = [self.coor([-x_contact[0]/2, 0]), -self.ori, cutout_list, positions, y_contact, len(positions)] #portIn TBC
         self.ports_dc[self.name+'_1'] = portOut1
         self.ports_dc[self.name+'_2'] = portOut2
+        
+    def split_dc_ports(self, side, subgroups, names):
+        ''' creates len(subgroups) ports '''
+        if len(subgroups) is not len(names):
+            raise ValueError('number of sub-groups and names do not match')
+        subgroups = [int(subgroups[ii]) for ii in range(len(subgroups))]
+        oldport = self.ports_dc[self.name+side]
+        for ii in range(len(subgroups)):
+            newport = [oldport[0], \
+                       oldport[1], \
+                       oldport[2][sum(subgroups[:ii]):sum(subgroups[:ii+1])], \
+                       oldport[3][sum(subgroups[:ii]):sum(subgroups[:ii+1])], \
+                       oldport[4][sum(subgroups[:ii]):sum(subgroups[:ii+1])], \
+                       subgroups[ii]]
+            self.ports_dc[self.name+side+'_'+names[ii]] = newport
+        
+    def draw_dc_pad(self, layer_name, positions, size, dc_track, dc_gap):
+        
+        positions, size, dc_track, dc_gap = parse_entry((positions, size, dc_track, dc_gap))
+        
+        pads = []
+        gaps = []
+        for ii in range(len(positions)):
+            pad = self.draw_rect('pad'+str(ii), self.coor([-size/2, positions[ii]-size/2]), \
+                                 self.coor_vec([size, size]))
+            padout = self.draw_rect('pad_out'+str(ii), self.coor([size/2, positions[ii]-dc_track/2]), \
+                                    self.coor_vec([2*dc_gap, dc_track]))
+            pads.append(self.unite([pad, padout]))
+            gap = self.draw_rect('gap'+str(ii), self.coor([-size/2-dc_gap, positions[ii]-size/2-dc_gap]), \
+                                 self.coor_vec([size+2*dc_gap, size+2*dc_gap]))
+            gapout = self.draw_rect('gap_out'+str(ii), self.coor([size/2, positions[ii]-dc_track/2-dc_gap]), \
+                                    self.coor_vec([2*dc_gap, dc_track+2*dc_gap]))
+            gaps.append(self.unite([gap, gapout]))
+        self.unite(pads, name=layer_name+'_'+self.name+'_track')
+        self.unite(gaps, name=layer_name+'_'+self.name+'_gap')
+        self.layers[layer_name]['trackObjects'].append(pads[0])
+        self.layers[layer_name]['gapObjects'].append(gaps[0])
+        
+        cutout_list = [dc_track+2*dc_gap for ii in range(len(positions))]
+        track_list = [dc_track for ii in range(len(positions))]
+
+        portOut = [self.coor([size/2, 0]), self.ori, cutout_list, positions, track_list, len(positions)]
+        self.ports_dc[self.name] = portOut
         
         
 class ConnectElt(KeyElt, Circuit):
@@ -2645,11 +2695,13 @@ class ConnectElt(KeyElt, Circuit):
                 self.iIn = iIn # name of the in port
                 self.pos = Vector(iInPort[POS])
                 self.ori = Vector(iInPort[ORI])
-                _, _, self.cutIn, self.rel_posIn, self.widIn = iInPort
+                _, _, self.cutIn, self.rel_posIn, self.widIn, _ = iInPort
+                self.multIn = int(iInPort[-1])
 #                self.layerIn = layer
             else:
                 raise ValueError('inPort %s does not exist' % iIn)
         #is the following really useful ?
+        #it is when defining intermediate port for draw_adaptor
         elif isinstance(iIn, list):
             if iOut in self.ports: # if iIn is defined on the fly then iOut is well defined
                 iInPort = parse_entry(iIn)
@@ -2662,7 +2714,8 @@ class ConnectElt(KeyElt, Circuit):
                 self.iIn = 'iIn' # dummy name test
                 self.pos = Vector(iInPort[POS])
                 self.ori = Vector(iInPort[ORI])
-                _, _, self.cutIn, self.rel_posIn, self.widIn = iInPort
+                _, _, self.cutIn, self.rel_posIn, self.widIn, _ = iInPort
+                self.multIn = int(iInPort[-1])
         else:
             raise ValueError('iIn should be given a port name, a list or nothing')
 
@@ -2680,23 +2733,23 @@ class ConnectElt(KeyElt, Circuit):
                 self.iOut = iOut
                 self.posOut = Vector(iOutPort[POS])
                 self.oriOut = Vector(iOutPort[ORI])
-                _, _, self.cutOut, self.rel_posOut, self.widOut = iOutPort
+                _, _, self.cutOut, self.rel_posOut, self.widOut, _ = iOutPort
+                self.multOut = int(iOutPort[-1])
 #                self.layerOut = layer
             else:
                 raise ValueError('outPort %s does not exist' % iOut)
-        # same question
         elif isinstance(iOut, list):
-            if iIn in self.ports:  #[0] added
+            if iIn in self.ports:
                 iOutPort = parse_entry(iOut)
                 self.outTrack, self.outGap = iOutPort[-2], iOutPort[-1]
-                if len(iOut)>2:
+                if len(iOut)>3:
                     self.posOut = Vector(iOutPort[POS])
                     self.oriOut = Vector(iOutPort[ORI])
                 self.isOut = False
             elif iIn in self.ports_dc:
                 iOutPort = parse_entry(iOut)
-                self.cutOut, self.rel_posOut, self.widOut = iOutPort[-3], iOutPort[-2], iOutPort[-1]
-                if len(iOut)>3:
+                self.cutOut, self.rel_posOut, self.widOut, self.multOut = iOutPort[-4], iOutPort[-3], iOutPort[-2], int(iOutPort[-1])
+                if len(iOut)>4:
                     self.pos = Vector(iOutPort[POS])
                     self.ori = Vector(iOutPort[ORI])
                 self.isOut = False
@@ -3338,7 +3391,7 @@ class ConnectElt(KeyElt, Circuit):
 #            else:
 #                return self.length(points, B, A, fillet)
 
-    def cable_starter(self, width = 'track', index=0): # width can also be 'gap'
+    def cable_starter(self, width = 'track', index=0, border=parse_entry('15um')): # width can also be 'gap'
         if width=='track' or width=='Track':
             points = self.append_points([(0, self.inTrack/2),
                                          (0, -self.inTrack)])
@@ -3351,7 +3404,9 @@ class ConnectElt(KeyElt, Circuit):
         elif width=='dc_track':
             points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2),\
                                                   (0, self.rel_posIn[index]+self.widIn[index]/2)])
-            
+        elif width=='dc_gap':
+            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2-border),\
+                                                  (0, self.rel_posIn[index]+self.widIn[index]/2+border)])
         elif width=='dc_cutout':
             points = self.append_absolute_points([(0, -self.cutIn/2), (0, self.cutIn/2)])
             
@@ -3701,30 +3756,103 @@ class ConnectElt(KeyElt, Circuit):
             # calculate the output
             # do not forget to add the new port to dict
             adaptDist = max([abs(self.widOut[ii]/2-self.widIn[ii]/2)/iSlope for ii in range(len(self.widOut))])
-            outPort = [self.pos+self.ori*adaptDist, self.ori, self.cutOut, self.rel_posOut, self.widOut] #DC type
+            outPort = [self.pos+self.ori*adaptDist, self.ori, self.cutOut, self.rel_posOut, self.widOut, self.multOut] #DC type
             self.ports_dc[self.iIn+'_bis'] = outPort
             self.__init__(self.name, self.iIn, self.iIn+'_bis', layer=self.layer)
         else:
             adaptDist = (self.pos-self.posOut).norm()
         
         tracks = []
+        gaps = []
         for ii in range(len(self.rel_posOut)):
             points = self.append_absolute_points([(0, self.rel_posIn[ii]-self.widIn[ii]/2),
                                                   (0, self.rel_posIn[ii]+self.widIn[ii]/2),
                                                   (adaptDist, self.rel_posOut[ii]+self.widOut[ii]/2),
                                                   (adaptDist, self.rel_posOut[ii]-self.widOut[ii]/2)])
             tracks.append(self.draw(self.layer+'_'+self.name+"_track_"+str(ii), points))
+            
+            points = self.append_absolute_points([(0, self.rel_posIn[ii]-self.cutIn[ii]/2),
+                                              (0, self.rel_posIn[ii]+self.cutIn[ii]/2),
+                                              (adaptDist, self.rel_posOut[ii]+self.cutOut[ii]/2), 
+                                              (adaptDist, self.rel_posOut[ii]-self.cutOut[ii]/2)])
+            gaps.append(self.draw(self.layer+'_'+self.name+"_gap_"+str(ii), points))
+            
         track = self.unite(tracks, name=self.layer+'_'+self.name+'_track')
         self.layers[self.layer]['trackObjects'].append(track)
-
-        points = self.append_absolute_points([(0, -self.cutIn/2),
-                                              (0, self.cutIn/2),
-                                              (adaptDist, self.cutOut/2), 
-                                              (adaptDist, -self.cutOut/2)])
-        gap = self.draw(self.layer+'_'+self.name+"_gap", points)
+        gap = self.unite(gaps, name=self.layer+'_'+self.name+'_gap')
         self.layers[self.layer]['gapObjects'].append(gap)
 
         return self.iIn+'_bis', adaptDist, track #, gap
+    
+    
+    def draw_dc_cable(self, layer_name, fillet="0.6mm", constrains=[], ground = False):
+        
+        fillet = parse_entry(fillet)
+        
+        self.to_bond=[]
+        adaptor_length=0
+        track_adaptor = None
+        
+        if not self.multIn == self.multOut:
+            raise ValueError('input and output ports do not have same multiplicity')
+        print(self.widIn)
+        print(self.widOut)
+        if any(x==False for x in [equal_float(self.val(self.widIn[ii]), self.val(self.widOut[ii])) \
+                                  for ii in range(self.multIn)]):
+            adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.cutIn, self.rel_posIn, self.widIn, self.multIn], layer=layer_name) #connect_elt dc type
+            iOut, adaptor_length, track_adaptor = adaptor.draw_dc_adaptor() #, gap_adaptor
+            self.__init__(self.name, self.iIn, iOut)
+  
+        all_constrains = []
+        for constrain in constrains:
+            all_constrains.append([self.ports[constrain][POS], -self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
+            all_constrains.append([self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
+              
+        tracks = []
+        gaps = []
+        port_names = [self.iIn]+all_constrains+[self.iOut]
+
+        for ii in range(len(constrains)+1):
+            if len(constrains)!=0:
+                to_add = '_'+str(ii)
+            else:
+                to_add = ''
+            self.__init__(self.name, *port_names[2*ii:2*ii+2])
+            
+            points = self.find_path(fillet, is_meander=False, to_meander=[], meander_length=0, meander_offset=0)
+            connection = self.draw(self.name+'_track'+to_add, points, closed=False)
+            connection.fillets(fillet-eps)
+            
+            connection_track = [connection.copy(layer_name+'_'+self.name+"_track"+to_add+str(ii)) for ii in range(self.multIn)]
+            track_starter = [self.cable_starter('dc_track', index=ii) for ii in range(self.multIn)]
+            connection_gap = [connection.copy(layer_name+'_'+self.name+"_gap"+to_add+str(ii)) for ii in range(self.multIn)]
+            if not ground:
+                gap_starter = self.cable_starter('dc_cutout')
+            else:
+                gap_starter = [self.cable_starter('dc_gap', index=ii) for ii in range(self.multIn)]
+                
+            for ii in range(len(self.rel_posIn)):
+                tracks.append(connection_track[ii].sweep_along_path(track_starter[ii]))
+                if ground:
+                    gaps.append(connection_gap[ii].sweep_along_path(gap_starter[ii]))
+            if not ground:
+                gaps.append(connection_gap.sweep_along_path(gap_starter))
+            
+            
+        if len(tracks)>1:
+            track = self.unite(tracks, layer_name+'_'+self.name+"_track")
+        else:
+            track = self.rename(tracks[0], layer_name+'_'+self.name+"_track")
+        self.layers[layer_name]['trackObjects'].append(track)
+        
+        if len(gaps)>1:
+            gap = self.unite(gaps, layer_name+'_'+self.name+"_gap")
+        else:
+            gap = self.rename(gaps[0], layer_name+'_'+self.name+"_gap")
+        self.layers[layer_name]['gapObjects'].append(gap)    
+            
+
+
     
     def _connect_JJ(self, iTrackJ, iInduct='1nH', fillet=None):
         '''
@@ -3967,59 +4095,4 @@ class ConnectElt(KeyElt, Circuit):
             x_pos = x_
             pos+spacing_bridge+width_bridge
 
-    def draw_DC_cable(self, layer_name, fillet="0.6mm", constrains=[]):
-        
-        fillet = parse_entry(fillet)
-        
-        self.to_bond=[]
-        adaptor_length=0
-        track_adaptor = None
-        if any(x==False for x in [equal_float(self.val(self.widIn[ii]), self.val(self.widOut[ii])) \
-                                 for ii in range(len(self.widIn))]):
-            adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.cutIn, self.rel_posIn, self.widIn], layer=layer_name) #connect_elt dc type
-            iOut, adaptor_length, track_adaptor = adaptor.draw_dc_adaptor() #, gap_adaptor
-            self.__init__(self.name, self.iIn, iOut)
-  
-        all_constrains = []
-        for constrain in constrains:
-            all_constrains.append([self.ports[constrain][POS], -self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-            all_constrains.append([self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-              
-        tracks = []
-        gaps = []
-        port_names = [self.iIn]+all_constrains+[self.iOut]
-
-        for ii in range(len(constrains)+1):
-            if len(constrains)!=0:
-                to_add = '_'+str(ii)
-            else:
-                to_add = ''
-            self.__init__(self.name, *port_names[2*ii:2*ii+2])
-            
-            points = self.find_path(fillet, is_meander=False, to_meander=[], meander_length=0, meander_offset=0)
-            connection = self.draw(self.name+'_track'+to_add, points, closed=False)
-            connection.fillets(fillet-eps)
-            
-            connection_track = [connection.copy(layer_name+'_'+self.name+"_track"+to_add+str(ii)) for ii in range(len(self.rel_posIn))]
-            track_starter = [self.cable_starter('dc_track', index=ii) for ii in range(len(self.rel_posIn))]
-            connection_gap = connection.copy(layer_name+'_'+self.name+"_gap"+to_add)
-            gap_starter = self.cable_starter('dc_cutout')
-            
-            for ii in range(len(self.rel_posIn)):
-                tracks.append(connection_track[ii].sweep_along_path(track_starter[ii]))
-            gaps.append(connection_gap.sweep_along_path(gap_starter))
-            
-            
-        if len(tracks)>1:
-            track = self.unite(tracks, layer_name+'_'+self.name+"_track")
-        else:
-            track = self.rename(tracks[0], layer_name+'_'+self.name+"_track")
-        self.layers[layer_name]['trackObjects'].append(track)
-        
-        if len(gaps)>1:
-            gap = self.unite(gaps, layer_name+'_'+self.name+"_gap")
-        else:
-            gap = self.rename(gaps[0], layer_name+'_'+self.name+"_gap")
-        self.layers[layer_name]['gapObjects'].append(gap)    
-            
-
+    
