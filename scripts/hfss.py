@@ -1118,6 +1118,12 @@ class HfssModeler(COMWrapper):
                                             self._attributes_array(**kwargs))
 
         return name # TODO create Wirebond class
+    
+    def connect_faces(self, name1, name2):
+        name = self._modeler.Connect(["NAME:Selections",
+                               "Selections:=", ','.join([name1, name2])])
+#        print(name) #None
+        return name
 
     def unite(self, names, name=None, keep_originals=False):
         self._modeler.Unite(
