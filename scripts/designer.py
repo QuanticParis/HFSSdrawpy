@@ -335,7 +335,10 @@ class Circuit(object):
 
         '''
         self.modeler.assign_perfect_E(iObj, name=iSuff)
-
+    
+    def assign_perfect_E_faces(self, iObj):
+        # very peculiar to Si cavity
+        return self.modeler.assign_perfect_E_faces(iObj)
 
     def subtract(self, iObjBlank, iObjTools, keep_originals=False):
         '''
@@ -349,7 +352,18 @@ class Circuit(object):
         '''
         iObjBlank = self.modeler.subtract(iObjBlank, iObjTools, keep_originals=keep_originals)
         return iObjBlank
-
+    
+    def duplicate_along_line(self, iObject, iVector, n=2):
+        '''
+        copies iObjand moves the copy by iVector
+        Inputs:
+        -------
+        iObject (string) : HFSS object name e.g. 'ground_plane'
+        iVector (list) : list of iVector's coordinates
+        '''
+        while len(iVector) < 3:
+            iVector.append(0)
+            self.modeler.duplicate_along_line(iObject, iVector, n=n)
 
     # main function
     def draw(self, iObj, iPoints, closed=True): #assume everything is in the plane z=0
@@ -465,6 +479,10 @@ class Circuit(object):
         self.all_points_val += [[self.val(corner1[0]), self.val(corner1[1])], 
                                 [self.val(corner2[0]), self.val(corner2[1])]]
         return rect
+    
+    def create_object_from_face(self, name):
+        face = self.modeler.create_object_from_face(name)
+        return face
     
     def get_extent(self, margin=0):
         margin = parse_entry(margin)
@@ -2433,6 +2451,7 @@ class KeyElt(Circuit):
  
         
     def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
+        iTrack, iGap = parse_entry((iTrack, iGap))
         if typeEnd=='open' or typeEnd=='Open':
             cutout = self.draw_rect(self.name+'_cutout', self.coor([iGap,-(iTrack+2*iGap)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*iGap-2*self.overdev]))
             if fillet is not None:
@@ -2596,33 +2615,100 @@ class KeyElt(Circuit):
         else:
             jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct)
     
-    def draw_cav_Si(self, size, chip_height, tunnel_length, n=5, margin_litho='10um'):
-        size, chip_height, tunnel_length, margin_litho = parse_entry((size, chip_height, tunnel_length, margin_litho))
-        self.draw_rect(self.name+'_rect', self.coor([-size/2, -size/2]), self.coor_vec([size,size]))
+    def draw_cav_Si(self, size, chip_height, tunnel_length, size_plot=None, height_plot=None, n=8, track='42um', gap='25um', ports_senw = ['500um',0,0,0], margin_litho='10um'):
+        # can only make square cavity
+        # size : intra size of the cavity : 4mm->15GHz
+        # chip_heigth : silicon height
+        # tunnel length : length of the silicon tunnel between 2 via
+        # size_plot : base size of the central plot
+        # height_plot : thickness of the capacitance at the top of the plot
+        # n : nb of vias
+        # track, gap : if we have an access port, track and gap of this port 
+        #   currently all port have same gap and track
+        # ports_senw = list giving the length of the cable coming from each port ; south, east, north, west
+        #   0 means there should be no port
+        # ports will be numeroted from 1 to n in the trigo way
+        # margin_litho : width of the Si3N4 mask between the vias
+        
+        ports_senw_bool = [bool(ii) for ii in ports_senw]
+        size, chip_height, tunnel_length, track, gap, margin_litho, ports_senw = parse_entry((size, chip_height, tunnel_length, track, gap, margin_litho, ports_senw))
+#        self.draw_rect(self.name+'_rect', self.coor([-size/2, -size/2]), self.coor_vec([size,size]))
+        access_width = track+2*gap+2*margin_litho
+        if size_plot is None:
+            size_plot=size/2
+        else:
+            size_plot = parse_entry((size_plot))
+        
+        if height_plot is None:
+            height_plot=chip_height/2
+        else:
+            height_plot = parse_entry((height_plot))
             
         # bottom row
         width_trapeze = (size-(n+1)*margin_litho)/n
-        for ii in range(n):
-            x_pos = -size/2+(ii+1)*margin_litho+(2*ii+1)/2*width_trapeze
-            self.draw_trapeze(self.name+'_'+str(ii), self.coor([x_pos, -size/2-tunnel_length/2]), 0, self.coor_vec([width_trapeze, tunnel_length]), -chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii+n), self.coor([x_pos, size/2+tunnel_length/2]), 0, self.coor_vec([width_trapeze, tunnel_length]), -chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii), self.coor([x_pos, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([width_trapeze, tunnel_length]), chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii+n), self.coor([x_pos, size/2+tunnel_length/2]), -chip_height, self.coor_vec([width_trapeze, tunnel_length]), chip_height/2)
-            y_pos = -size/2+(ii+1)*margin_litho+(2*ii+1)/2*width_trapeze
-            self.draw_trapeze(self.name+'_'+str(ii+2*n), self.coor([-size/2-tunnel_length/2, y_pos]), 0, self.coor_vec([tunnel_length, width_trapeze]), -chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii+3*n), self.coor([size/2+tunnel_length/2, y_pos]), 0, self.coor_vec([tunnel_length, width_trapeze]), -chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii+2*n), self.coor([-size/2-tunnel_length/2, y_pos]), -chip_height, self.coor_vec([tunnel_length, width_trapeze]), chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii+3*n), self.coor([size/2+tunnel_length/2, y_pos]), -chip_height, self.coor_vec([tunnel_length, width_trapeze]), chip_height/2)
-        for jj in range(4):
-            x_sign = (jj//2)*2-1
-            y_sign = (jj%2)*2-1
-            self.draw_trapeze(self.name+'_'+str(ii+1+3*n+jj), self.coor([x_sign*(size/2+tunnel_length/2), y_sign*(size/2+tunnel_length/2)]), 0, self.coor_vec([tunnel_length, tunnel_length]), -chip_height/2)
-            self.draw_trapeze(self.name+'_'+str(ii+1+3*n+jj), self.coor([x_sign*(size/2+tunnel_length/2), y_sign*(size/2+tunnel_length/2)]), -chip_height, self.coor_vec([tunnel_length, tunnel_length]), chip_height/2)
+        track = '42um'
+        gap = '25um'
+        name_s, name_e, name_n, name_w = self.name+'_s', self.name+'_e', self.name+'_n', self.name+'_w'
+        port_nb = 0
+        for ii, name in enumerate([name_s, name_e, name_n, name_w]):
+            if ports_senw_bool[ii]:
+                port_nb += 1 
+                _width_trapeze = width_trapeze-access_width/n
+                x_pos = -size/2+margin_litho+_width_trapeze/2
+                _n = n//2
+                self.draw_trapeze(name, self.coor([x_pos, -size/2-tunnel_length/2]), 0, self.coor_vec([_width_trapeze, tunnel_length]), -chip_height/2)
+                self.draw_trapeze(name+'_'+str('bis'), self.coor([x_pos, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([_width_trapeze, tunnel_length]), chip_height/2)
+                self.unite([name, name+'_'+str('bis')])
+
+                self.duplicate_along_line(name, self.coor_vec([_width_trapeze+margin_litho, 0]), n=_n)
+                unite_list = [name]+[name+'_'+str(ii+1) for ii in range(_n-1)]
+                self.unite(unite_list)
+                
+                self.duplicate_along_line(name, self.coor_vec([_n*(_width_trapeze+margin_litho)+access_width, 0]), n=2)
+                unite_list = [name, name+'_'+str(_n)]
+                self.unite(unite_list)
+                
+                portOut = [self.coor([0, -size/2-tunnel_length]), self.coor_vec([0,-1]), track, gap]
+                self.ports[self.name+'_port_'+str(port_nb)] = portOut
+                
+                end = self.key_elt(self.name+'_end_'+str(ii), self.coor([0, -size/2-tunnel_length+ports_senw[ii]]), self.coor_vec([0,-1]))
+                end.draw_end_cable(track, gap, fillet=gap)
+                cable = self.connect_elt(self.name+'_cable_'+str(ii), self.name+'_end_'+str(ii), self.name+'_port_'+str(port_nb))
+                cable.draw_cable(is_bond=False)
+            else:
+                x_pos = -size/2+margin_litho+width_trapeze/2
         
-        list_unite = [self.name+'_'+str(ii) for ii in range(4*(n+1))]
-        list_unite_1 = [self.name+'_'+str(ii)+'_1' for ii in range(4*(n+1))]
+                self.draw_trapeze(name, self.coor([x_pos, -size/2-tunnel_length/2]), 0, self.coor_vec([width_trapeze, tunnel_length]), -chip_height/2)
+                self.draw_trapeze(name+'_'+str('bis'), self.coor([x_pos, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([width_trapeze, tunnel_length]), chip_height/2)
+                self.unite([name, name+'_'+str('bis')])
+                
+                self.duplicate_along_line(name, self.coor_vec([width_trapeze+margin_litho, 0]), n=n)
+                unite_list = [name]+[name+'_'+str(ii+1) for ii in range(n-1)]
+                self.unite(unite_list)
+                
+            self.ori = self.ori.rot(Vector([0,1]))
+
+        name_c = self.name+'_c'
+        self.draw_trapeze(name_c, self.coor([-size/2-tunnel_length/2, -size/2-tunnel_length/2]), 0, self.coor_vec([tunnel_length, tunnel_length]), -chip_height/2)
+        self.draw_trapeze(name_c+'_bis', self.coor([-size/2-tunnel_length/2, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([tunnel_length, tunnel_length]), chip_height/2)
+        self.unite([name_c, name_c+'_bis'])
         
-        self.unite(list_unite+list_unite_1)
+        self.duplicate_along_line(name_c, self.coor_vec([size+tunnel_length, 0]), n=2)
+        unite_list = [name_c, name_c+'_1']
+        self.unite(unite_list)
+        
+        self.duplicate_along_line(name_c, self.coor_vec([0, size+tunnel_length]), n=2)
+        unite_list = [name_c, name_c+'_2']
+        self.unite(unite_list)
+        
+        name_p = name+'_p'
+        self.draw_trapeze(name_p, self.coor([0, 0]), -chip_height, self.coor_vec([size_plot, size_plot]), chip_height-height_plot)
+
+
+        unite_list = [name_s, name_e, name_n, name_w, name_c, name_p]
+        self.unite(unite_list)
+        self.name = name_s
+        
 class ConnectElt(KeyElt, Circuit):
 
     def __init__(self, name='connect_elt', iIn='iInt', iOut=None):

@@ -1178,6 +1178,31 @@ class HfssModeler(COMWrapper):
         else:
             name = str(obj)+'_'+name
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [obj], "InfGroundPlane:=", False])
+            
+    def assign_perfect_E_faces(self, name):
+        # this is very peculiar to cavity Si chips
+        faces = list(self._modeler.GetFaceIDs(name))
+        faces = [int(ii) for ii in faces]
+        faces.sort()
+        faces_perfE = [faces[1]]+faces[6:]
+        faces_loss = faces[2:6]
+
+        self._boundaries.AssignPerfectE(
+        	[
+        		"NAME:"+str(name)+'_PerfE',
+        		"Faces:="		, faces_perfE,
+        		"InfGroundPlane:="	, False
+        	])
+            
+        self._boundaries.AssignFiniteCond([ "NAME:FiniteCond3",
+                                        		"Faces:="		, faces_loss,
+                                        		"UseMaterial:="		, True,
+                                        		"Material:="		, "lossy conductor",
+                                        		"UseThickness:="	, False,
+                                        		"Roughness:="		, "0um",
+                                        		"InfGroundPlane:="	, False,
+                                        		"IsTwoSided:="		, False,
+                                        		"IsInternal:="		, True ])
 
     def assign_mesh_length(self, obj, length):#, suff = '_mesh'):
         name = str(obj)
@@ -1190,6 +1215,17 @@ class HfssModeler(COMWrapper):
 			         "RestrictLength:=",  True,
 			         "MaxLength:=", length]
         self._mesh.AssignLengthOp(params)
+        
+    def create_object_from_face(self, name):
+        faces = list(self._modeler.GetFaceIDs(name))
+        faces.sort()
+        face = faces[0]
+        self._modeler.CreateObjectFromFaces(["NAME:Selections",
+                                            "Selections:="		, name,
+                                            "NewPartsModelFlag:="	, "Model"],
+            ["NAME:Parameters",["NAME:BodyFromFaceToParameters","FacesToDetach:="	, [int(face)]]], 
+            ["CreateGroupsForNewObjects:=", False])
+        return name+'_ObjectFromFace1'
 
     def _fillet(self, radius, vertex_index, obj):
         vertices = self._modeler.GetVertexIDsFromObject(obj)
@@ -1259,6 +1295,18 @@ class HfssModeler(COMWrapper):
         new_obj = self._modeler.Paste()
         return new_obj[0]
 
+    def duplicate_along_line(self, obj, vec, n=2):
+        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
+                                          "NewPartsModelFlag:="	, "Model"], 
+                                        	["NAME:DuplicateToAlongLineParameters",
+                                    		"CreateNewObjects:="	, True,
+                                    		"XComponent:="		, vec[0],
+                                    		"YComponent:="		, vec[1],
+                                    		"ZComponent:="		, vec[2],
+                                    		"NumClones:="		, str(n)], 
+                                        	["NAME:Options",
+                                        	"DuplicateAssignments:=", False], 
+                                        	["CreateGroupsForNewObjects:=", False	])    
 
     def _make_lumped_rlc(self, r, l, c, start, end, obj_arr, name="LumpLRC"):
         name = increment_name(name, self._boundaries.GetBoundaries())
