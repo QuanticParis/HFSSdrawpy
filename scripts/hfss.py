@@ -1087,6 +1087,9 @@ class HfssModeler(COMWrapper):
 
         return name # TODO create Wirebond class
 
+    def delete(self, name):
+        self._modeler.Delete(["NAME:Selections", "Selections:=", name])
+        
     def unite(self, names, name=None, keep_originals=False):
         self._modeler.Unite(
             self._selections_array(*names),
@@ -1118,9 +1121,9 @@ class HfssModeler(COMWrapper):
         self._modeler.Move(
             self._selections_array(name),
             ["NAME:TranslateParameters",
-             "TranslateVectorX:=", vector[0],
-             "TranslateVectorY:=", vector[1],
-             "TranslateVectorZ:=", vector[2]]
+        		"TranslateVectorX:="	, vector[0],
+        		"TranslateVectorY:="	, vector[1],
+        		"TranslateVectorZ:="	, vector[2]]
         )
 
 
