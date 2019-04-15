@@ -2665,7 +2665,10 @@ class KeyElt(Circuit):
         
     def draw_dc_test_Nrect(self, layer_name, N, length, rel_pos, widths, border='10um'):
         '''
+<<<<<<< HEAD
         Poorly coded: rel_pos is the center of one edge but we use draw_rect instead of draw_rect_center
+=======
+>>>>>>> simplified routines draw rect
         REL_POS HAS TO BE A LIST
         '''
 
