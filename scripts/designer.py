@@ -2659,9 +2659,48 @@ class KeyElt(Circuit):
         self.layers[layer_name]['gapObjects'].append(cutout)
         
         portOut1 = [self.coor([length/2, 0]), self.ori, rel_pos, widths, width_cutout, mult] #portOut 
-        portOut2 = [self.coor([-length/2, 0]), -self.ori, list(-np.array(rel_pos)), widths, width_cutout, mult] #portIn
+        portOut2 = [self.coor([-length/2, 0]), -self.ori, rel_pos[::-1], widths, width_cutout, mult] #portIn
         self.ports_dc[self.name+'_1'] = portOut1
         self.ports_dc[self.name+'_2'] = portOut2
+        
+    def draw_dc_test_Nrect(self, layer_name, N, length, rel_pos, widths, border='10um'):
+        '''
+        Poorly coded: rel_pos is the center of one edge but we use draw_rect instead of draw_rect_center
+        REL_POS HAS TO BE A LIST
+        '''
+
+        if isinstance(widths, list):
+            if len(widths) is not len(rel_pos):
+                raise ValueError('widths and rel_pos do not have same length')
+        elif isinstance(widths, str):
+            widths = [widths for ii in range(len(rel_pos))]
+        else:
+            raise ValueError('widths should be a string or a list of strings')
+        mult = len(rel_pos)
+        
+        rel_pos, length, widths, border = parse_entry((rel_pos, length, widths, border))
+        
+        rect = []
+        for kk in range(N):
+            y0 = parse_entry((str(kk*100)+'um'))
+            for ii in range(mult):
+                rect.append(self.draw_rect(layer_name+'_'+self.name+'_track_'+str(ii), \
+                                            self.coor([-length/2, y0+rel_pos[ii]-widths[ii]/2]), \
+                                            self.coor_vec([length, widths[ii]])))
+        if len(rect) > 1:
+            rect = self.unite(rect, name=layer_name+'_'+self.name+'_track')
+        else:
+            rect = self.rename(layer_name+'_'+self.name+'_track', rect[0])
+        self.layers[layer_name]['trackObjects'].append(rect)
+        
+#        pos_cutout, width_cutout, vec_cutout = self.size_dc_gap(length, rel_pos, widths, border)
+#        cutout = self.draw_rect(layer_name+'_'+self.name+'_cutout', pos_cutout, vec_cutout)
+#        self.layers[layer_name]['gapObjects'].append(cutout)
+        
+#        portOut1 = [self.coor([length/2, 0]), self.ori, rel_pos, widths, width_cutout, mult] #portOut 
+#        portOut2 = [self.coor([-length/2, 0]), -self.ori, list(-np.array(rel_pos)), widths, width_cutout, mult] #portIn
+#        self.ports_dc[self.name+'_1'] = portOut1
+#        self.ports_dc[self.name+'_2'] = portOut2
         
         
     def draw_dc_pad(self, layer_name, iTrack, iGap, xlength='250um', ylength='250um'):
@@ -2739,6 +2778,68 @@ class KeyElt(Circuit):
 
         portOut = [self.coor([xlength/2+4*gaps[ii], 0]), self.ori, cutout_list, rel_pos, track_list, mult]
         self.ports_dc[self.name] = portOut
+      
+    def draw_alignment_marks(self, layer_name, isLayer63=True):
+        
+        w_thin, l_thin, w_large, l_large, square = '0.1um', '4um', '1um', '3um', '12um'
+        w_thin, l_thin, w_large, l_large, square = parse_entry((w_thin, l_thin, w_large, l_large, square))
+        marks = []
+        if isLayer63 is True:
+            self.new_layer('layer63')
+            squares = []
+        count = -1
+        for x0 in ['-42um', '42um']:
+            count += 1
+            for y0 in ['-42um', '42um']:
+                count += 1
+                mark = []
+                x0, y0 = parse_entry((x0, y0))
+                mark.append(self.draw_rect('thin_x', self.coor([x0-l_thin/2, y0-w_thin/2]), self.coor_vec([l_thin, w_thin])))
+                mark.append(self.draw_rect('thin_y', self.coor([x0-w_thin/2, y0-l_thin/2]), self.coor_vec([w_thin, l_thin])))
+                mark.append(self.draw_rect('large_right', self.coor([x0+l_thin/2, y0-w_large/2]), self.coor_vec([l_large, w_large])))
+                mark.append(self.draw_rect('large_left', self.coor([x0-l_thin/2, y0-w_large/2]), self.coor_vec([-l_large, w_large])))
+                mark.append(self.draw_rect('large_top', self.coor([x0-w_large/2, y0+l_thin/2]), self.coor_vec([w_large, l_large])))
+                mark.append(self.draw_rect('large_bot', self.coor([x0-w_large/2, y0-l_thin/2]), self.coor_vec([w_large, -l_large])))
+                mark = self.unite(mark, name=layer_name+'_'+self.name+'_alignement_mark_'+str(count))
+                marks.append(mark)
+                if isLayer63 is True:
+                    squares.append(self.draw_rect_center('layer63', self.coor([x0, y0]), self.coor_vec([square, square])))
+                    
+        marks = self.unite(marks, name=layer_name+'_'+self.name+'_alignement_mark')
+        self.layers[layer_name]['trackObjects'].append(marks)
+        if isLayer63 is True:
+            squares = self.unite(squares, name='layer63_'+self.name)
+            
+        
+    def draw_pits(self, rel_pos, length, width):
+        '''
+        rel_pos gives the position of the fine structure
+        length is the length along the CNT region
+        width is in the transverse direction, spans the whole comb
+        '''
+        self.new_layer('pits')
+        rel_pos, length, width = parse_entry((rel_pos, length, width))
+        
+        print(rel_pos)
+        dist2CNT = max([abs(pos) for pos in rel_pos])
+        dist2CNT += parse_entry('10um')
+        space = parse_entry('40um')
+        close_pit_left = self.draw_rect('close_pit_left', \
+                                        self.coor([-length/2, dist2CNT]), \
+                                        self.coor_vec([length, space]))
+        close_pit_right = self.draw_rect('close_pit_right', \
+                                         self.coor([-length/2, -dist2CNT]), \
+                                         self.coor_vec([length, -space]))
+        pit_left = self.draw_rect('pit_left', \
+                                  self.coor([-length, dist2CNT+space]), \
+                                  self.coor_vec([2*length, width]))
+        pit_right = self.draw_rect('pit_right', \
+                                    self.coor([-length, -dist2CNT-space]), \
+                                    self.coor_vec([2*length, -width]))
+        pit_left = self.unite([pit_left, close_pit_left], name='pits_'+self.name+'_left')
+        pit_right = self.unite([pit_right, close_pit_right], name='pits_'+self.name+'_right')
+        self.layers['pits']['trackObjects'].append(pit_left)
+        self.layers['pits']['trackObjects'].append(pit_right)
         
         
 class ConnectElt(KeyElt, Circuit):
@@ -3479,7 +3580,7 @@ class ConnectElt(KeyElt, Circuit):
         return self.draw(self.name+'_width_'+width+'_'+str(index), points, closed=False) #used to be +'_width'
         
 
-    def draw_cable(self, fillet="0.3mm", is_bond=True, is_meander=False, to_meanders = [1,0,1,0,1,0,1,0,1,0], meander_length=0, meander_offset=0, is_mesh=False, constrains=[], reverse_adaptor=False):
+    def draw_cable(self, fillet="0.3mm", is_bond=False, is_meander=False, to_meanders = [1,0,1,0,1,0,1,0,1,0], meander_length=0, meander_offset=0, is_mesh=False, constrains=[], reverse_adaptor=False, layer=None):
         '''
         Draws a CPW transmission line between iIn and iOut
 
@@ -3533,8 +3634,9 @@ class ConnectElt(KeyElt, Circuit):
         all_constrains = []
         for constrain in constrains:
             all_constrains.append([self.ports[constrain][POS], -self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-            all_constrains.append([self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-        
+            all_constrains.append(constrain)#[self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
+            # preivous modification to tackle the case where a cable is drawn between two ports defined on the fly
+            
         if not isinstance(to_meanders[0], list):
             to_meanders = [to_meanders for ii in range(len(constrains)+1)]
 #        print(to_meanders)
@@ -3545,12 +3647,14 @@ class ConnectElt(KeyElt, Circuit):
         gaps = []
         masks = []
         port_names = [self.iIn]+all_constrains+[self.iOut]
+        print(port_names)
         for ii in range(len(constrains)+1):
             to_meander = to_meanders[ii]
             if len(constrains)!=0:
                 to_add = '_'+str(ii)
             else:
                 to_add = ''
+            print(port_names[2*ii:2*ii+2])
             self.__init__(self.name, *port_names[2*ii:2*ii+2])
             
             points = self.find_path(fillet, is_meander, to_meander, meander_length, meander_offset)
@@ -3590,17 +3694,25 @@ class ConnectElt(KeyElt, Circuit):
             if track_adaptor is not None:
                 names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
             track = self.unite(tracks, names[0])
-            self.trackObjects.append(track)
             gap = self.unite(gaps, names[1])
-            self.gapObjects.append(gap)
+            if layer is None:
+                self.trackObjects.append(track)
+                self.gapObjects.append(gap)
+            else:
+                self.layers[layer]['trackObjects'].append(track)
+                self.layers[layer]['gapObjects'].append(gap)
             if self.is_mask:
                 mask = self.unite(masks, names[2])
                 self.maskObjects.append(mask)
         else:
             track = tracks[0]
             gap = gaps[0]
-            self.trackObjects.append(track)
-            self.gapObjects.append(gap)
+            if layer is None:
+                self.trackObjects.append(track)
+                self.gapObjects.append(gap)
+            else:
+                self.layers[layer]['trackObjects'].append(track)
+                self.layers[layer]['gapObjects'].append(gap)
             if self.is_mask:
                 self.maskObjects.append(*masks)
         
