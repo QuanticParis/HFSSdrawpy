@@ -380,7 +380,7 @@ class Circuit(object):
         return iObjBlank
 
 
-    def rename(self, name, iObj):
+    def rename(self, iObj, name):
         '''
         rename iObj by "name"
 
@@ -390,7 +390,7 @@ class Circuit(object):
         iObj (string) : HFSS object name e.g. ['readout_box', 'res_gap']
 
         '''
-        name = self.modeler.rename_obj(name, iObj)
+        name = self.modeler.rename_obj(iObj, name)
         return name
     
     
@@ -407,7 +407,7 @@ class Circuit(object):
         if not bruteforce:
             new_Obj = self.modeler.copy(iObject)
             if name is not None:
-                name = self.rename(name, new_Obj)
+                name = self.rename(new_Obj, name)
     #            self.__dict__[name] = name
         else:
             vertices = self.get_vertex_ids(iObject)
@@ -679,37 +679,50 @@ class Circuit(object):
     
     def create_dc_layout(self, chip_width, chip_length, pos_neg, homothetic=None):
         
-        z_shift = [str(0.5+ii)+'mm' for ii in range(len(self.layers.keys()))]
+        z_shift = [str(0.5*ii)+'mm' for ii in range(len(self.layers.keys()))]
         for ii, layer in enumerate(self.layers.keys()):
             if len(self.layers[layer]['gapObjects']) > 1:
                 gapObject = self.unite(self.layers[layer]['gapObjects'])#, name=layer+'_gapObject')
             else:
-                gapObject = self.rename(layer+'_gapObject', self.layers[layer]['gapObjects'][0])
+                if len(self.layers[layer]['gapObjects']) is not 0:
+                    gapObject = self.rename(self.layers[layer]['gapObjects'][0], layer+'_gapObject')
+                else:
+                    print('no gapObjects defined for the layer '+layer)
+                    gapObject = None
             if len(self.layers[layer]['trackObjects']) > 1:
                 trackObject = self.unite(self.layers[layer]['trackObjects'])#, name=layer+'_trackObject')
             else:
-                trackObject = self.rename(layer+'_trackObject', self.layers[layer]['trackObjects'][0])
-            
+                if len(self.layers[layer]['trackObjects']) is not 0:
+                    trackObject = self.rename(self.layers[layer]['trackObjects'][0], layer+'_trackObject')
+                else:
+                    print('no trackObjects defined for the layer '+layer)
+                    trackObject = None
+                    
             if pos_neg is 'neg':
                 ground_plane = self.draw_rect(layer+'_groud_plane', [0,0], [chip_width, chip_length])
                 negatif = self.draw_rect(layer+'_negatif', [0, 0], [chip_width, chip_length])
-                self.subtract(ground_plane, [gapObject])
-                self.subtract(negatif, [ground_plane]+[trackObject])
+                if gapObject and trackObject is not None:
+                    self.subtract(ground_plane, [gapObject])
+                    self.subtract(negatif, [ground_plane]+[trackObject])
+                elif gapObject is None: #should do the trick for the pits defined as trackO when creating etch drawing
+                    self.subtract(negatif, [trackObject])
                 if homothetic is 'increase':
                     layout = self.homothetic([negatif], 'decrease', self.overetch, N=6)
                 if homothetic is 'decrease':
                     layout = self.homothetic([negatif], 'increase', self.overetch, N=6)
             if pos_neg is 'pos':
-                self.delete(gapObject)
+                if gapObject is not None:
+                    self.delete(gapObject)
 #                HOMOTHETIC HAS NO OUTPUT
-                if homothetic is 'increase':
-                    layout = self.homothetic(trackObject, 'increase', self.overetch, N=6)
-                if homothetic is 'decrease':
-                    layout = self.homothetic(trackObject, 'decrease', self.overetch, N=6)
-                else:
-                    layout = trackObject
-            
-            self.translate(layout, ['0mm', '0mm', z_shift[ii]])
+                if trackObject is not None:
+                    if homothetic is 'increase':
+                        layout = self.homothetic(trackObject, 'increase', self.overetch, N=6)
+                    if homothetic is 'decrease':
+                        layout = self.homothetic(trackObject, 'decrease', self.overetch, N=6)
+                    else:
+                        layout = trackObject
+            if layout:
+                self.translate(layout, ['0mm', '0mm', z_shift[ii]])
 
 class KeyElt(Circuit):
 
@@ -2651,7 +2664,7 @@ class KeyElt(Circuit):
         if len(rect) > 1:
             rect = self.unite(rect, name=layer_name+'_'+self.name+'_track')
         else:
-            rect = self.rename(layer_name+'_'+self.name+'_track', rect[0])
+            rect = self.rename(rect[0], layer_name+'_'+self.name+'_track')
         self.layers[layer_name]['trackObjects'].append(rect)
         
         pos_cutout, width_cutout, vec_cutout = self.size_dc_gap(length, rel_pos, widths, border)
@@ -2693,7 +2706,7 @@ class KeyElt(Circuit):
         if len(rect) > 1:
             rect = self.unite(rect, name=layer_name+'_'+self.name+'_track')
         else:
-            rect = self.rename(layer_name+'_'+self.name+'_track', rect[0])
+            rect = self.rename(rect[0], layer_name+'_'+self.name+'_track')
         self.layers[layer_name]['trackObjects'].append(rect)
         
 #        pos_cutout, width_cutout, vec_cutout = self.size_dc_gap(length, rel_pos, widths, border)
@@ -2771,8 +2784,8 @@ class KeyElt(Circuit):
             self.unite(pads, name=layer_name+'_'+self.name+'_track')
             self.unite(pad_gaps, name=layer_name+'_'+self.name+'_gap')
         else:
-            self.rename(layer_name+'_'+self.name+'_track', pads[0])
-            self.rename(layer_name+'_'+self.name+'_gap', pad_gaps[0])
+            self.rename(pads[0], layer_name+'_'+self.name+'_track')
+            self.rename(pad_gaps[0], layer_name+'_'+self.name+'_gap')
         self.layers[layer_name]['trackObjects'].append(pads[0])
         self.layers[layer_name]['gapObjects'].append(pad_gaps[0])
         
@@ -3996,7 +4009,7 @@ class ConnectElt(KeyElt, Circuit):
         if len(tracks)>1:
             tracks = self.unite(tracks, name=self.layer+'_'+self.name+'_track')
         else:
-            tracks = self.rename(self.layer+'_'+self.name+'_track', tracks[0])
+            tracks = self.rename(tracks[0], self.layer+'_'+self.name+'_track')
         self.layers[self.layer]['trackObjects'].append(tracks)
         self.layers[self.layer]['gapObjects'].append(cutout)
 
@@ -4071,7 +4084,7 @@ class ConnectElt(KeyElt, Circuit):
         if len(cables)>1:
             cable = self.unite(cables, layer_name+'_'+self.name+"_track")
         else:
-            cable = self.rename(layer_name+'_'+self.name+"_track", cables[0])
+            cable = self.rename(cables[0], layer_name+'_'+self.name+"_track")
         self.layers[layer_name]['trackObjects'].append(cable)
         self.layers[layer_name]['gapObjects'].append(cutout)    
             

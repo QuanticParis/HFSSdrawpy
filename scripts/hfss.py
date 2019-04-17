@@ -1098,7 +1098,8 @@ class HfssModeler(COMWrapper):
         if name is None:
             return names[0]
         else:
-            return names[0].rename(name)
+#            return names[0].rename(name)
+            return self.rename_obj(names[0], name)
 
     def intersect(self, names, keep_originals=False):
         self._modeler.Intersect(
@@ -1241,7 +1242,7 @@ class HfssModeler(COMWrapper):
         return obj
     
     
-    def rename_obj(self, name, obj):
+    def rename_obj(self, obj, name):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
                                     			["NAME:PropServers", str(obj)],
@@ -1462,7 +1463,7 @@ class Polyline(ModelEntity): # Assume closed polyline
         return self.modeler.get_vertex_ids(self)
 
     def rename(self, new_name):
-        return Polyline(self.modeler.rename_obj(new_name, self), self.modeler)
+        return Polyline(self.modeler.rename_obj(self, new_name), self.modeler)
 
 class OpenPolyline(ModelEntity): # Assume closed polyline
     model_command = "CreatePolyline"
