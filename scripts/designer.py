@@ -754,7 +754,7 @@ class KeyElt(Circuit):
         
         if not self.is_litho:
             mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
-            self.modeler.assign_mesh_length(mesh, 2*track, suff='')
+            self.modeler.assign_mesh_length(mesh, 2*track)
 
         track_J=Jwidth*4.
         in_junction = [self.coor([-pad_spacing/2+self.overdev, 0]), self.coor_vec([1,0]), track_J+2*self.overdev, 0]
