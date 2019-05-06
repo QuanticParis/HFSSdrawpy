@@ -979,6 +979,26 @@ class HfssModeler(COMWrapper):
                    'new box named \'%s\'' % (kwargs['name'], name))
             print(msg)
         return Box(name, self, pos, size)
+    
+    
+#    def draw_cylinder(self, pos, size, **kwargs):
+#        pos = parse_entry(pos)
+#        size = parse_entry(size)
+#        name = self._modeler.CreateCylinder(
+#            ["NAME:CylinderParameters",
+#             "XCenter:=", pos[0], # '('+str(pos[0])+')'+self.unit,
+#             "YCenter:=", pos[1], # '('+str(pos[1])+')'+self.unit,
+#             "ZCenter:=", pos[2], # '('+str(pos[2])+')'+self.unit,
+#             "Radius:=", size[0], # '('+str(size[0])+')'+self.unit,
+#             "Height:=", size[1],
+#             "WhichAxis:=", "Z"], # '('+str(size[1])+')'+self.unit,
+#            self._attributes_array(**kwargs)
+#        )
+#        if name != kwargs['name']:
+#            msg = ('Warning: \'%s\' already exists, '
+#                   'new box named \'%s\'' % (kwargs['name'], name))
+#            print(msg)
+#        return Box(name, self, pos, size)
 
     def draw_box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
@@ -1054,6 +1074,18 @@ class HfssModeler(COMWrapper):
              "NumSides:=", 0],
             self._attributes_array(**kwargs))
 
+    def draw_disk(self, pos, radius, axis, **kwargs):
+            assert axis in "XYZ"
+            return self._modeler.CreateEllipse(
+                ["NAME:EllipsdeParameters",
+                 "XCenter:=", pos[0],
+                 "YCenter:=", pos[1],
+                 "ZCenter:=", pos[2],
+                 "MajRadius:=", radius,
+                 "Ratio:=", 1,
+                 "WhichAxis:=", axis],
+                self._attributes_array(**kwargs))
+
     def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
@@ -1086,6 +1118,12 @@ class HfssModeler(COMWrapper):
                                             self._attributes_array(**kwargs))
 
         return name # TODO create Wirebond class
+    
+    def connect_faces(self, name1, name2):
+        name = self._modeler.Connect(["NAME:Selections",
+                               "Selections:=", ','.join([name1, name2])])
+#        print(name) #None
+        return name
 
     def delete(self, name):
         self._modeler.Delete(["NAME:Selections", "Selections:=", name])
@@ -1151,6 +1189,31 @@ class HfssModeler(COMWrapper):
         else:
             name = str(obj)+'_'+name
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [obj], "InfGroundPlane:=", False])
+            
+    def assign_perfect_E_faces(self, name):
+        # this is very peculiar to cavity Si chips
+        faces = list(self._modeler.GetFaceIDs(name))
+        faces = [int(ii) for ii in faces]
+        faces.sort()
+        faces_perfE = [faces[1]]+faces[6:]
+        faces_loss = faces[2:6]
+
+        self._boundaries.AssignPerfectE(
+        	[
+        		"NAME:"+str(name)+'_PerfE',
+        		"Faces:="		, faces_perfE,
+        		"InfGroundPlane:="	, False
+        	])
+            
+        self._boundaries.AssignFiniteCond([ "NAME:FiniteCond3",
+                                        		"Faces:="		, faces_loss,
+                                        		"UseMaterial:="		, True,
+                                        		"Material:="		, "lossy conductor",
+                                        		"UseThickness:="	, False,
+                                        		"Roughness:="		, "0um",
+                                        		"InfGroundPlane:="	, False,
+                                        		"IsTwoSided:="		, False,
+                                        		"IsInternal:="		, True ])
 
     def assign_mesh_length(self, obj, length):#, suff = '_mesh'):
         name = str(obj)
@@ -1163,6 +1226,17 @@ class HfssModeler(COMWrapper):
 			         "RestrictLength:=",  True,
 			         "MaxLength:=", length]
         self._mesh.AssignLengthOp(params)
+        
+    def create_object_from_face(self, name):
+        faces = list(self._modeler.GetFaceIDs(name))
+        faces.sort()
+        face = faces[0]
+        self._modeler.CreateObjectFromFaces(["NAME:Selections",
+                                            "Selections:="		, name,
+                                            "NewPartsModelFlag:="	, "Model"],
+            ["NAME:Parameters",["NAME:BodyFromFaceToParameters","FacesToDetach:="	, [int(face)]]], 
+            ["CreateGroupsForNewObjects:=", False])
+        return name+'_ObjectFromFace1'
 
     def _fillet(self, radius, vertex_index, obj):
         vertices = self._modeler.GetVertexIDsFromObject(obj)
@@ -1179,6 +1253,25 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
+            
+     
+    def _fillet_edges(self, radius, edge_index, obj):
+        edges = self._modeler.GetEdgeIDsFromObject(obj)
+        print(edges)
+        if isinstance(edge_index, list):
+            to_fillet = [int(edges[e]) for e in edge_index]
+        else:
+            to_fillet = [int(edges[edge_index])]
+#        print(vertices)
+#        print(radius)
+        self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
+                              ["NAME:Parameters",
+                               ["NAME:FilletParameters",
+                                "Edges:=", to_fillet,
+                                "Vertices:=", [],
+                                "Radius:=", radius,
+                                "Setback:=", "0mm"]])   
+            
 
     def _fillets(self, radius, vertices, obj):
         self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
@@ -1269,6 +1362,18 @@ class HfssModeler(COMWrapper):
                                         	"DuplicateAssignments:=", False], 
                                         	["CreateGroupsForNewObjects:=", False	])
 
+    def duplicate_along_line(self, obj, vec, n=2):
+        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
+                                          "NewPartsModelFlag:="	, "Model"], 
+                                        	["NAME:DuplicateToAlongLineParameters",
+                                    		"CreateNewObjects:="	, True,
+                                    		"XComponent:="		, vec[0],
+                                    		"YComponent:="		, vec[1],
+                                    		"ZComponent:="		, vec[2],
+                                    		"NumClones:="		, str(n)], 
+                                        	["NAME:Options",
+                                        	"DuplicateAssignments:=", False], 
+                                        	["CreateGroupsForNewObjects:=", False	])    
 
     def _make_lumped_rlc(self, r, l, c, start, end, obj_arr, name="LumpLRC"):
         name = increment_name(name, self._boundaries.GetBoundaries())

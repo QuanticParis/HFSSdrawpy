@@ -213,13 +213,12 @@ class Circuit(object):
     all_points = []
     all_points_val = []
 
-    def __init__(self, design, modeler):
+    def __init__(self, design=None, modeler=None):
+        if design is not None and modeler is not None:
+            Circuit.modeler = modeler
+            Circuit.design = design
 
-        Circuit.modeler = modeler
-        Circuit.design = design
-
-        self.modeler.set_units('mm')
-
+            self.modeler.set_units('mm')
         '''
         trackObjects (list of strings) e.g. ['readout_track', 'transmon_pad']
         gapObjects (list of strings) e.g. ['readout_box', 'transmon_box']
@@ -301,6 +300,30 @@ class Circuit(object):
         iObj.make_rlc_boundary(axis, r=r, l=l, c=c, name=iSuff)
 
 
+    def assign_lumped_RLC_ArbitratryLine(self, iObj, iVal, start, end, iSuff="LumpRLC"):
+        """
+        Inputs:
+        -------
+        iObj (Rect): name of the object e.g. 'transmon_junction'
+        iVal (str or VarStr,)*3: resistance, inductance and capacitance value
+                                        e.g. (R1, Lj, '50fF')
+        start (str or VarStr,)*3: 3D coordinate of the start of the current line
+        end (str or VarStr,)*3: 3D coordinate of the end of the current line
+        iSuff (str): suffix to add to iObj name
+        Returns:
+        --------
+        takes existing name object and assigns boundary condition lumped RLC, L=iVal nH, R=0, C=0, along current_line
+        """
+        r, l, c = iVal
+        
+        start = [self.modeler.eval_var_str(s, unit="meter") for s in start]
+        end = [self.modeler.eval_var_str(s, unit="meter") for s in end]
+        
+        name = str(iObj)+'_'+iSuff
+        
+        self.modeler._make_lumped_rlc(r, l, c, start, end, ["Objects:=", [iObj]], name=name)
+
+
     def assign_perfE(self, iObj, iSuff='PerfE'):
         '''
         Assigns boundary condition PerfE of name name to object iObject
@@ -312,6 +335,10 @@ class Circuit(object):
 
         '''
         self.modeler.assign_perfect_E(iObj, name=iSuff)
+
+    def assign_perfect_E_faces(self, iObj):
+        # very peculiar to Si cavity
+        return self.modeler.assign_perfect_E_faces(iObj)
         
         
     def make_material(self, iObj, material='vacuum'):
@@ -333,6 +360,8 @@ class Circuit(object):
        
     def delete(self, iObj):
         self.modeler.delete(iObj)
+
+
 
     def unite(self, iObjs, name=None):
         '''
@@ -376,9 +405,20 @@ class Circuit(object):
         iObjectTools (list) : HFSS object name e.g. ['readout_box', 'res_gap']
 
         '''
-        iObjBlank = self.modeler.subtract(iObjBlank, iObjTools, keep_originals)
+        iObjBlank = self.modeler.subtract(iObjBlank, iObjTools, keep_originals=keep_originals)
         return iObjBlank
-
+    
+    def duplicate_along_line(self, iObject, iVector, n=2):
+        '''
+        copies iObjand moves the copy by iVector
+        Inputs:
+        -------
+        iObject (string) : HFSS object name e.g. 'ground_plane'
+        iVector (list) : list of iVector's coordinates
+        '''
+        while len(iVector) < 3:
+            iVector.append(0)
+            self.modeler.duplicate_along_line(iObject, iVector, n=n)
 
     def rename(self, iObj, name):
         '''
@@ -582,8 +622,35 @@ class Circuit(object):
         self.__dict__[box] = box
         return box
 
-    def draw_rect_center(self, name, pos, iSize):
-        pos = [pos[0], pos[1], 0]
+    def draw_cylinder(self, name, pos, iSize, axis, iMaterial='vaccum'):
+        box = self.modeler.draw_cylinder(pos, iSize[0], iSize[1], axis, material=iMaterial, name=name)
+        self.__dict__[box] = box
+        return box
+    
+    def draw_trapeze(self, name, pos, z, size, height, angle=54.74*np.pi/180):
+        # pos, is central vector position
+        # z is position of basis
+        # size is the diagonal vector of the basis
+        #   assume size is positive
+        # height is the height of the pyramid, can be positive or negative
+        pos, z, size, height = parse_entry((pos, z, size, height))
+        pos = Vector(pos)
+        size = Vector(size)
+        rect_base = self.draw_rect_center(name, pos, size, z=z)
+        size_top = size - Vector([height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[0])), 
+                                  height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[1]))])
+        rect_top = self.draw_rect_center('rect2', pos, size_top, z=z+height)
+        
+        pyramid = self.modeler.connect_faces(rect_base, rect_top)
+        return pyramid
+    
+    def draw_disk(self, name, pos, iSize, axis):
+        disk = self.modeler.draw_disk(pos, iSize, axis, name=name)
+        self.__dict__[disk] = disk
+        return disk
+
+    def draw_rect_center(self, name, pos, iSize, z=0):
+        pos = [pos[0], pos[1], z]
         size = [iSize[0], iSize[1], 0]
         rect = self.modeler.draw_rect_center(pos, size, name=name)
         self.__dict__[rect] = rect
@@ -595,8 +662,8 @@ class Circuit(object):
                                 [self.val(corner2[0]), self.val(corner2[1])]]
         return rect
 
-    def draw_rect(self, name, pos, iSize):
-        pos = [pos[0], pos[1], 0]
+    def draw_rect(self, name, pos, iSize, z=0):
+        pos = [pos[0], pos[1], z]
         size = [iSize[0], iSize[1], 0]
         rect = self.modeler.draw_rect_corner(pos, size, name=name)
         self.__dict__[rect] = rect
@@ -607,6 +674,10 @@ class Circuit(object):
         self.all_points_val += [[self.val(corner1[0]), self.val(corner1[1])], 
                                 [self.val(corner2[0]), self.val(corner2[1])]]
         return rect
+    
+    def create_object_from_face(self, name):
+        face = self.modeler.create_object_from_face(name)
+        return face
     
     def get_extent(self, margin=0):
         margin = parse_entry(margin)
@@ -724,6 +795,7 @@ class Circuit(object):
             if layout:
                 self.translate(layout, ['0mm', '0mm', z_shift[ii]])
 
+
 class KeyElt(Circuit):
 
     pcb_track = parse_entry('300um')
@@ -777,29 +849,30 @@ class KeyElt(Circuit):
             points.append(self.pos + self.rot(*coor))
         return points
 
-    def refx_points(self, coor_list, offset=0):
+    def refx_points(self, coor_list, offset=0, absolute=False):
         points=[]
         for ii, coor in enumerate(coor_list):
-            if ii>0:
+            if ii>0 and not absolute:
                 offset=0
             points.append(Vector(*coor).refx(offset))
         return points
 
-    def refy_points(self, coor_list, offset=0):
+    def refy_points(self, coor_list, offset=0, absolute=False):
         points=[]
         for ii, coor in enumerate(coor_list):
-            if ii>0:
+            if ii>0 and not absolute:
                 offset=0
             points.append(Vector(*coor).refy(offset))
         return points
     
-    def move_points(self, coor_list, move):
+    def move_points(self, coor_list, move, absolute=False):
         points=[]
         for ii, coor in enumerate(coor_list):
-            if ii>0:
+            if ii>0 and not absolute:
                 move=[0,0]
             points.append(Vector(*coor)+Vector(*move))
         return points
+
 
     def coor(self, vec): # Change of coordinate for a point
         return self.rot(*vec)+self.pos
@@ -807,7 +880,8 @@ class KeyElt(Circuit):
     def coor_vec(self, vec): # Change of coordinate for a vector
         return self.rot(*vec)
     
-    def create_port(self, iTrack, iGap):
+    def create_port(self, iTrack=0, iGap=0):
+        iTrack, iGap = parse_entry((iTrack, iGap))
         portOut = [self.coor([0,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name] = portOut
     
@@ -831,10 +905,7 @@ class KeyElt(Circuit):
                 i+=1
         self.unite(holes)
         
-        
-    
-
-    def draw_connector(self, iTrack, iGap, iBondLength, iSlope=1):
+    def draw_connector(self, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=None, pcbGap=None, tr_line=True):
         '''
         Draws a CPW connector for inputs and outputs.
 
@@ -862,7 +933,15 @@ class KeyElt(Circuit):
         '''
         iTrack, iGap = parse_entry((iTrack, iGap))
         iBondLength, iSlope = parse_entry((iBondLength, iSlope))
-
+        
+        if pcbGap is not None:
+            pcbGap = parse_entry(pcbGap)
+            self.pcb_gap = pcbGap
+            
+        if pcbTrack is not None:
+            pcbTrack = parse_entry(pcbTrack)
+            self.pcb_track = pcbTrack
+            
         adaptDist = (self.pcb_track/2-iTrack/2)/iSlope
 
         portOut = [self.coor([adaptDist+self.pcb_gap+iBondLength,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
@@ -895,7 +974,7 @@ class KeyElt(Circuit):
             self.maskObjects.append(self.draw(self.name+"_mask", points))
 
 
-        if not self.is_litho:
+        if not self.is_litho and tr_line:
             points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_track/2+self.overdev),
                                          (self.pcb_gap/2-2*self.overdev, 0),
                                          (0, -self.pcb_track-2*self.overdev),
@@ -1131,8 +1210,17 @@ class KeyElt(Circuit):
         points = self.append_points(raw_points)
         left_pad = self.draw(self.name+"_pad2", points)
         
-        right_track = self.draw_rect(self.name+"_track1", self.coor([cutout_size[0]/2-self.overdev,-track_right/2-self.overdev]), self.coor_vec([-(cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), track_right+2*self.overdev]))
-        left_track = self.draw_rect(self.name+"_track2", self.coor([-cutout_size[0]/2+self.overdev,-track_left/2-self.overdev]), self.coor_vec([(cutout_size[0]/2-pad_spacing/2-length_left-gap_left-short_left-spacing_left), track_left+2*self.overdev]))
+        right_track_raw_points = [(cutout_size[0]/2-self.overdev,-track_right/2-self.overdev),
+                                 (-(cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), 0),
+                                 (0, track_right+2*self.overdev),
+                                 ((cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), 0)]
+        right_track = self.draw(self.name+"_track1", self.append_points(right_track_raw_points))
+        
+        left_track_raw_points = [(-cutout_size[0]/2+self.overdev,-track_left/2-self.overdev),
+                                 ((cutout_size[0]/2-pad_spacing/2-length_left-gap_left-short_left-spacing_left), 0),
+                                 (0, track_left+2*self.overdev),
+                                 (-(cutout_size[0]/2-pad_spacing/2-length_left-gap_left-short_left-spacing_left), 0)]
+        left_track = self.draw(self.name+"_track2", self.append_points(left_track_raw_points))
         
         if short_right!=0:
             raw_points = [(cutout_size[0]/2-self.overdev,-track_right/2-gap_right+self.overdev),
@@ -1252,7 +1340,7 @@ class KeyElt(Circuit):
         self.maskObjects.append(self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size)))
         
         
-    def draw_capa(self, iTrack, iGap, pad_spacing, pad_size):
+    def draw_capa(self, iTrack, iGap, pad_spacing, pad_size, half=False):
         '''
         Inputs:
         -------
@@ -1279,11 +1367,16 @@ class KeyElt(Circuit):
               |  |  |  |
               +--+  +--+
         '''
+        _pos = self.pos
+        if half:
+            self.pos = self.pos - self.ori*(pad_spacing/2+pad_size[0]+iGap)
+            self.pos2 = self.pos
         iTrack, iGap, pad_spacing, pad_size = parse_entry((iTrack, iGap, pad_spacing, pad_size))
         pad_size = Vector(pad_size)
 
         portOut1 = [self.pos+self.ori*(pad_spacing/2+pad_size[0]+iGap), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
-        portOut2 = [self.pos-self.ori*(pad_spacing/2+pad_size[0]+iGap), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        if not half:
+            portOut2 = [self.pos-self.ori*(pad_spacing/2+pad_size[0]+iGap), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
 
         raw_points = [(pad_spacing/2-self.overdev, pad_size[1]/2+self.overdev),
                       (pad_size[0]+2*self.overdev, 0),
@@ -1296,18 +1389,28 @@ class KeyElt(Circuit):
         points = self.append_points(raw_points)
         right_pad = self.draw(self.name+"_pad1", points)
 
-        points = self.append_points(self.refy_points(raw_points))
-        left_pad = self.draw(self.name+"_pad2", points)
+        if not half:
+            points = self.append_points(self.refy_points(raw_points))
+            left_pad = self.draw(self.name+"_pad2", points)
 
-        pads = self.unite([right_pad, left_pad], name=self.name+'_pads')
+        padlist = [right_pad]
+        if not half:
+            padlist.append(left_pad)
+        pads = self.unite(padlist, name=self.name+'_pads')
         self.trackObjects.append(pads)
 
-        cutout = self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([pad_spacing + 2*pad_size[0]+2*iGap-2*self.overdev, pad_size[1] + 2*iGap-2*self.overdev]))
+        jj = 2 if not half else 1
+        pos_cutout = self.pos if not half else self.pos+self.ori*(pad_spacing/4+pad_size[0]/2+iGap/2)
+        cutout = self.draw_rect_center(self.name+"_cutout", pos_cutout, self.coor_vec([pad_spacing*jj/2 + jj*pad_size[0]+jj*iGap-jj*self.overdev, pad_size[1] + 2*iGap-2*self.overdev]))
         
         if self.is_overdev:
             sub_1 = self.draw_rect(self.name + '_sub_1', self.coor([pad_spacing/2+pad_size[0]+iGap, -iTrack/2-iGap+self.overdev]), self.coor_vec([-self.overdev, iTrack+2*iGap-2*self.overdev]))
-            sub_2 = self.draw_rect(self.name + '_sub_1', self.coor([-pad_spacing/2-pad_size[0]-iGap, -iTrack/2-iGap+self.overdev]), self.coor_vec([self.overdev, iTrack+2*iGap-2*self.overdev]))
-            cutout = self.unite([cutout, sub_1, sub_2])
+            if not half:
+                sub_2 = self.draw_rect(self.name + '_sub_1', self.coor([-pad_spacing/2-pad_size[0]-iGap, -iTrack/2-iGap+self.overdev]), self.coor_vec([self.overdev, iTrack+2*iGap-2*self.overdev]))
+            cutout_list = [cutout, sub_1]
+            if not half:
+                cutout_list.append(sub_2)
+            cutout = self.unite(cutout_list)
         
         self.gapObjects.append(cutout)
         if self.is_mask:
@@ -1317,9 +1420,11 @@ class KeyElt(Circuit):
             self.modeler.assign_mesh_length(self.name+"_mesh",iTrack)
 
         self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
-        
+        if not half:
+            self.ports[self.name+'_2'] = portOut2
 
+        self.pos = _pos
+        
     def draw_capa_inline(self, iTrack, iGap, capa_length, pad_spacing, n_pad=1, iTrack_capa=None, iGap_capa=None, premesh=True, tight=False): #iGap_capa is added gap
         
         iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry((iTrack, iGap, capa_length, pad_spacing, n_pad))
@@ -2399,7 +2504,159 @@ class KeyElt(Circuit):
         self.ports[self.name+'_2'] = portOut2
         portOut3 = [self.coor([0, -(iTrack/2+iGap)]), self.coor_vec([0,-1]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name+'_3'] = portOut3
+
+
+    def draw_inductance(self, iTrack, iGap, all_length, ind_length, mode='litho', L_eq = '1nH'): #for now assume left and right tracks are the same width
+        '''
+        --------
+
+        '''
+
+        iTrack, iGap, all_length, ind_length = parse_entry((iTrack, iGap, all_length, ind_length))
+
+        #snail array
+#        if mode=='litho':
+#            in_array = [self.coor([all_length/2, 0]), -self.ori, iTrackSnail, 0]
+#            out_array = [self.coor([-all_length/2, 0]), self.ori, iTrackSnail, 0]      
+#            snail_array = self.connect_elt(self.name+'_array', out_array, in_array)
+#            snail_track = snail_array._connect_snails2([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 4, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])
+#        
+#        if 0:
+#            in_array = [self.coor([array_room/2, 0]), -self.ori, iTrackSnail, 0]
+#            out_array = [self.coor([-array_room/2, 0]), self.ori, iTrackSnail, 0]      
+#            snail_array = self.connect_elt(self.name+'_array', in_array, out_array)
+#            snail_track = snail_array._connect_JJ(iTrack, iInduct=L_eq)
         
+        if mode=='equivalent':
+            connect_left = self.draw_rect(self.name+"_left", self.coor([ind_length/2,-iTrack/2]), self.coor_vec([all_length/2-ind_length/2, iTrack]))
+            connect_right = self.draw_rect(self.name+"_right", self.coor([-ind_length/2,-iTrack/2]), self.coor_vec([-(all_length/2-ind_length/2), iTrack]))
+            if not self.is_litho:
+                array_eq = self.draw_rect_center(self.name+"_eq", self.coor([0,0]), self.coor_vec([ind_length, iTrack]))
+                self.assign_lumped_RLC(array_eq, self.ori, (0, L_eq, 0))
+                points = self.append_points([(-ind_length/2,0),(ind_length,0)])
+                self.draw(self.name+'_eq_line', points, closed=False)
+ 
+
+        connect = self.unite([connect_left, connect_right])
+        self.trackObjects.append(connect)
+        
+        gap = self.draw_rect(self.name+"_cutout", self.coor([-all_length/2,-iTrack/2-iGap]), self.coor_vec([all_length, iTrack+2*iGap]))
+        self.gapObjects.append(gap)
+        if self.is_mask:
+            mask = self.draw_rect(self.name+"_mask", self.coor([-all_length/2,-iTrack/2-iGap-self.gap_mask]), self.coor_vec([all_length, iTrack+2*iGap+2*self.gap_mask]))
+            self.maskObjects.append(mask)
+            
+        portOut1 = [self.coor([all_length/2,0]), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        portOut2 = [self.coor([-all_length/2,0]), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+        
+        
+    def draw_halfJRM(self, iTrack, iGap, all_length, mode='litho', LS = '0.1nH',
+                     Lind ='1nH', LJ='5nH'): #for now assume left and right tracks are the same width
+        '''
+        --------
+
+        '''
+
+        iTrack, iGap, all_length = parse_entry((iTrack, iGap, all_length))
+        T = iTrack # Track
+        A = all_length # legnth of halfJRM element top to bottom
+        C = iGap # Gap. Width of halfJRM element is T+2*C
+        L = C/3 # length of lumped inductor
+        IJ = (C-L)/2 # Island of metal linking junctions to ground C = L+2*IJ
+        CLR = (A-3*T)/4
+        I = (A-2*CLR-3*T-2*L)/4 # Island of metal linking shunt junctions
+
+        #snail array
+#        if mode=='litho':
+#            in_array = [self.coor([all_length/2, 0]), -self.ori, iTrackSnail, 0]
+#            out_array = [self.coor([-all_length/2, 0]), self.ori, iTrackSnail, 0]      
+#            snail_array = self.connect_elt(self.name+'_array', out_array, in_array)
+#            snail_track = snail_array._connect_snails2([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 4, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])
+#        
+#        if 0:
+#            in_array = [self.coor([array_room/2, 0]), -self.ori, iTrackSnail, 0]
+#            out_array = [self.coor([-array_room/2, 0]), self.ori, iTrackSnail, 0]      
+#            snail_array = self.connect_elt(self.name+'_array', in_array, out_array)
+#            snail_track = snail_array._connect_JJ(iTrack, iInduct=L_eq)
+
+        raw_points_center = [(I+T/2, T/2),(-I-T/2, T/2),(-I-T/2, -T/2),(I+T/2, -T/2)]
+        raw_points_right = [(3*I/2+L+T+I/2+T/2, T/2), (3*I/2+L+T-I/2-T/2, T/2),
+                            (3*I/2+L+T-I/2-T/2, -T/2), (3*I/2+L+T+I/2+T/2, -T/2)]
+        raw_points_left = self.refy_points(raw_points_right, absolute=True)
+        raw_points_connector_top = [(T/2, T/2), (T/2, T/2+C), (-T/2, T/2+C),(-T/2, T/2)]
+        raw_points_center1 =[(T/2, -T/2),(-T/2, -T/2),(-T/2, -T/2-IJ),(T/2, -T/2-IJ)]
+        raw_points_center2 =self.move_points(raw_points_center1, [0, -IJ-L], absolute=True)
+        raw_points_left1 =self.move_points(raw_points_center1, [-L-T-2*I, 0], absolute=True)
+        raw_points_left2 =self.move_points(raw_points_center2, [-L-T-2*I, 0], absolute=True)
+        raw_points_right1 =self.move_points(raw_points_center1, [L+T+2*I, 0], absolute=True)
+        raw_points_right2 =self.move_points(raw_points_center2, [L+T+2*I, 0], absolute=True)
+
+        x0 = -T/2-I-L-I-T
+        raw_points_connector_left = [(x0, T/2),(x0-CLR, T/2),(x0-CLR, -T/2),(x0,-T/2)]
+        raw_points_connector_right = self.refy_points(raw_points_connector_left, absolute=True)
+        
+        island_center = self.draw(self.name+"_center", self.append_absolute_points(raw_points_center))
+        island_right = self.draw(self.name+"_right",self.append_absolute_points( raw_points_right))
+        island_left = self.draw(self.name+"_left", self.append_absolute_points(raw_points_left))
+        island_center1 = self.draw(self.name+"_center1", self.append_absolute_points(raw_points_center1))
+        island_center2 = self.draw(self.name+"_center2", self.append_absolute_points(raw_points_center2))
+        island_left1 = self.draw(self.name+"_left1", self.append_absolute_points(raw_points_left1))
+        island_left2 = self.draw(self.name+"_left2", self.append_absolute_points(raw_points_left2))
+        island_right1 = self.draw(self.name+"_right1", self.append_absolute_points(raw_points_right1))
+        island_right2 = self.draw(self.name+"_right2", self.append_absolute_points(raw_points_right2))
+        connector_top = self.draw(self.name+"_conn_top", self.append_absolute_points(raw_points_connector_top))
+        connector_left = self.draw(self.name+"_conn_left", self.append_absolute_points(raw_points_connector_left))
+        connector_right = self.draw(self.name+"_conn_right", self.append_absolute_points(raw_points_connector_right))
+        
+        if not self.is_litho:
+            array_eqS1 = self.draw_rect(self.name+"_LS1", self.coor([T/2+I, -T/2]), self.coor_vec([L, T]))
+            array_eqS2 = self.draw_rect(self.name+"_LS2", self.coor([-T/2-I-L, -T/2]), self.coor_vec([L, T]))
+            array_eqL = self.draw_rect(self.name+"_L", self.coor([-T/2, -T/2-IJ]), self.coor_vec([T, -L]))
+            array_eqJ1 = self.draw_rect(self.name+"_LJ1", self.coor([2*I+L+T-T/2, -T/2-IJ]), self.coor_vec([T, -L]))
+            array_eqJ2 = self.draw_rect(self.name+"_LJ2", self.coor([-2*I-L-T-T/2, -T/2-IJ]), self.coor_vec([T, -L]))
+            self.assign_lumped_RLC(array_eqS1, self.ori, (0, LS, 0))
+            self.assign_lumped_RLC(array_eqS2, self.ori, (0, LS, 0))
+            self.assign_lumped_RLC(array_eqL, self.ori, (0, Lind, 0))
+            self.assign_lumped_RLC(array_eqJ1, self.ori, (0, LJ, 0))
+            self.assign_lumped_RLC(array_eqJ2, self.ori, (0, LJ, 0))
+            pointsS1 = [(I+T/2,0),(I+T/2+L,0)]
+            self.draw(self.name+'_eq_lineS1', self.append_absolute_points(pointsS1), closed=False)
+            pointsS2 = self.refy_points(pointsS1, absolute=True)
+            self.draw(self.name+'_eq_lineS2', self.append_absolute_points(pointsS2), closed=False)
+            pointsL = [(0,-T/2-IJ),(0,-T/2-IJ-L)]
+            self.draw(self.name+'_eq_lineL', self.append_absolute_points(pointsL), closed=False)
+            pointsJ1 = self.move_points(pointsL, [T+2*I+L, 0], absolute=True)
+            self.draw(self.name+'_eq_lineJ1', self.append_absolute_points(pointsJ1), closed=False)
+            pointsJ2 = self.move_points(pointsL, [-T-2*I-L, 0], absolute=True)
+            self.draw(self.name+'_eq_lineJ2', self.append_absolute_points(pointsJ2), closed=False)
+ 
+
+        connect = self.unite([island_center, island_right, island_left,
+                              connector_top, island_center1, island_center2,
+                              island_left1,island_left2,
+                              island_right1,island_right2,
+                              connector_left, connector_right])
+        self.trackObjects.append(connect)
+        
+
+        gap = self.draw_rect(self.name+"_cutout", self.coor([-A/2,-T/2-C]), self.coor_vec([A, T+2*C]))
+        self.gapObjects.append(gap)
+#        if self.is_mask:
+#            mask = self.draw_rect(self.name+"_mask", self.coor([-all_length/2,-iTrack/2-iGap-self.gap_mask]), self.coor_vec([all_length, iTrack+2*iGap+2*self.gap_mask]))
+#            self.maskObjects.append(mask)
+#            
+        portT = [self.coor([0, T/2+C]), self.coor_vec([0,1]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portL = [self.coor([-A/2,0]), self.coor_vec([-1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portR = [self.coor([A/2,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portB = [self.coor([0,-T/2-IJ-L-IJ]), self.coor_vec([0,-1]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_T'] = portT
+        self.ports[self.name+'_L'] = portL
+        self.ports[self.name+'_R'] = portR
+        self.ports[self.name+'_B'] = portB
+
+
     def draw_T_join(self, iTrack, iGap):
         
         iTrack, iGap = parse_entry((iTrack, iGap))
@@ -2448,8 +2705,208 @@ class KeyElt(Circuit):
         self.ports[self.name+'_3'] = portOut3
 
         
-    def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
+    def draw_fluxline(self, iTrack, iGap, length, track_flux, slope=0.5, sym='center', return_spacing=0, return_depth=0, opposite=False):
+        is_fillet=True
+        iTrack, iGap, length, track_flux, return_spacing, return_depth = parse_entry((iTrack, iGap, length, track_flux, return_spacing, return_depth))
+        if sym == 'center':
+            offset_gap_down = 0
+            offset_track_down = 0
+            offset_gap_up = 0
+            offset_track_up = 0
+            adapt_length = (iTrack/2-track_flux)/slope
+        else:
+            adapt_length = (iTrack/2-track_flux+length/2)/slope
+            if sym=='down':
+                offset_gap_down = iGap+2*track_flux
+                offset_track_down = length/2+track_flux
+                offset_gap_up = 0
+                offset_track_up = 0
+            elif sym=='up':
+                offset_gap_down = 0
+                offset_track_down = 0
+                offset_gap_up = iGap+2*track_flux
+                offset_track_up = length/2+track_flux
+            else:
+                raise ValueError("sym should be either True, 'down' or 'up'.")
         
+        points = self.append_absolute_points([(adapt_length, iGap+iTrack/2),
+                                              (adapt_length-track_flux, iGap+iTrack/2),
+                                              (track_flux/2, length/2+offset_gap_up),
+                                              (track_flux/2, -length/2-offset_gap_down),
+                                              (adapt_length-track_flux, -(iGap+iTrack/2)),
+                                              (adapt_length, -(iGap+iTrack/2))])
+                
+
+        if not sym == 'center':
+            if return_spacing != 0:
+                if not opposite:
+                    test1 = self.draw_rect(self.name+'_test1', self.coor([return_depth, length/2+offset_gap_up]), self.coor_vec([-(return_spacing+track_flux/2+return_depth), return_spacing+track_flux]))
+                else:
+                    test1 = self.draw_rect(self.name+'_test1', self.coor([return_depth, -(length/2+offset_gap_up)]), self.coor_vec([-(return_spacing+track_flux/2+return_depth), -(return_spacing+track_flux)]))
+                test1.fillet(return_spacing+track_flux+eps, 2)
+                self.gapObjects.append(test1)                    
+                    
+            
+            
+        gap = self.draw(self.name+'_gap', points)
+        
+        
+        track = self.draw(self.name+'_track_guide', points, closed=False)
+        gapext = self.draw(self.name+'_gapext_guide', points, closed=False)
+        fillet = eps
+        fillet2 = track_flux+eps
+        if is_fillet:
+            track.fillet(fillet2, [1,4])
+            gapext.fillet(fillet2, [1,4])
+            gap.fillet(fillet2,[1,4])
+            
+            track.fillet(fillet, [3,4])
+            gapext.fillet(fillet, [3,4])
+            gap.fillet(fillet,[3,4])
+
+        points_starter = self.append_absolute_points([(adapt_length, iGap+iTrack/2),
+                                              (adapt_length, iGap+iTrack/2+track_flux)])
+        track_starter = self.draw(self.name+'_track', points_starter, closed=False)
+        gapext_starter = self.draw(self.name+'_gapext', points_starter, closed=False)
+        
+        
+        track = track.sweep_along_path(track_starter)
+        gapext = gapext.sweep_along_path(gapext_starter)
+        
+        gap = self.unite([gap, gapext])
+        
+        if self.is_mask:
+            mask = self.draw(self.name+'_mask', points)
+            maskext = self.draw(self.name+'_mask_ext_guide', points, closed=False)
+            points_starter_mask = self.append_absolute_points([(adapt_length, iGap+iTrack/2),
+                                              (adapt_length, iGap+iTrack/2+self.gap_mask)])
+            maskext_starter = self.draw(self.name+'_maskext', points_starter_mask, closed=False)
+            maskext = maskext.sweep_along_path(maskext_starter)
+            
+            mask = self.unite([mask, maskext])
+            self.maskObjects.append(mask)
+
+        points = self.append_absolute_points([(adapt_length, iTrack/2),
+                                              (adapt_length-track_flux, iTrack/2),
+                                              (track_flux/2, track_flux-offset_track_down+offset_track_up),
+                                              (track_flux/2, -track_flux-offset_track_down+offset_track_up),
+                                              (adapt_length-track_flux, -iTrack/2),
+                                              (adapt_length, -iTrack/2)])
+                  
+        track_adapt = self.draw(self.name+'_track_adapt', points)
+        if is_fillet:
+            track_adapt.fillet(fillet2, [1,4])
+        
+        track = self.unite([track, track_adapt])
+#            track.fillet(fillet, [15,20])
+#            track.fillet(fillet2, [17,20])
+        
+        self.gapObjects.append(gap)
+        self.trackObjects.append(track)
+
+        portOut = [self.coor([adapt_length, 0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name] = portOut
+        
+
+    def draw_double_fluxline(self, iTrack, iGap, length, track_flux, slope=0.7, sym='center', return_spacing=0, return_depth=0, opposite=False):
+        is_fillet = True
+        iTrack, iGap, length, track_flux, return_spacing, return_depth = parse_entry((iTrack, iGap, length, track_flux, return_spacing, return_depth))
+
+        offset_gap_down = 0
+        offset_track_down = 0
+        offset_gap_up = 0
+        offset_track_up = 0
+        adapt_length = (iTrack/2-track_flux/2)/slope
+        small_gap = length/4-3*track_flux/2/2
+        big_length = 3*iTrack + 4*iGap
+        
+        points = self.append_absolute_points([(adapt_length, big_length/2),
+                                              (adapt_length-track_flux,big_length/2),
+                                              (track_flux/2, length/2+offset_gap_up),
+                                              (track_flux/2, -length/2-offset_gap_down),
+                                              (adapt_length-track_flux, -big_length/2),
+                                              (adapt_length, -big_length/2)])
+                      
+                    
+        gap = self.draw(self.name+'_gap', points)
+        
+        track = self.draw(self.name+'_track_guide', points, closed=False)
+        
+        gapext = self.draw(self.name+'_gapext_guide', points, closed=False)
+
+
+        points_starter = self.append_absolute_points([(adapt_length, big_length/2),
+                                              (adapt_length, big_length/2+track_flux)])
+        track_starter = self.draw(self.name+'_track', points_starter, closed=False)
+        gapext_starter = self.draw(self.name+'_gapext', points_starter, closed=False)
+        
+        
+        track = track.sweep_along_path(track_starter)
+        gapext = gapext.sweep_along_path(gapext_starter)
+        
+        gap = self.unite([gap, gapext])
+        
+        if self.is_mask:
+            mask = self.draw(self.name+'_mask', points)
+            maskext = self.draw(self.name+'_mask_ext_guide', points, closed=False)
+            points_starter_mask = self.append_absolute_points([(adapt_length, iGap+iTrack/2),
+                                              (adapt_length, iGap+iTrack/2+self.gap_mask)])
+            maskext_starter = self.draw(self.name+'_maskext', points_starter_mask, closed=False)
+            maskext = maskext.sweep_along_path(maskext_starter)
+            
+            mask = self.unite([mask, maskext])
+            self.maskObjects.append(mask)
+            
+        raw_points_top = [(adapt_length,big_length/2-iGap),
+                          (adapt_length-track_flux, big_length/2-iGap),
+                          (track_flux/2, small_gap+3*track_flux/2),
+                          (track_flux/2, small_gap+3*track_flux/2-2/2*track_flux),
+                          (adapt_length-track_flux, big_length/2-iGap-iTrack),
+                          (adapt_length, big_length/2-iGap-iTrack)]
+            
+        raw_points_middle = [(adapt_length, iTrack/2),
+                          (adapt_length-track_flux, iTrack/2),
+                          (track_flux/2, track_flux/2-offset_track_down+offset_track_up),
+                          (track_flux/2, -track_flux/2-offset_track_down+offset_track_up),
+                          (adapt_length-track_flux, -iTrack/2),
+                          (adapt_length, -iTrack/2)]
+        
+        raw_points_bottom = self.refx_points(raw_points_top)
+
+        points_top = self.append_absolute_points(raw_points_top)
+        points_middle = self.append_absolute_points(raw_points_middle)
+        points_bottom = self.append_absolute_points(raw_points_bottom)
+                  
+        track_adapt_top = self.draw(self.name+'_track_adapt_top', points_top)
+        track_adapt_middle = self.draw(self.name+'_track_adapt_middle',
+                                       points_middle)
+        track_adapt_bottom = self.draw(self.name+'_track_adapt_bottom',
+                                       points_bottom)
+        
+
+        
+        track = self.unite([track, track_adapt_top,
+                            track_adapt_middle,
+                            track_adapt_bottom])
+#            track.fillet(fillet, [15,20])
+#            track.fillet(fillet2, [17,20])
+
+        fillet2 = 2*track_flux/2+eps
+        if is_fillet:
+            track.fillet(fillet2, [1, 2, 3, 4, 7,8,9,10,13,14,15,16,19,20,21,22,25,26,27,28])
+            gap.fillet(fillet2, [2,3,4, 5])
+        
+        self.gapObjects.append(gap)
+        self.trackObjects.append(track)
+
+        portOut_top = [self.coor([adapt_length, iTrack/2+iGap+iTrack/2]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portOut_bottom = [self.coor([adapt_length, -iTrack/2-iGap-iTrack/2]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_top'] = portOut_top
+        self.ports[self.name+'_bottom'] = portOut_bottom
+ 
+        
+    def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
+        iTrack, iGap = parse_entry((iTrack, iGap))
         if typeEnd=='open' or typeEnd=='Open':
             cutout = self.draw_rect(self.name+'_cutout', self.coor([iGap,-(iTrack+2*iGap)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*iGap-2*self.overdev]))
             if fillet is not None:
@@ -2609,9 +3066,14 @@ class KeyElt(Circuit):
         snail_array = self.connect_elt(self.name+'_junction', in_array, out_array)
         snail_track = snail_array._connect_snails_Zaki([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
-    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0):
+    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0, alternate_width=True):
         pad_size, pad_spacing,width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
         pad_size = Vector(pad_size)
+        if self.val(width)<1.5e-6 and n_bridge==1:
+            width_jct = width
+            width = 1.5e-6
+        else: 
+            width_jct=None
         
         self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2, -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]]))
         self.draw_rect(self.name+'_right', self.coor([pad_spacing/2, pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]]))
@@ -2625,7 +3087,104 @@ class KeyElt(Circuit):
         out_array = portOut1
         jcts = self.connect_elt(self.name+'_junction', in_array, out_array)
         print(n_bridge)
-        jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge)
+        if alternate_width:
+            jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct)
+        else:
+            jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct)
+    
+    def draw_cav_Si(self, size, chip_height, tunnel_length, size_plot=None, height_plot=None, n=8, track='42um', gap='25um', ports_senw = ['500um',0,0,0], margin_litho='10um'):
+        # can only make square cavity
+        # size : intra size of the cavity : 4mm->15GHz
+        # chip_heigth : silicon height
+        # tunnel length : length of the silicon tunnel between 2 via
+        # size_plot : base size of the central plot
+        # height_plot : thickness of the capacitance at the top of the plot
+        # n : nb of vias
+        # track, gap : if we have an access port, track and gap of this port 
+        #   currently all port have same gap and track
+        # ports_senw = list giving the length of the cable coming from each port ; south, east, north, west
+        #   0 means there should be no port
+        # ports will be numeroted from 1 to n in the trigo way
+        # margin_litho : width of the Si3N4 mask between the vias
+        
+        ports_senw_bool = [bool(ii) for ii in ports_senw]
+        size, chip_height, tunnel_length, track, gap, margin_litho, ports_senw = parse_entry((size, chip_height, tunnel_length, track, gap, margin_litho, ports_senw))
+#        self.draw_rect(self.name+'_rect', self.coor([-size/2, -size/2]), self.coor_vec([size,size]))
+        access_width = track+2*gap+2*margin_litho
+        if size_plot is None:
+            size_plot=size/2
+        else:
+            size_plot = parse_entry((size_plot))
+        
+        if height_plot is None:
+            height_plot=chip_height/2
+        else:
+            height_plot = parse_entry((height_plot))
+            
+        # bottom row
+        width_trapeze = (size-(n+1)*margin_litho)/n
+        track = '42um'
+        gap = '25um'
+        name_s, name_e, name_n, name_w = self.name+'_s', self.name+'_e', self.name+'_n', self.name+'_w'
+        port_nb = 0
+        for ii, name in enumerate([name_s, name_e, name_n, name_w]):
+            if ports_senw_bool[ii]:
+                port_nb += 1 
+                _width_trapeze = width_trapeze-access_width/n
+                x_pos = -size/2+margin_litho+_width_trapeze/2
+                _n = n//2
+                self.draw_trapeze(name, self.coor([x_pos, -size/2-tunnel_length/2]), 0, self.coor_vec([_width_trapeze, tunnel_length]), -chip_height/2)
+                self.draw_trapeze(name+'_'+str('bis'), self.coor([x_pos, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([_width_trapeze, tunnel_length]), chip_height/2)
+                self.unite([name, name+'_'+str('bis')])
+
+                self.duplicate_along_line(name, self.coor_vec([_width_trapeze+margin_litho, 0]), n=_n)
+                unite_list = [name]+[name+'_'+str(ii+1) for ii in range(_n-1)]
+                self.unite(unite_list)
+                
+                self.duplicate_along_line(name, self.coor_vec([_n*(_width_trapeze+margin_litho)+access_width, 0]), n=2)
+                unite_list = [name, name+'_'+str(_n)]
+                self.unite(unite_list)
+                
+                portOut = [self.coor([0, -size/2-tunnel_length]), self.coor_vec([0,-1]), track, gap]
+                self.ports[self.name+'_port_'+str(port_nb)] = portOut
+                
+                end = self.key_elt(self.name+'_end_'+str(ii), self.coor([0, -size/2-tunnel_length+ports_senw[ii]]), self.coor_vec([0,-1]))
+                end.draw_end_cable(track, gap, fillet=gap)
+                cable = self.connect_elt(self.name+'_cable_'+str(ii), self.name+'_end_'+str(ii), self.name+'_port_'+str(port_nb))
+                cable.draw_cable(is_bond=False)
+            else:
+                x_pos = -size/2+margin_litho+width_trapeze/2
+        
+                self.draw_trapeze(name, self.coor([x_pos, -size/2-tunnel_length/2]), 0, self.coor_vec([width_trapeze, tunnel_length]), -chip_height/2)
+                self.draw_trapeze(name+'_'+str('bis'), self.coor([x_pos, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([width_trapeze, tunnel_length]), chip_height/2)
+                self.unite([name, name+'_'+str('bis')])
+                
+                self.duplicate_along_line(name, self.coor_vec([width_trapeze+margin_litho, 0]), n=n)
+                unite_list = [name]+[name+'_'+str(ii+1) for ii in range(n-1)]
+                self.unite(unite_list)
+                
+            self.ori = self.ori.rot(Vector([0,1]))
+
+        name_c = self.name+'_c'
+        self.draw_trapeze(name_c, self.coor([-size/2-tunnel_length/2, -size/2-tunnel_length/2]), 0, self.coor_vec([tunnel_length, tunnel_length]), -chip_height/2)
+        self.draw_trapeze(name_c+'_bis', self.coor([-size/2-tunnel_length/2, -size/2-tunnel_length/2]), -chip_height, self.coor_vec([tunnel_length, tunnel_length]), chip_height/2)
+        self.unite([name_c, name_c+'_bis'])
+        
+        self.duplicate_along_line(name_c, self.coor_vec([size+tunnel_length, 0]), n=2)
+        unite_list = [name_c, name_c+'_1']
+        self.unite(unite_list)
+        
+        self.duplicate_along_line(name_c, self.coor_vec([0, size+tunnel_length]), n=2)
+        unite_list = [name_c, name_c+'_2']
+        self.unite(unite_list)
+        
+        name_p = name+'_p'
+        self.draw_trapeze(name_p, self.coor([0, 0]), -chip_height, self.coor_vec([size_plot, size_plot]), chip_height-height_plot)
+
+
+        unite_list = [name_s, name_e, name_n, name_w, name_c, name_p]
+        self.unite(unite_list)
+        self.name = name_s
         
     def size_dc_gap(self, length, positions, widths, border):
         
@@ -3023,57 +3582,6 @@ class ConnectElt(KeyElt, Circuit):
         self.iOut = retOut
 #        return [retIn, retOut]
 
-    def draw_half_capa(self, iLength, iWidth, iGap, add_gap=False,fillet=None):
-        '''
-        Inputs:
-        -------
-        name: string name of object
-        iIn: (position, direction, track, gap) defines the input port
-        iOut: (position, direction, track, gap) defines the output port
-               position and direction are None: this is calculated from
-               other parameters
-        iLength: (float) length of pads
-        iWidth: (float) width of pads
-
-        Outputs:
-        --------
-        retIn: same as iIn, with flipped vector
-        retOut: calculated output port to match all input dimensions
-
-            igap iWidth
-                 +--+
-                 |  |
-            +----+  | iLength
-        iIn |       |
-            +----+  |
-                 |  |
-                 +--+
-        '''
-        iLength, iWidth, iGap = parse_entry((iLength, iWidth, iGap))
-        self.ori = -self.ori
-
-        points = self.append_points([(0, self.inTrack/2),
-                                     (iGap-self.overdev, 0),
-                                     (0, (iLength-self.inTrack)/2+self.overdev),
-                                     (iWidth+2*self.overdev, 0),
-                                     (0, -iLength-2*self.overdev),
-                                     (-iWidth-2*self.overdev, 0),
-                                     (0, (iLength-self.inTrack)/2+self.overdev),
-                                     (-iGap+self.overdev, 0)])
-        halfcapa=self.draw(self.name+"_pad", points)
-        if fillet is not None:
-            halfcapa.fillet(fillet-self.overdev,6)
-            halfcapa.fillet(fillet+self.overdev,5)
-            halfcapa.fillet(fillet+self.overdev,4)
-            halfcapa.fillet(fillet+self.overdev,3)
-            halfcapa.fillet(fillet+self.overdev,2)
-            halfcapa.fillet(fillet-self.overdev,1)
-        
-        if is_mesh:
-            if not self.is_litho:
-                self.modeler.assign_mesh_length(halfcapa, iWidth)
-            
-        self.trackObjects.append(halfcapa)
 
 #        CreateBondwire(name+"_bondwire", iIn)
     def find_slanted_path(self):
@@ -3526,53 +4034,21 @@ class ConnectElt(KeyElt, Circuit):
         return final_choice
 
     def length(self, points, A, B, fillet): # A and B are integer point indices
+#        for point in points:
+#            print(self.val(point[0]), self.val(point[1]))
         if A<0 or A>=len(points):
             raise ValueError('First index should be within the point list')
         if B<0 or B>=len(points):
             raise ValueError('Second index should be within the point list')
         if A==B:
             return 0
-        if abs(A-B)==1:
-            if A<B:
-#                if A%2==1:
-#                    return self.val(fillet*np.pi/2)
-#                else:
-#                    return self.val((points[A]-points[B]).norm())
-
-                if A==0 or B==len(points)-1:
-                    return self.val((points[A]-points[B]).norm())-self.val(fillet*(2-np.pi/2))
-                else:
-                    return self.val((points[A]-points[B]).norm())-self.val(fillet*(1-np.pi/4))
-            else:
-                return self.length(points, B, A, fillet)
-        if abs(A-B)>1:
-            if A<B:
-                return self.length(points, A, B-1, fillet) + self.length(points, B-1, B, fillet)
-            else:
-                return self.length(points, B, A, fillet)
-
-
-#    def length_exp(self, points, A, B, fillet): # A and B are integer point indices
-#        if A<0 or A>=len(points):
-#            raise ValueError('First index should be within the point list')
-#        if B<0 or B>=len(points):
-#            raise ValueError('Second index should be within the point list')
-#        if A==B:
-#            return 0
-#        if abs(A-B)==1:
-#            if A<B:
-#                if A==0 or B==len(points)-1:
-#  
-#                    return (points[A]-points[B]).norm()-(2-np.pi/2)*fillet
-#                else:
-#                    return (points[A]-points[B]).norm()-(1-np.pi/4)*fillet
-#            else:
-#                return self.length(points, B, A, fillet)
-#        if abs(A-B)>1:
-#            if A<B:
-#                return self.length(points, A, B-1, fillet) + self.length(points, B-1, B, fillet)
-#            else:
-#                return self.length(points, B, A, fillet)
+        if A<B:
+            value = 0
+            for ii in range(B-A):
+                value+=self.val((points[A+ii+1]-points[A+ii]).norm())
+            return value-(B-A-1)*self.val(fillet*(2-np.pi/2))
+        else:
+            return self.length(points, B, A, fillet)
 
     def cable_starter(self, width = 'track', index=None, border=parse_entry('15um')): # width can also be 'gap'
         if width=='track' or width=='Track':
@@ -3658,7 +4134,7 @@ class ConnectElt(KeyElt, Circuit):
 #        print(to_meanders)
             
         
-        cable_length = 0
+        cable_length = []
         tracks = []
         gaps = []
         masks = []
@@ -3666,6 +4142,10 @@ class ConnectElt(KeyElt, Circuit):
         print(port_names)
         for ii in range(len(constrains)+1):
             to_meander = to_meanders[ii]
+            if isinstance(meander_length, (list, np.ndarray)):
+                m_length = meander_length[ii]
+            else:
+                m_length = meander_length
             if len(constrains)!=0:
                 to_add = '_'+str(ii)
             else:
@@ -3673,9 +4153,10 @@ class ConnectElt(KeyElt, Circuit):
             print(port_names[2*ii:2*ii+2])
             self.__init__(self.name, *port_names[2*ii:2*ii+2])
             
-            points = self.find_path(fillet, is_meander, to_meander, meander_length, meander_offset)
+            points = self.find_path(fillet, is_meander, to_meander, m_length, meander_offset)
             connection = self.draw(self.name+'_track'+to_add, points, closed=False)
-            cable_length += self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length)
+#            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
+            cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
             connection.fillets(fillet-eps)
     
             connection_gap = connection.copy(self.name+"_gap"+to_add)
@@ -3692,8 +4173,8 @@ class ConnectElt(KeyElt, Circuit):
             gaps.append(connection_gap.sweep_along_path(gap_starter))
 
             
-            if is_bond:
-                self.draw_bond((self.inTrack+self.inGap*2)*1.5)
+        if is_bond:
+            self.draw_bond((self.inTrack+self.inGap*2)*1.5)
         
         if track_adaptor is not None:
             self.trackObjects.pop()
@@ -3705,10 +4186,9 @@ class ConnectElt(KeyElt, Circuit):
                 masks = [*masks, mask_adaptor]
                 
         if len(tracks)>1:
-            print(tracks)
             names = [self.name+'_track', self.name+'_gap', self.name+'_mask']
-            if track_adaptor is not None:
-                names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
+#            if track_adaptor is not None:
+#                names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
             track = self.unite(tracks, names[0])
             gap = self.unite(gaps, names[1])
             if layer is None:
@@ -3735,8 +4215,10 @@ class ConnectElt(KeyElt, Circuit):
         if is_mesh is True:
             if not self.is_litho:
                 self.modeler.assign_mesh_length(track,2*self.inTrack)
-            
-        print('{0}_length = {1:.3f} mm'.format(self.name, cable_length*1000))
+                
+        for length in cable_length:
+            print('{0}_length = {1:.3f} mm'.format(self.name, length*1000))
+        print('sum = %.3f mm'%(1000*np.sum(cable_length)))
         
         
     def draw_slanted_cable(self, fillet=None, is_bond=False, is_mesh=False, constrains=[], reverse_adaptor=False, layer=None):
@@ -4298,8 +4780,8 @@ class ConnectElt(KeyElt, Circuit):
             x_pos = x_pos+width_snail
         x_pos = x_pos-width_snail
         snail.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -width_track/2]), self.coor_vec([2*width_track/2, squid_size[1]+width_top+width_bot+2*0.1e-6]))) #ZL
-            
-    def _connect_jct(self, width_bridge, n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=5e-6): #opt assymetry=0.25e-6
+
+    def _connect_jct(self, width_bridge, n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=5e-6, width_jct=None): #opt assymetry=0.25e-6
         limit_dose = 8e-6
         width = self.inTrack # assume both are equal
         spacing = (self.posOut-self.pos).norm()
@@ -4314,11 +4796,16 @@ class ConnectElt(KeyElt, Circuit):
         print(n)
         if n%2==0:
             _width_right = width+2*assymetry
-            print('was here')
         else:
             _width_right = width
+        if width_jct is not None:
+            margin = 1e-6
+            self.draw_rect(self.name+'_right2', self.coor([tot_width/2+margin,-_width_right/2]), self.coor_vec([limit_dose-margin, _width_right]))
+            self.draw_rect(self.name+'_right3', self.coor([tot_width/2,-width_jct/2]), self.coor_vec([margin, width_jct]))
+        else:
+            self.draw_rect(self.name+'_right2', self.coor([tot_width/2,-_width_right/2]), self.coor_vec([limit_dose, _width_right]))
+
         self.draw_rect(self.name+'_right', self.coor([tot_width/2+limit_dose,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap-limit_dose, _width_right]))
-        self.draw_rect(self.name+'_right2', self.coor([tot_width/2,-_width_right/2]), self.coor_vec([limit_dose, _width_right]))
 
         x_pos = -(tot_width)/2+width_bridge
         for ii in range(n-1):
