@@ -1283,8 +1283,8 @@ class HfssModeler(COMWrapper):
                                 "Setback:=", "0mm"]])
 
     def _sweep_along_path(self, to_sweep, path_obj):
-        self.rename_obj(str(path_obj)+'_path', path_obj)
-        new_name = self.rename_obj(path_obj, to_sweep)
+        self.rename_obj(path_obj, str(path_obj)+'_path')
+        new_name = self.rename_obj(to_sweep, path_obj)
         names = [path_obj, str(path_obj)+'_path']
         self._modeler.SweepAlongPath(self._selections_array(*names),
                                      ["NAME:PathSweepParameters",
@@ -1606,7 +1606,7 @@ class OpenPolyline(ModelEntity): # Assume closed polyline
         return self.modeler._sweep_along_path(to_sweep, self)
 
     def rename(self, new_name):
-        return OpenPolyline(self.modeler.rename_obj(new_name, self), self.modeler)#, self.points)
+        return OpenPolyline(self.modeler.rename_obj(self, new_name), self.modeler)#, self.points)
 
     def copy(self, new_name):
         new_obj = OpenPolyline(self.modeler.copy(self), self.modeler)

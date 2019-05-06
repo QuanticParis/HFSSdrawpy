@@ -4548,7 +4548,7 @@ class ConnectElt(KeyElt, Circuit):
                 cables.append(connection_track[ii].sweep_along_path(track_starter[ii]))
             cutout = connection_cutout.sweep_along_path(cutout_starter)
             
-            ''' what the hell the .copy routine ??? and .fillet ? '''
+#            ''' what the hell the .copy routine ??? and .fillet ? '''
 #            connection = []
 #            for ii in range(self.multIn):
 #                con = self.draw(layer_name+'_'+self.name+'_track'+to_add+'_'+str(ii), points, closed=False)
