@@ -1510,6 +1510,10 @@ class Rect(ModelEntity):
     def make_lumped_port(self, axis, z0="50ohm", name="LumpPort"):
         start, end = self.make_center_line(axis)
         self.modeler._make_lumped_port(start, end, ["Objects:=", [self]], z0=z0, name=name)
+        
+    def unite(self, list_other, name):
+        union = self.modeler.unite([self] + list_other, name=name)
+        return Polyline(union, self.modeler)
 
     def fillet(self, radius, vertex_index):
         self.modeler._fillet(radius, vertex_index, self)
@@ -1534,7 +1538,10 @@ class Polyline(ModelEntity): # Assume closed polyline
 #        X, Y, Z = (True, True, True)
 #        for point in points:
 #            X =
-
+    
+    def unite(self, list_other):
+        union = self.modeler.unite(self + list_other)
+        return Polyline(union, self.modeler)
 
     def make_center_line(self, axis): # Expects to act on a rectangle...
         #first : find center and size

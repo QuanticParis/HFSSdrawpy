@@ -1047,23 +1047,19 @@ class KeyElt(Circuit):
         
         if not self.is_litho:
             mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
-            self.modeler.assign_mesh_length(mesh, 2*track)
+            self.modeler.assign_mesh_length(mesh, 2*track, suff='')
 
         track_J=Jwidth*4.
         in_junction = [self.coor([-pad_spacing/2+self.overdev, 0]), self.coor_vec([1,0]), track_J+2*self.overdev, 0]
         out_junction = [self.coor([pad_spacing/2-self.overdev, 0]), self.coor_vec([-1,0]), track_J+2*self.overdev, 0]
-        
-        self.ports[self.name+'_in_jct'] = in_junction
-        self.ports[self.name+'_out_jct'] = out_junction
-
-        junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
+        junction = self.connect_elt(self.name+'_junction', in_junction, out_junction)
         junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
 
         right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
         left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
         
 
-        pads = right_pad.unite([left_pad, junction_pads], name=self.name+'_pads')
+        pads = self.unite([right_pad, left_pad, junction_pads], name=self.name+'_pads')
         
         if fillet is not None:
             pads.fillet(fillet+self.overdev,[19])
@@ -1189,10 +1185,7 @@ class KeyElt(Circuit):
         track_J=Jwidth*4.
         in_junction = [self.coor([-pad_spacing/2+self.overdev, 0]), self.coor_vec([1,0]), track_J+2*self.overdev, 0]
         out_junction = [self.coor([pad_spacing/2-self.overdev, 0]), self.coor_vec([-1,0]), track_J+2*self.overdev, 0]
-        
-        self.ports[self.name+'_in_jct'] = in_junction
-        self.ports[self.name+'_out_jct'] = out_junction
-        junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
+        junction = self.connect_elt(self.name+'_junction', in_junction, out_junction)
         junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
 
         raw_points = [(pad_spacing/2-self.overdev, -pad_size_right[1]/2-self.overdev),
@@ -3452,8 +3445,6 @@ class ConnectElt(KeyElt, Circuit):
         #is the following really useful ?
         #it is when defining intermediate port for draw_adaptor
         elif isinstance(iIn, list):
-            print('iOut')
-            print(iOut)
             if iOut in self.ports: # if iIn is defined on the fly then iOut is well defined
                 iInPort = parse_entry(iIn)
                 self.iIn = 'iIn' # dummy name test
