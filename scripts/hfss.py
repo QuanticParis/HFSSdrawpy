@@ -1125,6 +1125,9 @@ class HfssModeler(COMWrapper):
 #        print(name) #None
         return name
 
+    def delete(self, name):
+        self._modeler.Delete(["NAME:Selections", "Selections:=", name])
+        
     def unite(self, names, name=None, keep_originals=False):
         self._modeler.Unite(
             self._selections_array(*names),
@@ -1132,10 +1135,9 @@ class HfssModeler(COMWrapper):
         )
         if name is None:
             return names[0]
-        elif names[0]!=name:
-            return names[0].rename(name)
         else:
-            return names[0]
+#            return names[0].rename(name)
+            return self.rename_obj(names[0], name)
 
     def intersect(self, names, keep_originals=False):
         self._modeler.Intersect(
@@ -1158,11 +1160,20 @@ class HfssModeler(COMWrapper):
         self._modeler.Move(
             self._selections_array(name),
             ["NAME:TranslateParameters",
-             "TranslateVectorX:=", vector[0],
-             "TranslateVectorY:=", vector[1],
-             "TranslateVectorZ:=", vector[2]]
+        		"TranslateVectorX:="	, vector[0],
+        		"TranslateVectorY:="	, vector[1],
+        		"TranslateVectorZ:="	, vector[2]]
         )
 
+
+    def separate_bodies(self, name):
+        self._modeler.SeparateBody(["NAME:Selections",
+                                		"Selections:=", name,
+                                		"NewPartsModelFlag:="	, "Model"
+                                	], 
+                                	[
+                                		"CreateGroupsForNewObjects:=", False
+                                	])
 
 #    def make_perfect_E(self, *objects):
 #        print(self._boundaries.GetBoundaries())
@@ -1272,8 +1283,8 @@ class HfssModeler(COMWrapper):
                                 "Setback:=", "0mm"]])
 
     def _sweep_along_path(self, to_sweep, path_obj):
-        self.rename_obj(str(path_obj)+'_path', path_obj)
-        new_name = self.rename_obj(path_obj, to_sweep)
+        self.rename_obj(path_obj, str(path_obj)+'_path')
+        new_name = self.rename_obj(to_sweep, path_obj)
         names = [path_obj, str(path_obj)+'_path']
         self._modeler.SweepAlongPath(self._selections_array(*names),
                                      ["NAME:PathSweepParameters",
@@ -1282,18 +1293,74 @@ class HfssModeler(COMWrapper):
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
         return Polyline(new_name, self)
-
-    def rename_obj(self, name, obj):
+    
+    
+    def sweep_along_vector(self, names, vector):
+        self._modeler.SweepAlongVector(self._selections_array(*names), 
+                                        	["NAME:VectorSweepParameters",
+                                        		"DraftAngle:="		, "0deg",
+                                        		"DraftType:="		, "Round",
+                                        		"CheckFaceFaceIntersection:=", False,
+                                        		"SweepVectorX:="	, vector[0],
+                                        		"SweepVectorY:="	, vector[1],
+                                        		"SweepVectorZ:="	, vector[2]
+                                        	])
+                                        
+                                            
+    def thicken_sheet(self, sheet, thickness, bothsides=False):
+        self._modeler.ThickenSheet([
+                                		"NAME:Selections", "Selections:=", sheet,
+                                		"NewPartsModelFlag:="	, "Model"
+                                	], 
+                                	[
+                                		"NAME:SheetThickenParameters",
+                                		"Thickness:="		, thickness,
+                                		"BothSides:="		, bothsides
+                                	])
+                
+    def mirrorZ(self, obj):
+        self._modeler.Mirror([
+                        		"NAME:Selections", "Selections:=", obj,
+                        		"NewPartsModelFlag:="	, "Model"
+                        	  ], 
+                        	  [
+                        		"NAME:MirrorParameters",
+                        		"MirrorBaseX:="		, "0mm",
+                        		"MirrorBaseY:="		, "0mm",
+                        		"MirrorBaseZ:="		, "0mm",
+                        		"MirrorNormalX:="	, "0mm",
+                        		"MirrorNormalY:="	, "0mm",
+                        		"MirrorNormalZ:="	, "1mm"
+                        	  ])
+        return obj
+    
+    
+    def rename_obj(self, obj, name):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
                                     			["NAME:PropServers", str(obj)],
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
         return name
 
+
     def copy(self, obj):
         self._modeler.Copy(["NAME:Selections", "Selections:=", obj])
         new_obj = self._modeler.Paste()
         return new_obj[0]
+    
+    
+    def duplicate_along_line(self, obj, vec):
+        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
+                                          "NewPartsModelFlag:="	, "Model"], 
+                                        	["NAME:DuplicateToAlongLineParameters",
+                                    		"CreateNewObjects:="	, True,
+                                    		"XComponent:="		, vec[0],
+                                    		"YComponent:="		, vec[1],
+                                    		"ZComponent:="		, vec[2],
+                                    		"NumClones:="		, "2"], 
+                                        	["NAME:Options",
+                                        	"DuplicateAssignments:=", False], 
+                                        	["CreateGroupsForNewObjects:=", False	])
 
     def duplicate_along_line(self, obj, vec, n=2):
         self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
@@ -1330,6 +1397,17 @@ class HfssModeler(COMWrapper):
                    "FullResistance:=", "50ohm", "FullReactance:=", "0ohm"]
 
         self._boundaries.AssignLumpedPort(params)
+        
+    def make_material(self, obj, material):
+        self._modeler.ChangeProperty(["NAME:AllTabs",
+                                		["NAME:Geometry3DAttributeTab",
+                                			["NAME:PropServers", obj],
+                                			["NAME:ChangedProps",
+                                				["NAME:Material","Value:=", material]
+                                			]
+                                		]
+                                	])
+                
 
     def get_face_ids(self, obj):
         return self._modeler.GetFaceIDs(obj)
@@ -1357,7 +1435,10 @@ class HfssModeler(COMWrapper):
 #        print(objects)
         self._modeler.Delete(self._selections_array(*objects))
         
-        
+    def get_matched_object_name(self, name):
+        return self._modeler.GetMatchedObjectName(name+'*')
+    
+    
 class ModelEntity(str, HfssPropertyObject):
     prop_tab = "Geometry3DCmdTab"
     model_command = None
@@ -1429,6 +1510,10 @@ class Rect(ModelEntity):
     def make_lumped_port(self, axis, z0="50ohm", name="LumpPort"):
         start, end = self.make_center_line(axis)
         self.modeler._make_lumped_port(start, end, ["Objects:=", [self]], z0=z0, name=name)
+        
+    def unite(self, list_other, name):
+        union = self.modeler.unite([self] + list_other, name=name)
+        return Polyline(union, self.modeler)
 
     def fillet(self, radius, vertex_index):
         self.modeler._fillet(radius, vertex_index, self)
@@ -1453,7 +1538,10 @@ class Polyline(ModelEntity): # Assume closed polyline
 #        X, Y, Z = (True, True, True)
 #        for point in points:
 #            X =
-
+    
+    def unite(self, list_other):
+        union = self.modeler.unite(self + list_other)
+        return Polyline(union, self.modeler)
 
     def make_center_line(self, axis): # Expects to act on a rectangle...
         #first : find center and size
@@ -1487,7 +1575,7 @@ class Polyline(ModelEntity): # Assume closed polyline
         return self.modeler.get_vertex_ids(self)
 
     def rename(self, new_name):
-        return Polyline(self.modeler.rename_obj(new_name, self), self.modeler)
+        return Polyline(self.modeler.rename_obj(self, new_name), self.modeler)
 
 class OpenPolyline(ModelEntity): # Assume closed polyline
     model_command = "CreatePolyline"
@@ -1525,7 +1613,7 @@ class OpenPolyline(ModelEntity): # Assume closed polyline
         return self.modeler._sweep_along_path(to_sweep, self)
 
     def rename(self, new_name):
-        return OpenPolyline(self.modeler.rename_obj(new_name, self), self.modeler)#, self.points)
+        return OpenPolyline(self.modeler.rename_obj(self, new_name), self.modeler)#, self.points)
 
     def copy(self, new_name):
         new_obj = OpenPolyline(self.modeler.copy(self), self.modeler)
