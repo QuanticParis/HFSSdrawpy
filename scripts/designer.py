@@ -725,6 +725,7 @@ class Circuit(object):
                     vec_rel = Vector([0, oldport[2][ii]])
                     vec_rel = vec_rel.rot(oldport[1])
                     newport = [vec_center+vec_rel, oldport[1], oldport[3][ii], iGap]
+                    
                     self.ports[port+'_'+subnames[ii]] = newport
                 else:
                     print(port+'_'+subnames[ii]+' defined as a single dc port')
@@ -5154,7 +5155,7 @@ class KeyElt(Circuit):
             self.ports[self.name+'_pump_1'] = portOutpump1
             self.ports[self.name+'_pump_2'] = portOutpump2
             
-    def draw_squid_chain_essential(self, squid_param, Nsquid, dist2ground, Leq='1', draw='edge', litho=True, layer=None, is_pump=False):
+    def draw_squid_chain_essential(self, squid_param, Nsquid, dist2ground, Leq='1', draw='edge', litho=True, layer=None, is_pump=False, y_pump='20um'):
 
         '''
         _____    ______________    ______
@@ -5171,7 +5172,7 @@ class KeyElt(Circuit):
         '''
         
         w1,L1,v1,w2,L2,v2,vv,LL,ww = squid_param
-        w1,L1,v1,w2,L2,v2,vv,LL,ww,dist2ground,Leq = parse_entry((w1,L1,v1,w2,L2,v2,vv,LL,ww,dist2ground,Leq))
+        w1,L1,v1,w2,L2,v2,vv,LL,ww,dist2ground,Leq,y_pump = parse_entry((w1,L1,v1,w2,L2,v2,vv,LL,ww,dist2ground,Leq,y_pump))
         Leq = Leq*1e-9
         
         if np.isclose(w1+v1, w2+v2) is False:
@@ -5231,13 +5232,15 @@ class KeyElt(Circuit):
                                   self.coor_vec([(v1-vv)/2, L1*1.1]))
             suffix = ['_part2left', '_part1left', '_partbis', '_part2right', '_part1right']
             self.unite([self.name]+[self.name+suffix[ii] for ii in range(5)])
-            self.duplicate_along_line(self.name, self.coor_vec([length_chain/Nsquid, 0]), Nsquid)
-            names = [self.name]+[self.name+'_'+str(ii) for ii in range(Nsquid)]
-            self.unite(names)
+            if Nsquid > 1:
+                self.duplicate_along_line(self.name, self.coor_vec([length_chain/Nsquid, 0]), Nsquid)
+                names = [self.name]+[self.name+'_'+str(ii) for ii in range(Nsquid)]
+                self.unite(names)
             if layer is None:
-               self.trackObjects.append(names[0])
+               self.trackObjects.append(self.name)
             else:
-                self.layers[layer[0]]['trackObjects'].append(names[0])
+                self.layers[layer[0]]['trackObjects'].append(self.name)
+            
         else:
             eq_array = self.draw_rect_center(self.name,\
                                              self.coor([ref_x+length_chain/2, 0]),
@@ -5271,7 +5274,7 @@ class KeyElt(Circuit):
             iTrackPump = '5um'
             iGapPump = '5um'
             x_shift_pump = height_chain
-            y_shift_pump = height_chain/2+20e-6
+            y_shift_pump = height_chain/2+y_pump
             iTrackPump,iGapPump,x_shift_pump = parse_entry((iTrackPump,iGapPump,x_shift_pump))
             
             self.draw_rect(self.name+'_pump_track',\
@@ -5279,16 +5282,18 @@ class KeyElt(Circuit):
                            self.coor_vec([length_chain+2*x_shift_pump-2*iGapPump, iTrackPump]))
             self.draw_rect(self.name+'_pump_track_1',\
                            self.coor([ref_x-x_shift_pump+iGapPump, y_shift_pump+iTrackPump]),\
-                           self.coor_vec([+iTrackPump, y_shift_pump]))
+                           self.coor_vec([+iTrackPump, dist2ground]))
             self.draw_rect(self.name+'_pump_track_2',\
                            self.coor([ref_x+length_chain+x_shift_pump-iGapPump, y_shift_pump+iTrackPump]),\
-                           self.coor_vec([-iTrackPump, y_shift_pump]))
+                           self.coor_vec([-iTrackPump, dist2ground]))
             self.draw(self.name+'_pump_track_dummy',\
                       self.append_absolute_points([(ref_x,y_shift_pump),\
                                                    (ref_x+iTrackPump,y_shift_pump),\
                                                    (ref_x+iTrackPump,y_shift_pump+iTrackPump),\
                                                    (ref_x,y_shift_pump+iTrackPump)]))
             track = self.unite([self.name+'_pump_track'+ii for ii in ['', '_1', '_2','_dummy']])
+            if not litho:
+                self.modeler.assign_mesh_length(track, iTrackPump/2)
 #            track.fillet(fluxTrack/2,[1, 2, 5, 6])
             
             self.draw_rect(self.name+'_pump_gap',\
@@ -5312,8 +5317,8 @@ class KeyElt(Circuit):
                 self.maskObjects.append(self.name+'_pump_mask')
             
             ori_pump = [self.ori[1], self.ori[0]]
-            portOutpump1 = [self.coor([ref_x-x_shift_pump+iTrackPump/2, width_cutout/2+iTrackPump+3*iGapPump]), self.coor_vec(ori_pump), iTrackPump, iGapPump]
-            portOutpump2 = [self.coor([ref_x+length_chain+x_shift_pump-iGapPump-iTrackPump/2, width_cutout/2+iTrackPump+3*iGapPump]), self.coor_vec(ori_pump), iTrackPump, iGapPump]
+            portOutpump1 = [self.coor([ref_x-x_shift_pump+iTrackPump/2, y_shift_pump+iTrackPump+dist2ground]), self.coor_vec(ori_pump), iTrackPump, iGapPump]
+            portOutpump2 = [self.coor([ref_x+length_chain+x_shift_pump-iGapPump-iTrackPump/2, y_shift_pump+iTrackPump+dist2ground]), self.coor_vec(ori_pump), iTrackPump, iGapPump]
             self.ports[self.name+'_pump_1'] = portOutpump1
             self.ports[self.name+'_pump_2'] = portOutpump2
             
@@ -8021,6 +8026,100 @@ class KeyElt(Circuit):
             
         portOut = [self.coor([xlength/2+2*iGap, 0]), self.ori, iTrack, iGap]
         self.ports[self.name] = portOut
+        
+    def draw_filtered_dc_pad(self, layer, iTrack, iGap, Nspirals=1, Ncapa=5, xlength='250um', ylength='250um', iTrackSpiral='2.5um', iGapSpiral='2.5um', iTrackCapa='4um', iGapCapa='4um', hfss=False):
+        
+        iTrack,iGap,xlength,ylength,iTrackSpiral,iGapSpiral,iTrackCapa,iGapCapa = parse_entry((iTrack,iGap,xlength,ylength,iTrackSpiral,iGapSpiral,iTrackCapa,iGapCapa))
+        
+        if layer is None:
+            layer = ''
+        if layer is '':
+            name = self.name
+        else:
+            name = layer+'_'+self.name
+            
+        pad = self.draw_rect(name+'_track',\
+                             self.coor([-xlength/2, -ylength/2]),\
+                             self.coor_vec([xlength, ylength]))
+        
+        step = iTrackSpiral+iGapSpiral
+        for ii in range(Nspirals):
+            ri = self.draw_rect('right',\
+                                self.coor([xlength/2+ii*step, -ylength/2-ii*step]),\
+                                self.coor_vec([iTrackSpiral, ylength+(2*ii+1)*step]))
+            up = self.draw_rect('up',\
+                                self.coor([xlength/2+ii*step, ylength/2+iGapSpiral+ii*step]),\
+                                self.coor_vec([-xlength-(2*ii+1)*step, iTrackSpiral]))
+            le = self.draw_rect('left',\
+                                self.coor([-xlength/2-(ii+1)*step, ylength/2+(ii+1)*step]),\
+                                self.coor_vec([iTrackSpiral, -ylength-2*(ii+1)*step]))
+            do = self.draw_rect('down',\
+                                self.coor([-xlength/2-(ii+1)*step, -ylength/2-(ii+1)*step]),\
+                                self.coor_vec([xlength+2*(ii+1)*step, iTrackSpiral]))
+            if ii == 0:
+                spiral = self.unite([ri, up, le, do], name=self.name+'_spiral')
+            else:
+                spiral = self.unite([spiral, ri, up, le, do])
+        ender = self.draw_rect('endspiral',\
+                                self.coor([xlength/2+Nspirals*step, -ylength/2-Nspirals*step]),\
+                                self.coor_vec([iTrackSpiral, ylength/2+Nspirals*step+iTrack/2]))
+        self.unite([spiral, ender])
+        
+        origin = xlength/2+Nspirals*step + iTrackSpiral + iGapCapa
+        iLengthCapa = (ylength+(Nspirals+1)*step)/2
+        ctep = 2*iTrackCapa+2*iGapCapa
+        central = self.draw_rect('central',\
+                                 self.coor([origin-iGapCapa,-iTrack/2]),\
+                                 self.coor_vec([Ncapa*ctep+iGapCapa, iTrack]))
+        for ii in range(Ncapa):
+            up_arm = self.draw_rect('up_capa',\
+                                    self.coor([origin+(2*ii+1)*ctep/2,iTrack/2]),\
+                                    self.coor_vec([iTrackCapa, iLengthCapa]))
+            do_arm = self.draw_rect('do_capa',\
+                                    self.coor([origin+(2*ii+1)*ctep/2,-iTrack/2]),\
+                                    self.coor_vec([iTrackCapa, -iLengthCapa]))
+            if ii == 0:
+                up_capa = up_arm
+                do_capa = do_arm
+            else:
+                up_capa = self.unite([up_capa, up_arm])
+                do_capa = self.unite([do_capa, do_arm])
+        
+        self.duplicate_along_line(up_capa, self.coor_vec([-iTrackCapa-iGapCapa, iGapCapa]))
+        self.duplicate_along_line(do_capa, self.coor_vec([-iTrackCapa-iGapCapa,-iGapCapa]))
+        up_ground =  self.modeler.get_matched_object_name('up_capa_')
+        do_ground =  self.modeler.get_matched_object_name('do_capa_')
+        up_ground = up_ground[0] # because get_matched_object returns tuples
+        do_ground = do_ground[0]
+        print(up_ground, do_ground)
+        
+        cutout = self.draw_rect(self.name+'_cutout',\
+                                self.coor([-xlength/2-Nspirals*step-iGapCapa, -ylength/2-Nspirals*step-iGapCapa]),\
+                                self.coor_vec([xlength+2*Nspirals*step+iTrackSpiral+(Ncapa+1/2)*ctep, ylength+2*Nspirals*step+2*iGapCapa]))
+        
+        if layer is '':
+            self.unite([pad, spiral, central, up_capa, do_capa, up_ground, do_ground])
+            self.trackObjects.append(pad)
+            self.gapObjects.append(cutout)
+        else:
+            self.layers[layer]['trackObjects'].append(self.unite([pad, spiral, up_capa, do_capa, up_ground, do_ground]))
+            self.layers[layer]['gapObjects'].append(cutout)
+            
+#        if self.is_mask:
+#            self.draw_rect(name+'_mask',\
+#                           self.coor([-xlength/2-3*iGap, -ylength/2-3*iGap]), \
+#                           self.coor_vec([xlength+6*iGap, ylength+6*iGap]))
+#            self.maskObjects.append(name+'_mask')
+#            
+#        if hfss:
+#            zob = self.draw_rect(name+'_capa',\
+#                           self.coor([-xlength/2, -ylength/2]), \
+#                           self.coor_vec([-2*iGap, ylength]))
+#            self.assign_lumped_RLC(zob, self.ori, ('50ohm', 0, 0))
+            
+        portOut = [self.coor([xlength/2+2*iGap, 0]), self.ori, iTrack, iGap]
+        self.ports[self.name] = portOut
+        
         
         
     def draw_dc_pads(self, layer_name, rel_pos, widths, gaps, xlength='250um', ylength='250um'):
