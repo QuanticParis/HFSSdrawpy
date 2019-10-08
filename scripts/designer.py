@@ -459,6 +459,21 @@ class Circuit(object):
             print(vertices)
             new_Obj = self.modeler.draw_polyline(vertices)
         return new_Obj
+    
+#    
+#    def duplicate_along_line(self, iObject, iVector):
+#        '''
+#        copies iObjand moves the copy by iVector
+#
+#        Inputs:
+#        -------
+#        iObject (string) : HFSS object name e.g. 'ground_plane'
+#        iVector (list) : list of iVector's coordinates
+#
+#        '''
+#        while len(iVector) < 3:
+#            iVector.append(0)
+#        self.modeler.duplicate_along_line(iObject, iVector)
 
     def translate(self, iObject, iVector):
         '''
@@ -1153,13 +1168,14 @@ class KeyElt(Circuit):
                        pad_spacing,
                        pad_size,
                        Jwidth,
+                       Jlength,
                        track,
                        gap,
                        Jinduc,
                        nport=1,
                        fillet=None):
 
-        cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
+        cutout_size, pad_spacing, pad_size, Jwidth, Jlength, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, Jlength, track, gap))
         cutout_size = Vector(cutout_size)
         pad_size = Vector(pad_size)
 
@@ -1178,20 +1194,21 @@ class KeyElt(Circuit):
         self.ports[self.name+'_in_jct'] = in_junction
         self.ports[self.name+'_out_jct'] = out_junction
         junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
-
+        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, Jlength, iInduct=Jinduc, fillet=None)
+        
+        
         right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
         left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
         
 
         pads = right_pad.unite([left_pad, junction_pads], name=self.name+'_pads')
         
-        if fillet is not None:
-            pads.fillet(fillet+self.overdev,[19])
-            pads.fillet(0.75*fillet-self.overdev,[18,17,14,13])
-            pads.fillet(fillet+self.overdev,[12,11,10,9,8,7])
-            pads.fillet(0.75*fillet-self.overdev,[6,5,2,1])
-            pads.fillet(fillet+self.overdev,0)
+#        if fillet is not None:
+#            pads.fillet(fillet+self.overdev,[19])
+#            pads.fillet(0.75*fillet-self.overdev,[18,17,14,13])
+#            pads.fillet(fillet+self.overdev,[12,11,10,9,8,7])
+#            pads.fillet(0.75*fillet-self.overdev,[6,5,2,1])
+#            pads.fillet(fillet+self.overdev,0)
       
         self.trackObjects.append(pads)
 
@@ -1375,6 +1392,7 @@ class KeyElt(Circuit):
             spacing_left=spacing_right
         if short_left is None:
             short_left=short_right
+        print("good function")
         
         cutout_size = Vector(cutout_size)
         pad_size_left = Vector(pad_size_left)
@@ -4348,8 +4366,6 @@ class KeyElt(Circuit):
             
         # bottom row
         width_trapeze = (size-(n+1)*margin_litho)/n
-        track = '42um'
-        gap = '25um'
         name_s, name_e, name_n, name_w = self.name+'_s', self.name+'_e', self.name+'_n', self.name+'_w'
         port_nb = 0
         for ii, name in enumerate([name_s, name_e, name_n, name_w]):
@@ -6012,7 +6028,7 @@ class ConnectElt(KeyElt, Circuit):
     
     def _connect_JJ(self, iTrackJ, iInduct='1nH', fillet=None):
         '''
-        Draws a Joseph's Son Junction.
+        Draws a Josephson Junction.
 
         Draws a rectangle, here called "junction",
         with Bondary condition :lumped RLC, C=R=0, L=iInduct in nH
@@ -6034,6 +6050,7 @@ class ConnectElt(KeyElt, Circuit):
 
         '''
         iLength = (self.posOut-self.pos).norm()
+        print('iLength=', iLength)
         
         if 0:
             induc_H = self.val(iInduct)*1e-9
@@ -6063,11 +6080,11 @@ class ConnectElt(KeyElt, Circuit):
                       (0, -iTrack),
                       (-adaptDist, (iTrack-iTrackJ)/2),
                       (-(iLength/2-iTrackJ/2-adaptDist), 0)]
+        print(raw_points)
+        
         points = self.append_points(raw_points)
         right_pad = self.draw(self.name+"_pad1", points)
         
-            
-
         points = self.append_points(self.refy_points(raw_points))
         left_pad = self.draw(self.name+"_pad2", points)
 
