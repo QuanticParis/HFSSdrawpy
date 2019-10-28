@@ -978,8 +978,14 @@ class HfssModeler(COMWrapper):
             msg = ('Warning: \'%s\' already exists, '
                    'new box named \'%s\'' % (kwargs['name'], name))
             print(msg)
-        return Box(name, self, pos, size)
-    
+        return ModelEntity(name, dim='Solid')
+
+    def draw_box_center(self, pos, size, **kwargs):
+        pos = parse_entry(pos)
+        size = parse_entry(size)
+        corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
+#        print(corner_pos)
+        return self.draw_box_corner(corner_pos, size, **kwargs)
     
 #    def draw_cylinder(self, pos, size, **kwargs):
 #        pos = parse_entry(pos)
@@ -999,13 +1005,6 @@ class HfssModeler(COMWrapper):
 #                   'new box named \'%s\'' % (kwargs['name'], name))
 #            print(msg)
 #        return Box(name, self, pos, size)
-
-    def draw_box_center(self, pos, size, **kwargs):
-        pos = parse_entry(pos)
-        size = parse_entry(size)
-        corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-#        print(corner_pos)
-        return self.draw_box_corner(corner_pos, size, **kwargs)
 
     def draw_polyline(self, points, closed=True, **kwargs):
         points = parse_entry(points)
@@ -1031,9 +1030,9 @@ class HfssModeler(COMWrapper):
         )
 
         if closed:
-            return Polyline(name, self, points)
+            return ModelEntity(name)
         else:
-            return OpenPolyline(name, self, points)
+            return ModelEntity(name)
 
     def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
@@ -1053,7 +1052,7 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs)
         )
-        return Rect(name, self, pos, size)
+        return ModelEntity(name)
 
     def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
@@ -1063,7 +1062,7 @@ class HfssModeler(COMWrapper):
 
     def draw_cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
-        return self._modeler.CreateCylinder(
+        name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
              "XCenter:=", pos[0],
              "YCenter:=", pos[1],
@@ -1073,10 +1072,18 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis,
              "NumSides:=", 0],
             self._attributes_array(**kwargs))
-
+        return ModelEntity(name)
+    
+    def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
+        assert axis in "XYZ"
+        axis_idx = ["X", "Y", "Z"].index(axis)
+        edge_pos = copy(pos)
+        edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
+        return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
+    
     def draw_disk(self, pos, radius, axis, **kwargs):
             assert axis in "XYZ"
-            return self._modeler.CreateEllipse(
+            name = self._modeler.CreateEllipse(
                 ["NAME:EllipsdeParameters",
                  "XCenter:=", pos[0],
                  "YCenter:=", pos[1],
@@ -1085,13 +1092,7 @@ class HfssModeler(COMWrapper):
                  "Ratio:=", 1,
                  "WhichAxis:=", axis],
                 self._attributes_array(**kwargs))
-
-    def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
-        assert axis in "XYZ"
-        axis_idx = ["X", "Y", "Z"].index(axis)
-        edge_pos = copy(pos)
-        edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
-        return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
+            return ModelEntity(name)
 
     def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
@@ -1117,18 +1118,29 @@ class HfssModeler(COMWrapper):
                                             "WhichAxis:=", "Z"],
                                             self._attributes_array(**kwargs))
 
-        return name # TODO create Wirebond class
+        return ModelEntity(name)
     
-    def connect_faces(self, name1, name2):
+    def connect_faces(self, entity1, entity2):
         name = self._modeler.Connect(["NAME:Selections",
-                               "Selections:=", ','.join([name1, name2])])
+                               "Selections:=", ','.join([entity1, entity2])])
 #        print(name) #None
+        entity1.append_history(entity2.name)
+        del entity2
+        return entity1
+    
+    def delete(self, entity):
+        self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
+        del entity
+        
+    def rename_entity(self, en, name):
+        self._modeler.ChangeProperty(["NAME:AllTabs",
+                                    		["NAME:Geometry3DAttributeTab",
+                                    			["NAME:PropServers", str(obj)],
+                                    			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
         return name
 
-    def delete(self, name):
-        self._modeler.Delete(["NAME:Selections", "Selections:=", name])
-        
-    def unite(self, names, name=None, keep_originals=False):
+    def unite(self, entities, name=None, keep_originals=False):
+        names = [entity.name for entity in entities]
         self._modeler.Unite(
             self._selections_array(*names),
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
@@ -1333,14 +1345,6 @@ class HfssModeler(COMWrapper):
                         		"MirrorNormalZ:="	, "1mm"
                         	  ])
         return obj
-    
-    
-    def rename_obj(self, obj, name):
-        self._modeler.ChangeProperty(["NAME:AllTabs",
-                                    		["NAME:Geometry3DAttributeTab",
-                                    			["NAME:PropServers", str(obj)],
-                                    			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
-        return name
 
 
     def copy(self, obj):
@@ -1439,25 +1443,34 @@ class HfssModeler(COMWrapper):
         return self._modeler.GetMatchedObjectName(name+'*')
     
     
-class ModelEntity(str, HfssPropertyObject):
-    prop_tab = "Geometry3DCmdTab"
-    model_command = None
-    transparency = make_float_prop("Transparent", prop_tab="Geometry3DAttributeTab", prop_server=lambda self: self)
-    material = make_str_prop("Material", prop_tab="Geometry3DAttributeTab", prop_server=lambda self: self)
-    coordinate_system = make_str_prop("Coordinate System")
+#class ModelEntity(str, HfssPropertyObject):
+#    prop_tab = "Geometry3DCmdTab"
+#    model_command = None
+#    transparency = make_float_prop("Transparent", prop_tab="Geometry3DAttributeTab", prop_server=lambda self: self)
+#    material = make_str_prop("Material", prop_tab="Geometry3DAttributeTab", prop_server=lambda self: self)
+#    coordinate_system = make_str_prop("Coordinate System")
+#
+#    def __new__(self, val, *args, **kwargs):
+#        return str.__new__(self, val)
+#
+#    def __init__(self, val, modeler):
+#        """
+#        :type val: str
+#        :type modeler: HfssModeler
+#        """
+#        super(ModelEntity, self).__init__()#val) #Comment out keyword to match arguments
+#        self.modeler = modeler
+#        self.prop_server = self + ":" + self.model_command + ":1"
+        
+class ModelEntity():
 
-    def __new__(self, val, *args, **kwargs):
-        return str.__new__(self, val)
-
-    def __init__(self, val, modeler):
-        """
-        :type val: str
-        :type modeler: HfssModeler
-        """
-        super(ModelEntity, self).__init__()#val) #Comment out keyword to match arguments
-        self.modeler = modeler
-        self.prop_server = self + ":" + self.model_command + ":1"
-
+    def __init__(self, name, dim):
+        self.name = name
+        self.dim = dim
+        self.history = []    
+        
+    def append_history(self, entity):
+        self.history.append(entity)
 
 class Box(ModelEntity):
     model_command = "CreateBox"
