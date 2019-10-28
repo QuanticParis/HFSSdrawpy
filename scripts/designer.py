@@ -1524,9 +1524,10 @@ class KeyElt(Circuit):
             
     def cutout(self, zone_size, layer=None):
         zone_size = parse_entry(zone_size)
-        self.maskObjects.append(self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size)))
         if layer is not None:
             self.layers[layer]['gapObjects'].append(self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size)))
+        if self.is_mask:
+            self.maskObjects.append(self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size)))
         
     def draw_capa(self, iTrack, iGap, pad_spacing, pad_size, half=False):
         '''
