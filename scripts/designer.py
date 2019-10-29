@@ -3529,9 +3529,41 @@ class KeyElt(Circuit):
         self.ports[self.name+'_R'] = portR
         self.ports[self.name+'_B'] = portB
 
+    def draw_ind_inline(self, iTrack, iGap, ind_length, ind_track, premesh=True):
+        '''
+        iTrack is the track width of the input CPW
+        iGap is the gap width of the input CPW
+        ind_length is the length of the inductive rectangle
+        ind_track is the width of the inductive rectangle
+        
+        '''
+        
+        iTrack, iGap, ind_length, ind_track = parse_entry((iTrack, iGap, ind_length, ind_track))
+        rect_ind=self.draw_rect(self.name, self.coor([-ind_length/2,-ind_track/2-self.overdev]), self.coor_vec([ind_length,ind_track+2*self.overdev]))
 
-    def draw_T_join(self, iTrack, iGap, layer=None):
+        portOut1=[self.coor([ind_length/2,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portOut2 = [self.coor([-ind_length/2,0]), self.coor_vec([-1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
 
+        rect_gap=self.draw_rect(self.name+'_gap', self.coor([-ind_length/2,-iTrack/2-iGap+self.overdev]), self.coor_vec([ind_length,2*iGap+iTrack-2*self.overdev]))
+        
+        if premesh:
+            if not self.is_litho:
+                self.draw_rect(self.name+'_mesh', self.coor([-ind_length/2,-iTrack/2-iGap+self.overdev]), self.coor_vec([ind_length,2*iGap+iTrack-2*self.overdev]))   
+                self.modeler.assign_mesh_length(self.name+"_mesh",ind_track)
+
+
+        self.trackObjects.append(rect_ind)
+        
+        self.gapObjects.append(rect_gap)
+        if self.is_mask:
+            self.maskObjects.append(self.draw_rect_center(self.name+"_mask", self.coor([0,0]), self.coor_vec([ind_length, iTrack + 2*iGap +2*self.gap_mask])))
+        
+      
+      
+    def draw_T_join(self, iTrack, iGap):
+        
         iTrack, iGap = parse_entry((iTrack, iGap))
         
         if not self.is_overdev or self.val(self.overdev<0):
