@@ -3608,30 +3608,31 @@ class KeyElt(Circuit):
         for move, direction_exp, direction_name in zip(moves, directions_exp, directions_name):
             self.draw_alignement_mark_r(size, disp*direction_exp+move, suff=direction_name)      
         
-    def draw_dose_test_Nb(self, pad_size, pad_spacing, array, correction='0um'):
+    def draw_dose_test_Nb(self, pad_size, pad_spacing, array, correction='0um', alum=False):
         pad_size, pad_spacing = parse_entry((pad_size, pad_spacing))
         pad_size = Vector(pad_size)
         pads = []
         
-        pos_x = pad_spacing
+        pos_x = pad_spacing+0.5*correction
         pos_y = pad_spacing
         for jj in range(array[1]):
             for ii in range(array[0]):
                 pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_x, pos_y]), self.coor_vec(pad_size)))
                 pos_x += pad_size[0]+pad_spacing-correction
                 pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_x, pos_y]), self.coor_vec(pad_size)))
-                pos_x += pad_size[0]+2*pad_spacing-correction
+                pos_x += pad_size[0]+2*pad_spacing+correction
             pos_y += pad_size[1]+pad_spacing
-            pos_x = pad_spacing
-                
-        cutout = self.draw_rect(self.name+'_cutout', self.coor([0, 0]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*3*array[0]-correction*(2*array[0]-1),pad_size[1]*array[1]+pad_spacing*(array[1]+1)]))
+            pos_x = pad_spacing+0.5*correction
+        
+        if not alum:
+            cutout = self.draw_rect(self.name+'_cutout', self.coor([0.5*correction, 0]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*3*array[0]-correction, pad_size[1]*array[1]+pad_spacing*(array[1]+1)]))
+            cutout = self.subtract(cutout, pads)
+            self.gapObjects.append(cutout)
         if self.is_mask:
-            mask = self.draw_rect(self.name+'_cutout', self.coor([-self.gap_mask, -self.gap_mask]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*3*array[0]-correction*(2*array[0]-1)+2*self.gap_mask,pad_size[1]*array[1]+pad_spacing*(array[1]+1)+2*self.gap_mask]))
+            mask = self.draw_rect(self.name+'_cutout', self.coor([0.5*correction-self.gap_mask, -self.gap_mask]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*3*array[0]-correction+2*self.gap_mask,pad_size[1]*array[1]+pad_spacing*(array[1]+1)+2*self.gap_mask]))
             self.maskObjects.append(mask)
-        cutout = self.subtract(cutout, pads)
-        self.gapObjects.append(cutout)
         
-        
+
     def draw_dose_test_Nb_junctions(self, pad_size, pad_spacing, array, widths, width_bridge, spacing_bridges, n_bridge, small_pad_size):
         pad_size, pad_spacing, widths, width_bridge, spacing_bridges, small_pad_size = parse_entry((pad_size, pad_spacing, widths, width_bridge, spacing_bridges, small_pad_size))
         pad_size = Vector(pad_size)
@@ -3707,7 +3708,7 @@ class KeyElt(Circuit):
         snail_array = self.connect_elt(self.name+'_junction', in_array, out_array)
         snail_track = snail_array._connect_snails_Zaki([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
-    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0, alternate_width=True):
+    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0, alternate_width=True, version=0):
         pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
         pad_size = Vector(pad_size)
         if self.val(width) < 1.5e-6 and n_bridge==1:
@@ -3725,11 +3726,16 @@ class KeyElt(Circuit):
         self.ports[self.name+'_2'] = portOut2
 
         jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
-        #print(n_bridge)
         if alternate_width:
-            jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct)
+            if version==0:
+                jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct)
+            elif version==1:
+                jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, thin=True)
         else:
-            jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct)
+            if version==0:
+                jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct)
+            elif version==1:
+                jcts._connect_jct(width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True)
             
     
     def draw_dose_test_junctions(self, cutout_size, pad_size, pad_spacing, widths, width_bridge, spacing_bridges, n_bridge, alternate_width=False):
@@ -6079,7 +6085,7 @@ class ConnectElt(KeyElt, Circuit):
             x_pos = x_pos+width_snail
         self.unite(squids, name=self.name+'_squids')
 
-    def _connect_jct(self, width_bridge, n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=5e-6, width_jct=None): #opt assymetry=0.25e-6
+    def _connect_jct(self, width_bridge, n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=5e-6, width_jct=None, thin=False): #opt assymetry=0.25e-6
         limit_dose = 8e-6
         width = self.inTrack # assume both are equal
         spacing = (self.posOut-self.pos).norm()
@@ -6088,8 +6094,15 @@ class ConnectElt(KeyElt, Circuit):
         
         tot_width = n*width_bridge+(n-1)*spacing_bridge
         
+        if width_jct is not None:
+            margin = 1e-6
+        
         self.draw_rect(self.name+'_left', self.coor([-tot_width/2-limit_dose,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap+limit_dose, width+2*assymetry]))
-        self.draw_rect(self.name+'_left2', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-limit_dose, width+2*assymetry]))
+        if thin and width_jct is not None:
+            self.draw_rect(self.name+'_left2', self.coor([-tot_width/2-margin,-width/2-assymetry]), self.coor_vec([-limit_dose+margin, width+2*assymetry]))
+            self.draw_rect(self.name+'_left3', self.coor([-tot_width/2,-width_jct/2]), self.coor_vec([-margin, width_jct]))
+        else:
+            self.draw_rect(self.name+'_left2', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-limit_dose, width+2*assymetry]))
 
         #print(n)
         if n%2==0:
@@ -6097,7 +6110,6 @@ class ConnectElt(KeyElt, Circuit):
         else:
             _width_right = width
         if width_jct is not None:
-            margin = 1e-6
             self.draw_rect(self.name+'_right2', self.coor([tot_width/2+margin,-_width_right/2]), self.coor_vec([limit_dose-margin, _width_right]))
             self.draw_rect(self.name+'_right3', self.coor([tot_width/2,-width_jct/2]), self.coor_vec([margin, width_jct]))
         else:
