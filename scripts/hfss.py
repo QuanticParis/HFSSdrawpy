@@ -1461,17 +1461,69 @@ class HfssModeler(COMWrapper):
 #        super(ModelEntity, self).__init__()#val) #Comment out keyword to match arguments
 #        self.modeler = modeler
 #        self.prop_server = self + ":" + self.model_command + ":1"
-        
-class ModelEntity():
-
-    def __init__(self, name, dim):
-        self.name = name
-        self.dim = dim
-        self.history = []    
-        
-    def append_history(self, entity):
-        self.history.append(entity)
-
+      
+#class ModelEntity():
+#    def __init__(self, name, referential, model, boundaries):
+#        self.name = name
+#        self.referential = referential
+#        self.history = []    
+#        self.model = model
+#        self.boundaries = boundaries
+#        
+#    def append_history(self, entity):
+#        self.history.append(entity)
+#    def delete(self):
+#        del self
+#    def unite(self, entities, name=None, keep_originals=False):
+#        if name is None:
+#            union = ModelEntity(entities[0].name, entities[0].referential, entities[0].model, entities[0].boundaries)
+#        else:
+##            return names[0].rename(name)
+#            union = ModelEntity(name, entities[0].referential, entities[0].model, entities[0].boundaries)
+#        
+#        if keep_originals:
+#            return entities.append(union)
+#        else:
+#            return union
+#    def rename_entity(self, name):
+#        self.name = name
+#    
+#class Entity1D(ModelEntity):
+#    def __init__(self, name, referential, model):
+#        self.name = name
+#        self.referential = referential
+#        self.history = []    
+#        self.model = model
+#        self.boundaries = None
+#    
+#    def _sweep_along_path(self, path_obj):   
+#        sheet = Entity2D('sheet',self.referential,self.model,self.boundaries)
+#        sheet.append_history(self)
+#        return self,sheet 
+#        
+#    def sweep_along_vector(self, vect):
+#        "Duplicate the line and create a surface with the copy"
+#        sheet = Entity2D(self.name +'_To_Sheet',self.referential,self.model,self.boundaries)
+#        sheet.append_history(self)
+#        for entity in self.history:
+#            sheet.append_history(entity)
+#        return self, sheet
+#
+#class Entity2D(ModelEntity):
+#    
+#    def thicken_sheet(self, thickness, bothsides=False):
+#        solid = Entity3D(self.name+'_To_Solid',self.referential, self.model, self.boundaries)
+#        solid.append_history(self)
+#        for entity in self.history:
+#            solid.append_history(entity)
+#        return self, solid
+#    
+#class Entity3D(ModelEntity):
+#    def __init__(name, referential, model):
+#        self.name = name
+#        self.referential = referential
+#        self.model = model
+    
 class Box(ModelEntity):
     model_command = "CreateBox"
     position = make_float_prop("Position")

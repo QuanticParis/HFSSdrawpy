@@ -4,10 +4,10 @@ Created on Mon Oct 28 16:18:36 2019
 
 @author: Zaki
 """
-from designer import Vector, Circuit, way, equalfloat, eps
+from designer import Vector, way, equal_float, eps
 import numpy as np
-from .hfss import parse_entry
-from .hfss import VariableString
+from hfss import parse_entry
+from hfss import VariableString
 
 TOP = [0, 1]
 DOWN = [0, -1]
@@ -19,7 +19,7 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
-class KeyElt(Circuit):
+class KeyElt():
 
     pcb_track = parse_entry('300um')
     pcb_gap = parse_entry('200um')

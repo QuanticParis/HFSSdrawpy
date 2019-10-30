@@ -78,8 +78,8 @@ LEFT = [-1, 0]
 
 
 
-from .hfss import parse_entry
-from .hfss import VariableString
+from hfss import parse_entry
+from hfss import VariableString
 import numpy as np
 
 
@@ -198,11 +198,12 @@ class Vector(list):
         return Vector([-self[0]+2*offset, self[1]])
 
 class Design(object):
-
-    
+    def __init__(self, name):
+        self.name = name
+        
 class Object(object):
-    def __init__(model, material):
-        self.model = model # string with "Sheet" or "Vacuum"
+    def __init__(self, model, material):
+        self.model = model # string with "Sheet" or "Solids"
         self.material = material
         self.boundaries = []
         self.subObject = []

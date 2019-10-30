@@ -5,7 +5,7 @@ Created on Mon Oct 28 16:27:24 2019
 @author: Zaki
 """
 
-from designer import Vector, Circuit, way, equalfloat, eps
+from designer import Vector, way, equal_float, eps
 from KeyElement import KeyElt
 import numpy as np
 from .hfss import parse_entry
