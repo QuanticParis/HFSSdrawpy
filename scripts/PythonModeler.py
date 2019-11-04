@@ -10,14 +10,14 @@ from designer import Vector
 from hfss import ModelEntity
 import CustomElement
 from hfss import parse_entry, get_active_project
+from gds_modeler import GdsModeler
 
 class PythonModeler(CustomElement.CustomElt):
-    def __init__(self, name, str,  pos=[0,0], ori=[1,0]): #"Hfss" or "Gds"
+    def __init__(self, interface_name,  pos=[0,0], ori=[1,0]): #"Hfss" or "Gds"
         pos1, ori1 = parse_entry((pos, ori))
         self.pos, self.ori = Vector(pos1), Vector(ori1)
         self.ports = {}
-        self.name = name
-        if str=="hfss":
+        if interface_name=="hfss":
             project = get_active_project()
             design = project.get_active_design()
             self.modeler = design.modeler
@@ -25,8 +25,8 @@ class PythonModeler(CustomElement.CustomElt):
             self.modeler.delete_all_objects()
             self.interface = self.modeler
             
-        if str=="gds":
-            self.interface = 1
+        if interface_name=="gds":
+            self.interface = GdsModeler("test")
         
     def set_units(self, units='m'):
         if (self.modeler != None):
@@ -50,7 +50,7 @@ class PythonModeler(CustomElement.CustomElt):
         return ModelEntity(name, 2, referential, model)
     
     def draw_rect_center(self, referential, pos, size, model = 'True', **kwargs):
-        name = self.interface.draw_box_corner(pos, size, **kwargs)
+        name = self.interface.draw_rect_center(pos, size, **kwargs)
         return ModelEntity(name, 2, referential, model)
         
     def draw_cylinder(self, name, referential, pos, size, model = 'True', **kwargs):

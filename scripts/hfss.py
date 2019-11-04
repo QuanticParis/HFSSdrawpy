@@ -1164,7 +1164,8 @@ class HfssModeler(COMWrapper):
 #            return names[0].rename(name)
             return self.rename_obj(names[0], name)
 
-    def intersect(self, names, keep_originals=False):
+    def intersect(self, entities, keep_originals=False):
+        names = [entity.name for entity in entities]
         self._modeler.Intersect(
             self._selections_array(*names),
             ["NAME:IntersectParameters", "KeepOriginals:=", keep_originals]
@@ -1476,7 +1477,7 @@ class HfssModeler(COMWrapper):
 #        self.prop_server = self + ":" + self.model_command + ":1"
       
 class ModelEntity():
-    def __init__(self, name, dimension, referential, model, boundaries, layer="layer0"):
+    def __init__(self, name, dimension, referential, model, boundaries=[], layer="layer0"):
         self.name = name
         self.dimension = dimension
         self.referential = referential
