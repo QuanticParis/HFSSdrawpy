@@ -7,37 +7,22 @@ Created on Thu Oct 31 14:14:51 2019
 
 from KeyElement import KeyElt
 from designer import Vector
-<<<<<<< HEAD
-from hfss import ModelEntity
-import CustomElement
-from hfss import parse_entry, get_active_project
+from hfss import parse_entry, get_active_project, ModelEntity
 from gds_modeler import GdsModeler
 
 class PythonModeler():
     def __init__(self, interface): #"Hfss" or "Gds"
         self.ports = {}
-        if interface_name=="hfss":
-=======
-from hfss import parse_entry, get_active_project, ModelEntity
-
-class PythonModeler():
-    def __init__(self, interface): #"Hfss" or "Gds"
-        self.ports = {}
         if interface=="hfss":
->>>>>>> Anthony
             project = get_active_project()
             design = project.get_active_design()
             self.modeler = design.modeler
             self.modeler.set_units('mm')
             self.modeler.delete_all_objects()
             self.interface = self.modeler
-            
-<<<<<<< HEAD
-        if interface_name=="gds":
-            self.interface = GdsModeler("test")
-=======
+
         if interface=="gds":
-            self.interface = 1
+            self.interface = GdsModeler('body')
     
     def body(self, name='Global', coor_sys=None):
         # TODO if coor_sys already just change the properties of the existing 
@@ -46,53 +31,50 @@ class PythonModeler():
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(name, coor_sys)
-        return Body(self.modeler, self.interface, name)
->>>>>>> Anthony
+        return Body(self.interface, name)
         
     def set_units(self, units='m'):
         if (self.modeler != None):
             self.modeler.set_units('mm')
             self.interface = self.modeler
+    
+    def generate_gds(self, name_file):
+        assert type(self.interface)==GdsModeler
+        self.interface.generate_gds(name_file)
 
-    def draw_box_corner(self, coor_sys, pos, size, model = 'True', **kwargs):
+    def box_corner(self, coor_sys, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_box_corner(pos, size, **kwargs)
         return ModelEntity(name, 3, coor_sys, model)
     
-    def draw_box_center(self, coor_sys, pos, size, model = 'True', **kwargs):
+    def box_center(self, coor_sys, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_box_center(pos, size, **kwargs)
         return (name, 3, coor_sys, model)
   
-    def polyline(self, points, closed=True, **kwargs): # among kwargs, name should be given
-        name = self.interface.draw_polyline(points, closed=closed, **kwargs)
+    def polyline(self, points, layer, closed=True, **kwargs): # among kwargs, name should be given
+        name = self.interface.draw_polyline(points, layer, closed=closed, **kwargs)
         dim = closed + 1 # 2D when closed, 1D when open
         return ModelEntity(name, dim, self.coor_sys)
     
-    def draw_rect_corner(self, pos, size, model = 'True', **kwargs):
+    def rect_corner(self, pos, size, model = 'True', **kwargs):
 #        pos = local_ref(pos)
 #        size = local_ref(size)
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, model)
     
-<<<<<<< HEAD
-    def draw_rect_center(self, referential, pos, size, model = 'True', **kwargs):
+    def rect_center(self, referential, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_rect_center(pos, size, **kwargs)
         return ModelEntity(name, 2, referential, model)
-=======
-    def draw_rect_center(self, coor_sys, pos, size, model = 'True', **kwargs):
-        name = self.interface.draw_box_corner(pos, size, **kwargs)
-        return ModelEntity(name, 2, coor_sys, model)
->>>>>>> Anthony
-        
-    def draw_cylinder(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+
+    def cylinder(self, name, coor_sys, pos, size, model = 'True', **kwargs):
         return ModelEntity(name, 3, coor_sys, model, **kwargs)
     
-    def draw_cylinder_center(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+    def cylinder_center(self, name, coor_sys, pos, size, model = 'True', **kwargs):
         return ModelEntity(name, 3, coor_sys, pos, size, model)
     
-    def draw_disk(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+    def disk(self, name, coor_sys, pos, size, model = 'True', **kwargs):
         return ModelEntity(name, 2, coor_sys, model)
     
-    def draw_wirebond(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+    def wirebond(self, name, coor_sys, pos, size, model = 'True', **kwargs):
         return ModelEntity(name, 2, coor_sys, model)
     
     def connect_faces(self, name, entity1, entity2):
@@ -223,8 +205,7 @@ class Body(PythonModeler, KeyElt):
     pos_elt = [0,0]
     ori_elt = 0
     
-    def __init__(self, modeler, interface, coor_sys):
-        self.modeler = modeler
+    def __init__(self, interface, coor_sys):
         self.interface = interface
         self.coor_sys = coor_sys
 

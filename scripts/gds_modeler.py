@@ -24,7 +24,6 @@ class GdsModeler():
         self.cell = gdspy.Cell(body)
 
     def generate_gds(self,name_file):
-        gdspy.LayoutViewer(self.body)
         gdspy.write_gds(name_file, unit= 1.0e-6, precision=10.e-9)
 
     def set_units(self, units='m'):
