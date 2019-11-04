@@ -7,17 +7,12 @@ Created on Thu Oct 31 14:14:51 2019
 
 from KeyElement import KeyElt
 from designer import Vector
-from hfss import ModelEntity
-import CustomElement
-from hfss import parse_entry, get_active_project
-from gds_modeler import GdsModeler
+from hfss import parse_entry, get_active_project, ModelEntity
 
-class PythonModeler(CustomElement.CustomElt):
-    def __init__(self, interface_name,  pos=[0,0], ori=[1,0]): #"Hfss" or "Gds"
-        pos1, ori1 = parse_entry((pos, ori))
-        self.pos, self.ori = Vector(pos1), Vector(ori1)
+class PythonModeler():
+    def __init__(self, interface): #"Hfss" or "Gds"
         self.ports = {}
-        if interface_name=="hfss":
+        if interface=="hfss":
             project = get_active_project()
             design = project.get_active_design()
             self.modeler = design.modeler
@@ -25,50 +20,62 @@ class PythonModeler(CustomElement.CustomElt):
             self.modeler.delete_all_objects()
             self.interface = self.modeler
             
-        if interface_name=="gds":
-            self.interface = GdsModeler("test")
+        if interface=="gds":
+            self.interface = 1
+    
+    def body(self, name='Global', coor_sys=None):
+        # TODO if coor_sys already just change the properties of the existing 
+        # one
+        if name != 'Global':
+            if not(coor_sys is None):
+                coor_sys = parse_entry(coor_sys)
+                self.interface.create_coor_sys(name, coor_sys)
+        return Body(self.modeler, self.interface, name)
         
     def set_units(self, units='m'):
         if (self.modeler != None):
             self.modeler.set_units('mm')
             self.interface = self.modeler
 
-    def draw_box_corner(self, referential, pos, size, model = 'True', **kwargs):
+    def draw_box_corner(self, coor_sys, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_box_corner(pos, size, **kwargs)
-        return ModelEntity(name,3, referential, model)
+        return ModelEntity(name, 3, coor_sys, model)
     
-    def draw_box_center(self, referential, pos, size, model = 'True', **kwargs):
+    def draw_box_center(self, coor_sys, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_box_center(pos, size, **kwargs)
-        return (name, 3, referential, model)
+        return (name, 3, coor_sys, model)
   
-    def draw_polyline(self, referential, pos, size, model = 'True', **kwargs):
-        name = self.interface.draw_polyline(pos, size, **kwargs)
-        return ModelEntity(name, 1, referential, model)
+    def polyline(self, points, closed=True, **kwargs): # among kwargs, name should be given
+        name = self.interface.draw_polyline(points, closed=closed, **kwargs)
+        dim = closed + 1 # 2D when closed, 1D when open
+        return ModelEntity(name, dim, self.coor_sys)
     
-    def draw_rect_corner(self, referential, pos, size, model = 'True', **kwargs):
+    def draw_rect_corner(self, pos, size, model = 'True', **kwargs):
+#        pos = local_ref(pos)
+#        size = local_ref(size)
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
-        return ModelEntity(name, 2, referential, model)
+        return ModelEntity(name, 2, self.coor_sys, model)
     
     def draw_rect_center(self, referential, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_rect_center(pos, size, **kwargs)
         return ModelEntity(name, 2, referential, model)
         
-    def draw_cylinder(self, name, referential, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 3, referential, model, **kwargs)
+    def draw_cylinder(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+        return ModelEntity(name, 3, coor_sys, model, **kwargs)
     
-    def draw_cylinder_center(self, name, referential, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 3, referential, pos, size, model)
+    def draw_cylinder_center(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+        return ModelEntity(name, 3, coor_sys, pos, size, model)
     
-    def draw_disk(self, name, referential, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 2, referential, model)
+    def draw_disk(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+        return ModelEntity(name, 2, coor_sys, model)
     
-    def draw_wirebond(self, name, referential, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 2, referential, model)
+    def draw_wirebond(self, name, coor_sys, pos, size, model = 'True', **kwargs):
+        return ModelEntity(name, 2, coor_sys, model)
     
     def connect_faces(self, name, entity1, entity2):
         assert entity1.dimension == entity2.dimension
         assert entity1.dimension == 2
-        return ModelEntity(name, 3, entity1.referential, entity1.model)
+        return ModelEntity(name, 3, entity1.coor_sys, entity1.model)
         
     def delete(self, entity):
         del entity
@@ -85,21 +92,21 @@ class PythonModeler(CustomElement.CustomElt):
             if dim_Union == 0:
                 pass
             elif dim_Union == 1:
-                union = ModelEntity(entities[0].name,1 , entities[0].referential, entities[0].model)
+                union = ModelEntity(entities[0].name,1 , entities[0].coor_sys, entities[0].model)
             elif dim_Union == 2:
-                union = ModelEntity(entities[0].name,2 , entities[0].referential, entities[0].model, entities[0].boundaries)
+                union = ModelEntity(entities[0].name,2 , entities[0].coor_sys, entities[0].model, entities[0].boundaries)
             elif dim_Union == 3:
-                union = ModelEntity(entities[0].name,3 , entities[0].referential, entities[0].model, entities[0].boundaries)
+                union = ModelEntity(entities[0].name,3 , entities[0].coor_sys, entities[0].model, entities[0].boundaries)
        
         else:
             if dim_Union == 0:
                 pass
             elif dim_Union == 1:
-                union = ModelEntity(name, 1, entities[0].referential, entities[0].model)
+                union = ModelEntity(name, 1, entities[0].coor_sys, entities[0].model)
             elif dim_Union == 2:
-                union = ModelEntity(name, 2, entities[0].referential, entities[0].model, entities[0].boundaries)
+                union = ModelEntity(name, 2, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
             elif dim_Union == 3:
-                union = ModelEntity(name, 3, entities[0].referential, entities[0].model, entities[0].boundaries)
+                union = ModelEntity(name, 3, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
        
         if not(keep_originals):
             for entity in entities:
@@ -114,11 +121,11 @@ class PythonModeler(CustomElement.CustomElt):
         if dim_Intersection == 0:
             pass
         elif dim_Intersection == 1:
-            Intersection = ModelEntity(entities[0].name, 1, entities[0].referential, entities[0].model)
+            Intersection = ModelEntity(entities[0].name, 1, entities[0].coor_sys, entities[0].model)
         elif dim_Intersection == 2:
-            Intersection = ModelEntity(entities[0].name, 2, entities[0].referential, entities[0].model, entities[0].boundaries)
+            Intersection = ModelEntity(entities[0].name, 2, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
         elif dim_Intersection == 3:
-            Intersection = ModelEntity(entities[0].name, 3, entities[0].referential, entities[0].model, entities[0].boundaries)
+            Intersection = ModelEntity(entities[0].name, 3, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
    
         #A factoriser
         if not(keep_originals):
@@ -131,8 +138,11 @@ class PythonModeler(CustomElement.CustomElt):
         # What does this function ?
         pass
 
-    def translate(self):
-        pass
+    def translate(self, entities, vector=[0,0,0]):
+        self.interface.translate(entities, vector)
+    
+    def rotate(self, entities, angle=0):
+        self.interface.rotate(entities, angle)
     
     def separate_bodies(self,name):
         #This looks hard
@@ -148,11 +158,11 @@ class PythonModeler(CustomElement.CustomElt):
         if entity.dimension ==0:
             pass
         elif entity.dimension ==1:
-            return ModelEntity(entity.name, entity.referential, entity.model)
+            return ModelEntity(entity.name, entity.coor_sys, entity.model)
         elif entity.dimension ==2:
-            return ModelEntity(entity.name, entity.referential, entity.model, entity.boundaries)
+            return ModelEntity(entity.name, entity.coor_sys, entity.model, entity.boundaries)
         elif entity.dimension ==3:
-            return ModelEntity(entity.name, entity.referential, entity.model, entity.boundaries)
+            return ModelEntity(entity.name, entity.coor_sys, entity.model, entity.boundaries)
         
     def duplicate_along_line(self, entity, vec):
         #Create clones
@@ -186,10 +196,65 @@ class PythonModeler(CustomElement.CustomElt):
 #    def rectangle():
 #        plt.plot(pos,size)
 #        
-class chip(PythonModeler):
-    def __init__(self,repere,modeler):
-            self.repere = repere
-            self.modeler = modeler
+class Body(PythonModeler, KeyElt):
+    pos_elt = [0,0]
+    ori_elt = 0
+    
+    def __init__(self, modeler, interface, coor_sys):
+        self.modeler = modeler
+        self.interface = interface
+        self.coor_sys = coor_sys
+
+    def rot(self, x, y=0):
+        return Vector(x, y).rot(self.ori)
+
+    def append_points(self, coor_list):
+        points = [self.pos + self.rot(*coor_list[0])]
+        for coor in coor_list[1:]:
+            points.append(points[-1] + self.rot(*coor))
+        return points
+    
+    def append_absolute_points(self, coor_list):
+        points=[]
+        for coor in coor_list:
+            points.append(self.pos + self.rot(*coor))
+        return points
+
+    def refx_points(self, coor_list, offset=0, absolute=False):
+        points=[]
+        for ii, coor in enumerate(coor_list):
+            if ii>0 and not absolute:
+                offset=0
+            points.append(Vector(*coor).refx(offset))
+        return points
+
+    def refy_points(self, coor_list, offset=0, absolute=False):
+        points=[]
+        for ii, coor in enumerate(coor_list):
+            if ii>0 and not absolute:
+                offset=0
+            points.append(Vector(*coor).refy(offset))
+        return points
+    
+    def move_points(self, coor_list, move, absolute=False):
+        points=[]
+        for ii, coor in enumerate(coor_list):
+            if ii>0 and not absolute:
+                move=[0,0]
+            points.append(Vector(*coor)+Vector(*move))
+        return points
+
+
+    def coor(self, vec): # Change of coordinate for a point
+        return self.rot(*vec)+self.pos
+
+    def coor_vec(self, vec): # Change of coordinate for a vector
+        return self.rot(*vec)
+            
+
+
+    
+    
 #            
 #chip1 = PM.chip()
 #chip1.transmon(..)

@@ -8,6 +8,8 @@ from designer import Vector, way, equal_float, eps
 import numpy as np
 from hfss import parse_entry
 from hfss import VariableString
+from CustomElement import CustomElt
+
 
 TOP = [0, 1]
 DOWN = [0, -1]
@@ -19,8 +21,20 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
+class Port():
+    def __init__(self, pos, ori, track, gap):
+        self.pos = pos
+        self.ori = ori
+        self.track = track
+        self.gap = gap
+        
+    # TODO several track within one gap for a port
+    # TODO Be able to split a port which returns several ports
+    # TODO Draw a port
+    # TODO Adaptor should be defined here
+    
 
-class KeyElt():
+class KeyElt(CustomElt):
 
     pcb_track = parse_entry('300um')
     pcb_gap = parse_entry('200um')
@@ -46,63 +60,17 @@ class KeyElt():
 #    def pcb_gap(self, new_pcb_gap):
 #        self._pcb_gap = parse_entry(new_pcb_gap)
 
-
-
-    def __init__(self, name, pos=[0,0], ori=[1,0]):
-        pos, ori = parse_entry((pos, ori))
-        self.name = name
-        self.pos = Vector(pos)
-        self.ori = Vector(ori)
-        print(self.name)
-
-    def rot(self, x, y=0):
-#        if isinstance(x, Vector):
-#            return(Vector(x))
-#        else:
-        return Vector(x, y).rot(self.ori)
-
-    def append_points(self, coor_list):
-        points = [self.pos + self.rot(*coor_list[0])]
-        for coor in coor_list[1:]:
-            points.append(points[-1] + self.rot(*coor))
-        return points
-    
-    def append_absolute_points(self, coor_list):
-        points=[]
-        for coor in coor_list:
-            points.append(self.pos + self.rot(*coor))
-        return points
-
-    def refx_points(self, coor_list, offset=0, absolute=False):
-        points=[]
-        for ii, coor in enumerate(coor_list):
-            if ii>0 and not absolute:
-                offset=0
-            points.append(Vector(*coor).refx(offset))
-        return points
-
-    def refy_points(self, coor_list, offset=0, absolute=False):
-        points=[]
-        for ii, coor in enumerate(coor_list):
-            if ii>0 and not absolute:
-                offset=0
-            points.append(Vector(*coor).refy(offset))
-        return points
-    
-    def move_points(self, coor_list, move, absolute=False):
-        points=[]
-        for ii, coor in enumerate(coor_list):
-            if ii>0 and not absolute:
-                move=[0,0]
-            points.append(Vector(*coor)+Vector(*move))
-        return points
-
-
-    def coor(self, vec): # Change of coordinate for a point
-        return self.rot(*vec)+self.pos
-
-    def coor_vec(self, vec): # Change of coordinate for a vector
-        return self.rot(*vec)
+    def move(func):
+        def moved(*args, **kwargs):
+            pos = args[2]
+            angle = args[3]
+            args = args[:2]+args[4:]
+            print(args)
+            ports, entities = func(*args, **kwargs)
+#            args[0].rotate(entities, angle=angle)
+            args[0].translate(entities, vector=[pos[0], pos[1], 0])
+            return ports, entities
+        return moved
     
     def create_port(self, iTrack=0, iGap=0):
         iTrack, iGap = parse_entry((iTrack, iGap))
@@ -112,8 +80,13 @@ class KeyElt():
     def create_dc_port(self, layer, cut, rel_pos, wid):
         portOut = [self.coor([0,0]), self.coor_vec([1,0]), cut, rel_pos, wid, len(rel_pos)]
         self.ports_dc[layer+'_'+self.name] = portOut
+    
+#    draw_connector(name, pos, ori, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=None, pcbGap=None, tr_line=True)
         
-    def draw_connector(self, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=None, pcbGap=None, tr_line=True):
+    # a decorator wraps the function, pos and ori are not arguments at the
+    # the definition level, but should be used when using the function
+    @move
+    def draw_connector(self, name, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=None, pcbGap=None, tr_line=True):
         '''
         Draws a CPW connector for inputs and outputs.
 
@@ -139,6 +112,7 @@ class KeyElt():
         --------
         returns iIn and recalculated iOut
         '''
+        
         iTrack, iGap = parse_entry((iTrack, iGap))
         iBondLength, iSlope = parse_entry((iBondLength, iSlope))
         
@@ -152,49 +126,55 @@ class KeyElt():
             
         adaptDist = (self.pcb_track/2-iTrack/2)/iSlope
 
-        portOut = [self.coor([adaptDist+self.pcb_gap+iBondLength,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portOut = Port([adaptDist+self.pcb_gap+iBondLength,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
 #        print(self.pos, self.ori)
 #        print(adaptDist)
 #        print(self.pos+self.ori*(adaptDist+iGap+iBondLength), self.ori)
-        points = self.append_points([(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev),
-                                     (iBondLength+self.overdev, 0),
-                                     (adaptDist, iTrack/2-self.pcb_track/2),
-                                     (0, -iTrack-2*self.overdev),
-                                     (-adaptDist, iTrack/2-self.pcb_track/2),
-                                     (-iBondLength-self.overdev, 0)])
-        self.trackObjects.append(self.draw(self.name+"_track", points))
+        points = [(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev, 0),
+                  (self.pcb_gap+iBondLength, self.pcb_track/2+self.overdev, 0, 0),
+                  (self.pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2, 0),
+                  (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev, 0),
+                  (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev, 0),
+                  (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev, 0)]
+        print(name)
+        track = self.polyline(points, name=name+'_track')
+        
+#        self.trackObjects.append(self.draw(points, ))
+       
+        points = [(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev, 0),
+                 (self.pcb_gap+iBondLength, self.pcb_gap+self.pcb_track/2-self.overdev, 0),
+                 (self.pcb_gap+iBondLength+adaptDist, iGap+iTrack/2-self.overdev, 0),
+                 (self.pcb_gap+iBondLength+adaptDist, -iGap-iTrack/2+self.overdev, 0),
+                 (self.pcb_gap+iBondLength, -self.pcb_gap-self.pcb_track/2+self.overdev, 0),
+                 (self.pcb_gap/2+self.overdev, -self.pcb_gap-self.pcb_track/2+self.overdev, 0)]
+    
+        gap = self.polyline(points, name=name+'_gap')
+#        self.gapObjects.append(self.draw(self.name+"_gap", points))
 
-        points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev),
-                             (self.pcb_gap/2+iBondLength-self.overdev, 0),
-                             (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (0, -2*iGap-iTrack+2*self.overdev),
-                             (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (-(self.pcb_gap/2+iBondLength)+self.overdev, 0)])
-        self.gapObjects.append(self.draw(self.name+"_gap", points))
-
-        if self.is_mask:
-            points = self.append_points([(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
-                             (self.pcb_gap/2+iBondLength+self.gap_mask, 0),
-                             (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (0, -2*iGap-iTrack-2*self.gap_mask),
-                             (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (-(self.pcb_gap/2+iBondLength)-self.gap_mask, 0)])
-            self.maskObjects.append(self.draw(self.name+"_mask", points))
+#        if self.is_mask:
+#            points = self.append_points([(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
+#                             (self.pcb_gap/2+iBondLength+self.gap_mask, 0),
+#                             (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
+#                             (0, -2*iGap-iTrack-2*self.gap_mask),
+#                             (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
+#                             (-(self.pcb_gap/2+iBondLength)-self.gap_mask, 0)])
+#            self.maskObjects.append(self.draw(self.name+"_mask", points))
 
 
-        if not self.is_litho and tr_line:
-            points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_track/2+self.overdev),
-                                         (self.pcb_gap/2-2*self.overdev, 0),
-                                         (0, -self.pcb_track-2*self.overdev),
-                                         (-self.pcb_gap/2+2*self.overdev, 0)])
-            ohm = self.draw(self.name+"_ohm", points)
-            self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
-            self.modeler.assign_mesh_length(ohm, self.pcb_track/10)
-#            self.trackObjects.append(ohm)
-            points = self.append_points([(self.pcb_gap/2+self.overdev,0),(self.pcb_gap/2-2*self.overdev,0)])
-            self.draw(self.name+'_line', points, closed=False)
+#        if not self.is_litho and tr_line:
+#            points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_track/2+self.overdev),
+#                                         (self.pcb_gap/2-2*self.overdev, 0),
+#                                         (0, -self.pcb_track-2*self.overdev),
+#                                         (-self.pcb_gap/2+2*self.overdev, 0)])
+#            ohm = self.draw(points, name=name+'_ohm')
+#            self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
+#            self.modeler.assign_mesh_length(ohm, self.pcb_track/10)
+##            self.trackObjects.append(ohm)
+#            points = self.append_points([(self.pcb_gap/2+self.overdev,0),(self.pcb_gap/2-2*self.overdev,0)])
+#            self.draw(self.name+'_line', points, closed=False)
+            
+        return [portOut], [track, gap]
 
-        self.ports[self.name] = portOut
 
     def draw_quarter_circle(self, name, fillet, coor, ori=Vector([1,1])):
         ori=Vector(ori)
