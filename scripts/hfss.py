@@ -978,7 +978,7 @@ class HfssModeler(COMWrapper):
             msg = ('Warning: \'%s\' already exists, '
                    'new box named \'%s\'' % (kwargs['name'], name))
             print(msg)
-        return ModelEntity(name, dim='Solid')
+        return name
 
     def draw_box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
@@ -1028,11 +1028,11 @@ class HfssModeler(COMWrapper):
             indexsStr],
             self._attributes_array(**kwargs)
         )
-
-        if closed:
-            return ModelEntity(name)
-        else:
-            return ModelEntity(name)
+        if name != kwargs['name']:
+            msg = ('Warning: \'%s\' already exists, '
+                   'new box named \'%s\'' % (kwargs['name'], name))
+            print(msg)
+        return name
 
     def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
@@ -1052,7 +1052,11 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs)
         )
-        return ModelEntity(name)
+        if name != kwargs['name']:
+            msg = ('Warning: \'%s\' already exists, '
+                   'new box named \'%s\'' % (kwargs['name'], name))
+            print(msg)
+        return name
 
     def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
@@ -1072,7 +1076,11 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis,
              "NumSides:=", 0],
             self._attributes_array(**kwargs))
-        return ModelEntity(name)
+        if name != kwargs['name']:
+            msg = ('Warning: \'%s\' already exists, '
+                   'new box named \'%s\'' % (kwargs['name'], name))
+            print(msg)
+        return name
     
     def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
@@ -1082,18 +1090,22 @@ class HfssModeler(COMWrapper):
         return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
     
     def draw_disk(self, pos, radius, axis, **kwargs):
-            assert axis in "XYZ"
-            name = self._modeler.CreateEllipse(
-                ["NAME:EllipsdeParameters",
-                 "XCenter:=", pos[0],
-                 "YCenter:=", pos[1],
-                 "ZCenter:=", pos[2],
-                 "MajRadius:=", radius,
-                 "Ratio:=", 1,
-                 "WhichAxis:=", axis],
-                self._attributes_array(**kwargs))
-            return ModelEntity(name)
-
+        assert axis in "XYZ"
+        name = self._modeler.CreateEllipse(
+            ["NAME:EllipsdeParameters",
+             "XCenter:=", pos[0],
+             "YCenter:=", pos[1],
+             "ZCenter:=", pos[2],
+             "MajRadius:=", radius,
+             "Ratio:=", 1,
+             "WhichAxis:=", axis],
+             self._attributes_array(**kwargs))
+        if name != kwargs['name']:
+            msg = ('Warning: \'%s\' already exists, '
+                   'new box named \'%s\'' % (kwargs['name'], name))
+            print(msg)
+        return name
+           
     def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
         xpad = pos[0]-width/2.*ori[1]
@@ -1117,27 +1129,28 @@ class HfssModeler(COMWrapper):
                                             "beta:=", "80deg",
                                             "WhichAxis:=", "Z"],
                                             self._attributes_array(**kwargs))
-
-        return ModelEntity(name)
+        
+        if name != kwargs['name']:
+            msg = ('Warning: \'%s\' already exists, '
+                   'new box named \'%s\'' % (kwargs['name'], name))
+            print(msg)
+        return name
     
     def connect_faces(self, entity1, entity2):
         name = self._modeler.Connect(["NAME:Selections",
                                "Selections:=", ','.join([entity1, entity2])])
 #        print(name) #None
-        entity1.append_history(entity2.name)
-        del entity2
-        return entity1
+        return name
     
     def delete(self, entity):
         self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
-        del entity
         
-    def rename_entity(self, en, name):
+    def rename_entity(self, entity, name):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
-                                    			["NAME:PropServers", str(obj)],
+                                    			["NAME:PropServers", str(entity)],
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
-        return name
+
 
     def unite(self, entities, name=None, keep_originals=False):
         names = [entity.name for entity in entities]
@@ -1462,67 +1475,40 @@ class HfssModeler(COMWrapper):
 #        self.modeler = modeler
 #        self.prop_server = self + ":" + self.model_command + ":1"
       
-#class ModelEntity():
-#    def __init__(self, name, referential, model, boundaries):
-#        self.name = name
-#        self.referential = referential
-#        self.history = []    
-#        self.model = model
-#        self.boundaries = boundaries
-#        
-#    def append_history(self, entity):
-#        self.history.append(entity)
-#    def delete(self):
-#        del self
-#    def unite(self, entities, name=None, keep_originals=False):
-#        if name is None:
-#            union = ModelEntity(entities[0].name, entities[0].referential, entities[0].model, entities[0].boundaries)
-#        else:
-##            return names[0].rename(name)
-#            union = ModelEntity(name, entities[0].referential, entities[0].model, entities[0].boundaries)
-#        
-#        if keep_originals:
-#            return entities.append(union)
-#        else:
-#            return union
-#    def rename_entity(self, name):
-#        self.name = name
-#    
-#class Entity1D(ModelEntity):
-#    def __init__(self, name, referential, model):
-#        self.name = name
-#        self.referential = referential
-#        self.history = []    
-#        self.model = model
-#        self.boundaries = None
-#    
-#    def _sweep_along_path(self, path_obj):   
-#        sheet = Entity2D('sheet',self.referential,self.model,self.boundaries)
-#        sheet.append_history(self)
-#        return self,sheet 
-#        
-#    def sweep_along_vector(self, vect):
-#        "Duplicate the line and create a surface with the copy"
-#        sheet = Entity2D(self.name +'_To_Sheet',self.referential,self.model,self.boundaries)
-#        sheet.append_history(self)
-#        for entity in self.history:
-#            sheet.append_history(entity)
-#        return self, sheet
-#
-#class Entity2D(ModelEntity):
-#    
-#    def thicken_sheet(self, thickness, bothsides=False):
-#        solid = Entity3D(self.name+'_To_Solid',self.referential, self.model, self.boundaries)
-#        solid.append_history(self)
-#        for entity in self.history:
-#            solid.append_history(entity)
-#        return self, solid
-#    
-#class Entity3D(ModelEntity):
-#    def __init__(name, referential, model):
-#        self.name = name
-#        self.referential = referential
-#        self.model = model
+class ModelEntity():
+    def __init__(self, name, dimension, referential, model, boundaries, layer="layer0"):
+        self.name = name
+        self.dimension = dimension
+        self.referential = referential
+        self.history = []    
+        self.model = model
+        self.boundaries = boundaries
+        self.layer = layer #in the chip
+
+
+    def append_history(self, entity):
+        self.history.append(entity)
+        
+    def delete(self):
+        del self
+        
+    
+    def rename_entity(self, name):
+        self.name = name
+        
+    def _sweep_along_path(self, path_obj):
+        self.dimension = 2
+        self.append_history(path_obj)
+        return self
+        
+    def sweep_along_vector(self, vect):
+        "Duplicate the line and create a surface with the copy"
+        self.dimension = 2
+        return self
+
+    def thicken_sheet(self, thickness, bothsides=False):
+        self.dimension = 3
+        return self
     
 class Box(ModelEntity):
     model_command = "CreateBox"
