@@ -9,14 +9,16 @@ from PythonModeler import PythonModeler
 
 PM = PythonModeler('hfss')
 
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+
 # A body is the shared coordinate system of several elements.
 # If one wants to insert a chip into a 3D cavity, one should create
 # One body for the cavity and one body for the chip. 
 chip = PM.body('chip1', [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
-
+        
 # When drawing 2D object, the code assume we draw them in the plane z=0
 info = 'con1', ['1mm','1mm'], 90
-chip.draw_connector(*info, '42um', '25um', '100um')
-
+chip.draw_connector(*info, PM.track, '25um', PM.bond*2+'100um')
 
 

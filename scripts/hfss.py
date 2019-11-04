@@ -19,20 +19,12 @@ from win32com.client import Dispatch, CDispatch
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
+LENGTH_UNIT = 'meter'
+
 BASIS_ORDER = {"Zero Order": 0,
                "First Order": 1,
                "Second Order": 2,
                "Mixed Order": -1}
-LENGTH = '[length]'
-INDUCTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2'
-CAPACITANCE = '[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]'
-RESISTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3'
-
-LENGTH_UNIT = 'meter'
-INDUCTANCE_UNIT = 'nH'
-CAPACITANCE_UNIT = 'fF'
-RESISTANCE_UNIT = 'ohm'
-
 
 def simplify_arith_expr(expr):
     try:
@@ -66,14 +58,12 @@ def extract_value_unit(expr, units):
             return float(expr)
         except Exception:
             return expr
-
-
+        
 def extract_value_dim(expr):
     """
     type expr: str
     """
     return str(Q(expr).dimensionality)
-
 
 def parse_entry(entry):
     #should take a list of tuple of list... of int, float or str...
@@ -85,56 +75,62 @@ def parse_entry(entry):
         for entry in entries:
             _entry.append(parse_entry(entry))
         return _entry
-
+    
+def rem_unit(other):
+    try:
+        value = extract_value_unit(other, LENGTH_UNIT)
+        return value
+    except Exception:
+        return other
 
 class VariableString(str):
     # TODO: What happen with a list (Vector in our case)
     def __add__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         if other=="'":
             return super(VariableString, self, other).__add__()
         return var("(%s) + (%s)" % (self, other))
 
     def __radd__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         if other=="'":
             return super(VariableString, self, other).__radd__()
         return var("(%s) + (%s)" % (other, self))
 
     def __sub__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) - (%s)" % (self, other))
 
     def __rsub__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) - (%s)" % (other, self))
 
     def __mul__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) * (%s)" % (self, other))
 
     def __rmul__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) * (%s)" % (other, self))
 
     def __div__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) / (%s)" % (self, other))
 
     def __rdiv__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) / (%s)" % (other, self))
 
     def __truediv__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) / (%s)" % (self, other))
 
     def __rtruediv__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) / (%s)" % (other, self))
 
     def __pow__(self, other):
-        other = self.rem_unit(other)
+        other = rem_unit(other)
         return var("(%s) ** (%s)" % (self, other))
 
 #    def __rpow__(self, other):
@@ -146,13 +142,6 @@ class VariableString(str):
 
     def __abs__(self):
         return var("abs(%s)" % self)
-
-    def rem_unit(self, other):
-        try:
-            _other = extract_value_unit(other, LENGTH_UNIT)
-            return _other
-        except Exception:
-            return other
 
 
 def var(x):
@@ -526,34 +515,13 @@ class HfssDesign(COMWrapper):
                 "PropType:=", variableprop,
                 "UserDef:=", True,
                 "Value:=", value]]]])
-        self.store_variable(name, value)
-        return VariableString(name)
 
     def set_variable(self, name, value, postprocessing=False):
-        # TODO: check if variable does not exist and quit if it doesn't?
-#        print(name)
-#        print(type(name))
-#        print(value)
-#        print(type(value))
         if name not in self._design.GetVariables()+self._design.GetPostProcessingVariables():
             self.create_variable(name, value, postprocessing=postprocessing)
         else:
             self._design.SetVariableValue(name, value)
-            self.store_variable(name, value)
         return VariableString(name)
-
-    def store_variable(self, name, value):
-        if not isinstance(value, VariableString):
-            if LENGTH == extract_value_dim(value):
-                self.variables[name]=extract_value_unit(value, LENGTH_UNIT)
-            if INDUCTANCE == extract_value_dim(value):
-                self.variables[name]=extract_value_unit(value, INDUCTANCE_UNIT)
-            if CAPACITANCE == extract_value_dim(value):
-                self.variables[name]=extract_value_unit(value, CAPACITANCE_UNIT)
-            if RESISTANCE == extract_value_dim(value):
-                self.variables[name]=extract_value_unit(value, RESISTANCE_UNIT)
-        else:
-            self.variables[name]=value
 
     def get_variable_value(self, name):
         return self._design.GetVariableValue(name)
@@ -961,7 +929,18 @@ class HfssModeler(COMWrapper):
 
     def _selections_array(self, *names):
         return ["NAME:Selections", "Selections:=", ",".join(names)]
+    
+    def assert_name(func):
+        def asserted_name(*args, **kwargs):
+            name = func(*args, **kwargs)
+            if name != kwargs['name']:
+                msg = ('Warning: \'%s\' already exists, '
+                       'new entity named \'%s\'' % (kwargs['name'], name))
+                print(msg)
+            return name
+        return asserted_name
 
+    @assert_name
     def draw_box_corner(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
@@ -985,7 +964,6 @@ class HfssModeler(COMWrapper):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-#        print(corner_pos)
         return self.draw_box_corner(corner_pos, size, **kwargs)
     
 #    def draw_cylinder(self, pos, size, **kwargs):
@@ -1006,11 +984,9 @@ class HfssModeler(COMWrapper):
 #                   'new box named \'%s\'' % (kwargs['name'], name))
 #            print(msg)
 #        return Box(name, self, pos, size)
-
+    @assert_name
     def draw_polyline(self, points, closed=True, **kwargs):
         points = parse_entry(points)
-        print(points)
-#        print(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
         for ii, point in enumerate(points):
@@ -1028,14 +1004,10 @@ class HfssModeler(COMWrapper):
             *params_closed,
             pointsStr,
             indexsStr],
-            self._attributes_array(**kwargs)
-        )
-        if name != kwargs['name']:
-            msg = ('Warning: \'%s\' already exists, '
-                   'new box named \'%s\'' % (kwargs['name'], name))
-            print(msg)
+            self._attributes_array(**kwargs))
         return name
-
+    
+    @assert_name
     def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
@@ -1054,10 +1026,6 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs)
         )
-        if name != kwargs['name']:
-            msg = ('Warning: \'%s\' already exists, '
-                   'new box named \'%s\'' % (kwargs['name'], name))
-            print(msg)
         return name
 
     def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
@@ -1065,7 +1033,8 @@ class HfssModeler(COMWrapper):
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
         return self.draw_rect_corner(corner_pos, size, **kwargs)
-
+    
+    @assert_name
     def draw_cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
@@ -1078,10 +1047,6 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis,
              "NumSides:=", 0],
             self._attributes_array(**kwargs))
-        if name != kwargs['name']:
-            msg = ('Warning: \'%s\' already exists, '
-                   'new box named \'%s\'' % (kwargs['name'], name))
-            print(msg)
         return name
     
     def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
@@ -1091,6 +1056,7 @@ class HfssModeler(COMWrapper):
         edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
         return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
     
+    @assert_name
     def draw_disk(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateEllipse(
@@ -1102,12 +1068,9 @@ class HfssModeler(COMWrapper):
              "Ratio:=", 1,
              "WhichAxis:=", axis],
              self._attributes_array(**kwargs))
-        if name != kwargs['name']:
-            msg = ('Warning: \'%s\' already exists, '
-                   'new box named \'%s\'' % (kwargs['name'], name))
-            print(msg)
         return name
-           
+    
+    @assert_name
     def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
         xpad = pos[0]-width/2.*ori[1]
@@ -1131,17 +1094,11 @@ class HfssModeler(COMWrapper):
                                             "beta:=", "80deg",
                                             "WhichAxis:=", "Z"],
                                             self._attributes_array(**kwargs))
-        
-        if name != kwargs['name']:
-            msg = ('Warning: \'%s\' already exists, '
-                   'new box named \'%s\'' % (kwargs['name'], name))
-            print(msg)
         return name
     
     def connect_faces(self, entity1, entity2):
         name = self._modeler.Connect(["NAME:Selections",
                                "Selections:=", ','.join([entity1, entity2])])
-#        print(name) #None
         return name
     
     def delete(self, entity):
@@ -1152,7 +1109,6 @@ class HfssModeler(COMWrapper):
                                     		["NAME:Geometry3DAttributeTab",
                                     			["NAME:PropServers", str(entity)],
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
-
 
     def unite(self, entities, name=None, keep_originals=False):
         names = [entity.name for entity in entities]
@@ -1196,30 +1152,19 @@ class HfssModeler(COMWrapper):
         
     def rotate(self, entities, angle):
         names = [entity.name for entity in entities]
-        self._modeler.Rotate([self._selections_array(*names),
-                              "NewPartsModelFlag:="	, "Model"], 
-            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", 
-             "%ddeg"%(angle)])
-        
+        self._modeler.Rotate(self._selections_array(*names), 
+            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
 
-    def separate_bodies(self, name):
-        self._modeler.SeparateBody(["NAME:Selections",
-                                		"Selections:=", name,
-                                		"NewPartsModelFlag:="	, "Model"
-                                	], 
-                                	[
-                                		"CreateGroupsForNewObjects:=", False
-                                	])
-
-#    def make_perfect_E(self, *objects):
-#        print(self._boundaries.GetBoundaries())
-#        name = increment_name("PerfE", self._boundaries.GetBoundaries())
-#        print(name)
-#        self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", objects, "InfGroundPlane:=", False])
+#    def separate_bodies(self, name):
+#        self._modeler.SeparateBody(["NAME:Selections",
+#                                		"Selections:=", name,
+#                                		"NewPartsModelFlag:="	, "Model"
+#                                	], 
+#                                	[
+#                                		"CreateGroupsForNewObjects:=", False
+#                                	])
 
     def assign_perfect_E(self, obj, name='PerfE'):
-#        print(obj)
-
         if isinstance(obj, list):
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", obj, "InfGroundPlane:=", False])
         else:
@@ -1289,7 +1234,6 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
-            
      
     def _fillet_edges(self, radius, edge_index, obj):
         edges = self._modeler.GetEdgeIDsFromObject(obj)
@@ -1307,7 +1251,6 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", [],
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])   
-            
 
     def _fillets(self, radius, vertices, obj):
         self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
@@ -1329,7 +1272,6 @@ class HfssModeler(COMWrapper):
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
         return Polyline(new_name, self)
-    
     
     def sweep_along_vector(self, names, vector):
         self._modeler.SweepAlongVector(self._selections_array(*names), 
@@ -1375,20 +1317,6 @@ class HfssModeler(COMWrapper):
         self._modeler.Copy(["NAME:Selections", "Selections:=", obj])
         new_obj = self._modeler.Paste()
         return new_obj[0]
-    
-    
-    def duplicate_along_line(self, obj, vec):
-        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
-                                          "NewPartsModelFlag:="	, "Model"], 
-                                        	["NAME:DuplicateToAlongLineParameters",
-                                    		"CreateNewObjects:="	, True,
-                                    		"XComponent:="		, vec[0],
-                                    		"YComponent:="		, vec[1],
-                                    		"ZComponent:="		, vec[2],
-                                    		"NumClones:="		, "2"], 
-                                        	["NAME:Options",
-                                        	"DuplicateAssignments:=", False], 
-                                        	["CreateGroupsForNewObjects:=", False	])
 
     def duplicate_along_line(self, obj, vec, n=2):
         self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
@@ -1470,12 +1398,23 @@ class HfssModeler(COMWrapper):
         origin = coor_sys[0]
         new_x = coor_sys[1]
         new_y =coor_sys[2]
-        self._modeler.CreateRelativeCS(["NAME:RelativeCSParameters",
-        "Mode:="		, "Axis/Position",
-        "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
-        "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
-        "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]], 
-        ["NAME:Attributes", "Name:=", name])
+        if not(name in self._modeler.GetCoordinateSystems()):
+            self._modeler.CreateRelativeCS(["NAME:RelativeCSParameters",
+            "Mode:="		, "Axis/Position",
+            "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
+            "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
+            "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]], 
+            ["NAME:Attributes", "Name:=", name])
+        else:
+            
+            self._modeler.ChangeProperty(["NAME:AllTabs",
+		["NAME:Geometry3DCSTab",
+			["NAME:PropServers", name],
+			["NAME:ChangedProps", ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
+                                ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
+                                ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
+				
+            
     
     
 #class ModelEntity(str, HfssPropertyObject):

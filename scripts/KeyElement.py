@@ -64,10 +64,8 @@ class KeyElt(CustomElt):
         def moved(*args, **kwargs):
             pos = args[2]
             angle = args[3]
-            args = args[:2]+args[4:]
-            print(args)
-            ports, entities = func(*args, **kwargs)
-#            args[0].rotate(entities, angle=angle)
+            ports, entities = func(*(args[:2]+args[4:]), **kwargs)
+            args[0].rotate(entities, angle=angle)
             args[0].translate(entities, vector=[pos[0], pos[1], 0])
             return ports, entities
         return moved
@@ -130,35 +128,34 @@ class KeyElt(CustomElt):
 #        print(self.pos, self.ori)
 #        print(adaptDist)
 #        print(self.pos+self.ori*(adaptDist+iGap+iBondLength), self.ori)
-        points = [(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev, 0),
-                  (self.pcb_gap+iBondLength, self.pcb_track/2+self.overdev, 0, 0),
-                  (self.pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2, 0),
-                  (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev, 0),
-                  (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev, 0),
-                  (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev, 0)]
-        print(name)
-        track = self.polyline(points, name=name+'_track')
+        points = [(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev),
+                  (self.pcb_gap+iBondLength, self.pcb_track/2+self.overdev, 0),
+                  (self.pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2),
+                  (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev),
+                  (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev),
+                  (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev)]
+        track = self.polyline_2D(points, name=name+'_track')
         
 #        self.trackObjects.append(self.draw(points, ))
        
-        points = [(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev, 0),
-                 (self.pcb_gap+iBondLength, self.pcb_gap+self.pcb_track/2-self.overdev, 0),
-                 (self.pcb_gap+iBondLength+adaptDist, iGap+iTrack/2-self.overdev, 0),
-                 (self.pcb_gap+iBondLength+adaptDist, -iGap-iTrack/2+self.overdev, 0),
-                 (self.pcb_gap+iBondLength, -self.pcb_gap-self.pcb_track/2+self.overdev, 0),
-                 (self.pcb_gap/2+self.overdev, -self.pcb_gap-self.pcb_track/2+self.overdev, 0)]
+        points = [(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev),
+                 (self.pcb_gap+iBondLength, self.pcb_gap+self.pcb_track/2-self.overdev),
+                 (self.pcb_gap+iBondLength+adaptDist, iGap+iTrack/2-self.overdev),
+                 (self.pcb_gap+iBondLength+adaptDist, -iGap-iTrack/2+self.overdev),
+                 (self.pcb_gap+iBondLength, -self.pcb_gap-self.pcb_track/2+self.overdev),
+                 (self.pcb_gap/2+self.overdev, -self.pcb_gap-self.pcb_track/2+self.overdev)]
     
-        gap = self.polyline(points, name=name+'_gap')
+        gap = self.polyline_2D(points, name=name+'_gap')
 #        self.gapObjects.append(self.draw(self.name+"_gap", points))
 
-#        if self.is_mask:
-#            points = self.append_points([(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
-#                             (self.pcb_gap/2+iBondLength+self.gap_mask, 0),
-#                             (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-#                             (0, -2*iGap-iTrack-2*self.gap_mask),
-#                             (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-#                             (-(self.pcb_gap/2+iBondLength)-self.gap_mask, 0)])
-#            self.maskObjects.append(self.draw(self.name+"_mask", points))
+        if self.is_mask:
+            points = self.append_points([(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
+                             (self.pcb_gap/2+iBondLength+self.gap_mask, 0),
+                             (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
+                             (0, -2*iGap-iTrack-2*self.gap_mask),
+                             (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
+                             (-(self.pcb_gap/2+iBondLength)-self.gap_mask, 0)])
+            self.maskObjects.append(self.draw(self.name+"_mask", points))
 
 
 #        if not self.is_litho and tr_line:

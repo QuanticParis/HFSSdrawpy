@@ -77,9 +77,9 @@ RIGHT = [1, 0]
 LEFT = [-1, 0]
 
 
-
-from hfss import parse_entry
 from hfss import VariableString
+from hfss import parse_entry
+
 import numpy as np
 
 
