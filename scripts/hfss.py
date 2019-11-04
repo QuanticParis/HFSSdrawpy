@@ -941,8 +941,9 @@ class HfssModeler(COMWrapper):
                                      "Units:=", units,"Rescale:=",False])
 
     def _attributes_array(self, name=None, nonmodel=False, color=None,
-                          transparency=0.9, material=None, solve_inside = None):
-        arr = ["NAME:Attributes", "PartCoordinateSystem:=", "Global"]
+                          transparency=0.9, material=None, solve_inside = None,
+                          coor_sys='Global'):
+        arr = ["NAME:Attributes", "PartCoordinateSystem:=", coor_sys]
         if name is not None:
             arr.extend(["Name:=", name])
         if nonmodel:
@@ -1008,6 +1009,7 @@ class HfssModeler(COMWrapper):
 
     def draw_polyline(self, points, closed=True, **kwargs):
         points = parse_entry(points)
+        print(points)
 #        print(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
@@ -1181,15 +1183,23 @@ class HfssModeler(COMWrapper):
         )
         return blank_name
 
-    def translate(self, name, vector):
+    def translate(self, entities, vector):
+        names = [entity.name for entity in entities]
         self._modeler.Move(
-            self._selections_array(name),
+            self._selections_array(*names),
             ["NAME:TranslateParameters",
         		"TranslateVectorX:="	, vector[0],
         		"TranslateVectorY:="	, vector[1],
         		"TranslateVectorZ:="	, vector[2]]
         )
-
+        
+    def rotate(self, entities, angle):
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate([self._selections_array(*names),
+                              "NewPartsModelFlag:="	, "Model"], 
+            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", 
+             "%ddeg"%(angle)])
+        
 
     def separate_bodies(self, name):
         self._modeler.SeparateBody(["NAME:Selections",
@@ -1455,6 +1465,17 @@ class HfssModeler(COMWrapper):
     def get_matched_object_name(self, name):
         return self._modeler.GetMatchedObjectName(name+'*')
     
+    def create_coor_sys(self, name, coor_sys):
+        origin = coor_sys[0]
+        new_x = coor_sys[1]
+        new_y =coor_sys[2]
+        self._modeler.CreateRelativeCS(["NAME:RelativeCSParameters",
+        "Mode:="		, "Axis/Position",
+        "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
+        "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
+        "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]], 
+        ["NAME:Attributes", "Name:=", name])
+    
     
 #class ModelEntity(str, HfssPropertyObject):
 #    prop_tab = "Geometry3DCmdTab"
@@ -1476,13 +1497,13 @@ class HfssModeler(COMWrapper):
 #        self.prop_server = self + ":" + self.model_command + ":1"
       
 class ModelEntity():
-    def __init__(self, name, dimension, referential, model, boundaries, layer="layer0"):
+    def __init__(self, name, dimension, coor_sys, layer="layer0"):# model,
         self.name = name
         self.dimension = dimension
-        self.referential = referential
+        self.coor_sys = coor_sys
         self.history = []    
-        self.model = model
-        self.boundaries = boundaries
+#        self.model = model
+#        self.boundaries = boundaries
         self.layer = layer #in the chip
 
 

@@ -6,7 +6,6 @@ Created on Mon Oct 28 16:27:24 2019
 """
 
 from designer import Vector, way, equal_float, eps
-from KeyElement import KeyElt
 import numpy as np
 from hfss import parse_entry
 from hfss import VariableString
@@ -21,10 +20,8 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
-class CustomElt(KeyElt):
+class CustomElt():
 
-    
-    
     def draw_JJ(self, iTrack, iGap, iTrackJ, iLength, iInduct='1nH', fillet=None):
         '''
         Draws a Joseph's Son Junction.
