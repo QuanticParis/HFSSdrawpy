@@ -7,12 +7,24 @@ Created on Thu Oct 31 14:14:51 2019
 
 from KeyElement import KeyElt
 from designer import Vector
+<<<<<<< HEAD
+from hfss import ModelEntity
+import CustomElement
+from hfss import parse_entry, get_active_project
+from gds_modeler import GdsModeler
+
+class PythonModeler():
+    def __init__(self, interface): #"Hfss" or "Gds"
+        self.ports = {}
+        if interface_name=="hfss":
+=======
 from hfss import parse_entry, get_active_project, ModelEntity
 
 class PythonModeler():
     def __init__(self, interface): #"Hfss" or "Gds"
         self.ports = {}
         if interface=="hfss":
+>>>>>>> Anthony
             project = get_active_project()
             design = project.get_active_design()
             self.modeler = design.modeler
@@ -20,6 +32,10 @@ class PythonModeler():
             self.modeler.delete_all_objects()
             self.interface = self.modeler
             
+<<<<<<< HEAD
+        if interface_name=="gds":
+            self.interface = GdsModeler("test")
+=======
         if interface=="gds":
             self.interface = 1
     
@@ -31,6 +47,7 @@ class PythonModeler():
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(name, coor_sys)
         return Body(self.modeler, self.interface, name)
+>>>>>>> Anthony
         
     def set_units(self, units='m'):
         if (self.modeler != None):
@@ -56,9 +73,15 @@ class PythonModeler():
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, model)
     
+<<<<<<< HEAD
     def draw_rect_center(self, referential, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_rect_center(pos, size, **kwargs)
         return ModelEntity(name, 2, referential, model)
+=======
+    def draw_rect_center(self, coor_sys, pos, size, model = 'True', **kwargs):
+        name = self.interface.draw_box_corner(pos, size, **kwargs)
+        return ModelEntity(name, 2, coor_sys, model)
+>>>>>>> Anthony
         
     def draw_cylinder(self, name, coor_sys, pos, size, model = 'True', **kwargs):
         return ModelEntity(name, 3, coor_sys, model, **kwargs)
