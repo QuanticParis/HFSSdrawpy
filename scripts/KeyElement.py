@@ -134,7 +134,7 @@ class KeyElt(CustomElt):
                   (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev),
                   (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev),
                   (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev)]
-        track = self.polyline_2D(points, name=name+'_track')
+        track = self.polyline_2D(points, name=name+'_track', layer='track')
         
 #        self.trackObjects.append(self.draw(points, ))
        
@@ -145,7 +145,7 @@ class KeyElt(CustomElt):
                  (self.pcb_gap+iBondLength, -self.pcb_gap-self.pcb_track/2+self.overdev),
                  (self.pcb_gap/2+self.overdev, -self.pcb_gap-self.pcb_track/2+self.overdev)]
     
-        gap = self.polyline_2D(points, name=name+'_gap')
+        gap = self.polyline_2D(points, name=name+'_gap', layer='gap')
 #        self.gapObjects.append(self.draw(self.name+"_gap", points))
 
         if self.is_mask:

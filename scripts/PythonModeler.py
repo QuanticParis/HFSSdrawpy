@@ -282,11 +282,11 @@ class Body(PythonModeler, KeyElt):
         self.coor_sys = coor_sys
         
     # 2D means in plane
-    def polyline_2D(self, points, z=0, **kwargs): # among kwargs, name should be given
+    def polyline_2D(self, points, z=0, closed=True, **kwargs): # among kwargs, name and layer should be given
         points_3D = []
         for point in points:
             points_3D.append(point+(z,))
-        return self.polyline(points_3D, **kwargs)
+        return self.polyline(points_3D, closed=closed, **kwargs)
 
     def rot(self, x, y=0):
         return Vector(x, y).rot(self.ori)

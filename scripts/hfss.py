@@ -985,7 +985,7 @@ class HfssModeler(COMWrapper):
 #            print(msg)
 #        return Box(name, self, pos, size)
     @assert_name
-    def draw_polyline(self, points, closed=True, **kwargs):
+    def draw_polyline(self, points, layer, closed=True, **kwargs):
         points = parse_entry(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]

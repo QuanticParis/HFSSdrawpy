@@ -22,3 +22,4 @@ info = 'con1', ['1mm','1mm'], 90
 chip.draw_connector(*info, PM.track, '25um', PM.bond*2+'100um')
 
 
+
