@@ -78,6 +78,7 @@ class GdsModeler():
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
+        print(corner_pos)
         return self.draw_rect_corner(corner_pos, size, **kwargs)
 
     def draw_cylinder(self, pos, radius, height, axis, **kwargs):

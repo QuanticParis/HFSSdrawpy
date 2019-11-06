@@ -954,10 +954,6 @@ class HfssModeler(COMWrapper):
              "ZSize:=", size[2]], #'('+str(size[2])+')'+self.unit],
             self._attributes_array(**kwargs)
         )
-        if name != kwargs['name']:
-            msg = ('Warning: \'%s\' already exists, '
-                   'new box named \'%s\'' % (kwargs['name'], name))
-            print(msg)
         return name
 
     def draw_box_center(self, pos, size, **kwargs):
@@ -1130,15 +1126,17 @@ class HfssModeler(COMWrapper):
         )
         return names[0]
 
-    def subtract(self, blank_name, tool_names, keep_originals=False):
+    def subtract(self, blank_entity, tool_entities, keep_originals=False):
+        tool_names = [entity.name for entity in tool_entities]
+
         selection_array= ["NAME:Selections",
-                          "Blank Parts:=", blank_name,
+                          "Blank Parts:=", blank_entity.name,
                           "Tool Parts:=", ",".join(tool_names)]
         self._modeler.Subtract(
             selection_array,
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
         )
-        return blank_name
+        return blank_entity.name
 
     def translate(self, entities, vector):
         names = [entity.name for entity in entities]
@@ -1196,13 +1194,13 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
-    def assign_mesh_length(self, obj, length):#, suff = '_mesh'):
-        name = str(obj)
+    def assign_mesh_length(self, entity, length):#, suff = '_mesh'):
+        name = entity.name
 #        print(obj)
         params = ["NAME:"+name]
         params += ["RefineInside:=", False, "Enabled:=", True]
         ######## RefineInside Should be False for planar object
-        params += ["Objects:=", [str(obj)]]
+        params += ["Objects:=", [name]]
         params += ["RestrictElem:=", False,
 			         "RestrictLength:=",  True,
 			         "MaxLength:=", length]

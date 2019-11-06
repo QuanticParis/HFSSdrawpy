@@ -149,15 +149,20 @@ class KeyElt(CustomElt):
 #        self.gapObjects.append(self.draw(self.name+"_gap", points))
 
         if self.is_mask:
-            points = self.append_points([(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
-                             (self.pcb_gap/2+iBondLength+self.gap_mask, 0),
-                             (adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (0, -2*iGap-iTrack-2*self.gap_mask),
-                             (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
-                             (-(self.pcb_gap/2+iBondLength)-self.gap_mask, 0)])
-            self.maskObjects.append(self.draw(self.name+"_mask", points))
-
-
+            points =[(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
+                     (self.pcb_gap+iBondLength, self.pcb_gap+self.pcb_track/2+self.gap_mask),
+                     (self.pcb_gap+iBondLength+adaptDist, iGap+iTrack/2+self.gap_mask),
+                     (self.pcb_gap+iBondLength+adaptDist, -iGap-self.gap_mask),
+                     (self.pcb_gap+iBondLength, (self.pcb_gap)+(iTrack-self.pcb_track)*0.5-self.gap_mask),
+                     (self.pcb_gap/2-self.gap_mask, (self.pcb_gap)+(iTrack-self.pcb_track)*0.5-self.gap_mask)]
+            
+            mask = self.polyline_2D(points, name=self.name+"_mask", layer="mask")
+            self.rotate([mask], angle=angle)
+            self.translate([mask], vector=[pos[0], pos[1], 0])
+            self.maskObjects.append(cutout_rect)
+            ''' PROBLEME'''
+            
+            
 #        if not self.is_litho and tr_line:
 #            points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_track/2+self.overdev),
 #                                         (self.pcb_gap/2-2*self.overdev, 0),
@@ -170,72 +175,84 @@ class KeyElt(CustomElt):
 #            points = self.append_points([(self.pcb_gap/2+self.overdev,0),(self.pcb_gap/2-2*self.overdev,0)])
 #            self.draw(self.name+'_line', points, closed=False)
             
-        return [portOut], [track, gap]
-
-
-    def draw_quarter_circle(self, name, fillet, coor, ori=Vector([1,1])):
-        ori=Vector(ori)
-        temp = self.draw_rect(self.name+"_"+name, self.coor(coor), self.coor_vec(ori*2*fillet))
-        temp_fillet = self.draw_rect(self.name+"_"+name+'f', self.coor(coor), self.coor_vec(ori*2*fillet))
-        temp_fillet.fillet(fillet, 0)
+        return [portOut], [track, gap,]
+        #on renvoie track, gap, mask
+    @move
+    def draw_quarter_circle(self, name, fillet, ori=Vector([1,1])):
+        print(ori*2*fillet)
+        temp = self.rect_corner_2D([0,0], ori*2*fillet, name=name)
+        temp_fillet = self.rect_corner_2D([0,0], ori*2*fillet, name=name+'_fillet')
+        self._fillet(fillet, 0, temp_fillet)
         
         quarter = self.subtract(temp, [temp_fillet])
-        return quarter
+        return [],[quarter,None,None]
     
-    def mesh_zone(self, zone_size, mesh_length):
+    
+    def mesh_zone(self, pos, angle, zone_size, mesh_length):
+        '''IN PLACE doesn't allow the use of @move'''
         zone_size, mesh_length = parse_entry((zone_size, mesh_length))
         if not self.is_litho:
-            zone = self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size))
-            self.modeler.assign_mesh_length(zone, mesh_length)
+            zone = self.rect_center_2D([0, 0], zone_size, name=self.name)
+            self.rotate([zone], angle=angle)
+            self.translate([zone], vector=[pos[0], pos[1], 0])
+            self.interface.assign_mesh_length(zone, mesh_length)
             
-    def cutout(self, zone_size):
+    def cutout(self, name, pos, angle, zone_size):
+        '''IN PLACE doesn't allow the use of @move'''
         zone_size = parse_entry(zone_size)
-        self.maskObjects.append(self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec(zone_size)))
-                    
-    def draw_T(self, iTrack, iGap):
-        
+        cutout_rect = self.rect_center_2D([0, 0], zone_size, name=name)
+        self.rotate([cutout_rect], angle=angle)
+        self.translate([cutout_rect], vector=[pos[0], pos[1], 0])
+        self.maskObjects.append(cutout_rect)
+        return [], [None,None,cutout_rect]
+            
+    def draw_T(self, name, iTrack, iGap):
         if not self.is_overdev or self.val(self.overdev<0):
-            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,self.overdev/2]), self.coor_vec([2*iGap+iTrack, 2*iGap+iTrack-self.overdev]))
+            cutout = self.rect_center_2D([0,self.overdev/2], [2*iGap+iTrack, 2*iGap+iTrack-self.overdev], name=self.name+'_cutout')
             self.gapObjects.append(cutout)
         else:
-            points = self.append_points([(-(iGap+iTrack/2),-iTrack/2-iGap+self.overdev),
-                             (0, 2*iGap+iTrack-2*self.overdev),
-                             ((iGap+iTrack/2)*2, 0),
-                             (0, -(2*iGap+iTrack)+2*self.overdev),
-                             (-self.overdev, 0),
-                             (0, -self.overdev), 
-                             (-iTrack-2*iGap+2*self.overdev, 0),
-                             (0, self.overdev)])
-            cutout = self.draw(self.name+'_cutout', points)
+            points = [       (-(iGap+iTrack/2),-iTrack/2-iGap+self.overdev),
+                             (-(iGap+iTrack/2), iGap-self.overdev),
+                             ((iGap+iTrack/2), iGap-self.overdev),
+                             ((iGap+iTrack/2), -(iGap+iTrack)+self.overdev),
+                             ((iGap+iTrack/2)-self.overdev, -(iGap+iTrack)+self.overdev),
+                             ((iGap+iTrack/2)-self.overdev, -(iGap+iTrack)), 
+                             (-iTrack/2-iGap+self.overdev, -(iGap+iTrack)),
+                             (-iTrack/2-iGap+self.overdev, self.overdev-(iGap+iTrack)) ]
+            
+            cutout = self.polyline_2D(points, name=name+'_cutout', layer='cutout')
             self.gapObjects.append(cutout)
         
         if self.is_mask:
-            mask = self.draw_rect(self.name+'_mask', self.coor([-iGap-iTrack/2,-iGap-iTrack/2]), self.coor_vec([2*iGap+iTrack, 2*iGap+iTrack+self.gap_mask]))
+            mask = self.rect_center_2D([-iGap-iTrack/2,-iGap-iTrack/2], [2*iGap+iTrack, 2*iGap+iTrack+self.gap_mask], name = self.name+'_mask')
             self.maskObjects.append(mask)
             
-        points = self.append_points([(-(iGap+iTrack/2),-iTrack/2-self.overdev),
-                                     (0, iTrack+2*self.overdev),
-                                     ((iGap+iTrack/2)*2, 0),
-                                     (0, -iTrack-2*self.overdev),
-                                     (-iGap+self.overdev, 0),
-                                     (0, -iGap+self.overdev), 
-                                     (-iTrack-2*self.overdev, 0),
-                                     (0, iGap-self.overdev)])
-        track = self.draw(self.name+'_track', points)
-        if self.val(iGap)<self.val(iTrack):
+        points = [                   (-(iGap+iTrack/2),-iTrack/2-self.overdev),
+                                     (-(iGap+iTrack/2), iTrack/2+self.overdev),
+                                     ((iGap+iTrack/2), iTrack/2+self.overdev),
+                                     ((iGap+iTrack/2), -iTrack/2-self.overdev),
+                                     (iTrack/2+self.overdev, -iTrack/2-self.overdev),
+                                     (iTrack/2+self.overdev, -iGap-iTrack/2), 
+                                     (-iTrack/2-self.overdev, -iGap-iTrack/2),
+                                     (-iTrack/2-self.overdev, -iTrack/2-self.overdev)]
+        track = self.polyline_2D(points, name = self.name+'_track', layer='track')
+        if iGap<iTrack:
+            #not sure if self.val(iGap)<self.val(iTrack) was correct
             fillet=iGap
         else:
             fillet=iTrack
-        track.fillet(fillet-eps,[4,7])
+        self._fillet(fillet-eps,[4,7], track)
         
         self.trackObjects.append(track)
         
-        portOut1 = [self.coor([iTrack/2+iGap, 0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
-        self.ports[self.name+'_1'] = portOut1
-        portOut2 = [self.coor([-(iTrack/2+iGap), 0]), self.coor_vec([-1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
-        self.ports[self.name+'_2'] = portOut2
-        portOut3 = [self.coor([0, -(iTrack/2+iGap)]), self.coor_vec([0,-1]), iTrack+2*self.overdev, iGap-2*self.overdev]
-        self.ports[self.name+'_3'] = portOut3
+        portOut1 = [[iTrack/2+iGap, 0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev]
+        #self.ports[self.name+'_1'] = portOut1
+        portOut2 = [[-(iTrack/2+iGap), 0], [-1,0], iTrack+2*self.overdev, iGap-2*self.overdev]
+        #self.ports[self.name+'_2'] = portOut2
+        portOut3 = [[0, -(iTrack/2+iGap)], [0,-1], iTrack+2*self.overdev, iGap-2*self.overdev]
+        #self.ports[self.name+'_3'] = portOut3
+        
+        return [portOut1,portOut2,portOut3], [track, cutout,]
 
     def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
         iTrack, iGap = parse_entry((iTrack, iGap))

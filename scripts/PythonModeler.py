@@ -48,12 +48,12 @@ class PythonModeler():
             self.interface = GdsModeler('body')
         self.mode = interface
     
-    def body(self, name='Global', coor_sys=None):
-        if name != 'Global':
+    def body(self, body_name, coor_name='Global', coor_sys=None):
+        if coor_name != 'Global':
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
-                self.interface.create_coor_sys(name, coor_sys)
-        return Body(self.interface, name)
+                self.interface.create_coor_sys(coor_name, coor_sys)
+        return Body(self.interface, coor_name, body_name)
         
     def set_units(self, units='m'):
         if (self.modeler != None):
@@ -114,7 +114,7 @@ class PythonModeler():
         else:
             return self.eval_var_str(name)
 
-    def box_corner(self, coor_sys, pos, size, model = 'True', **kwargs):
+    def box_corner(self, coor_sys, pos, size, model = 'True', **kwargs):  
         name = self.interface.draw_box_corner(pos, size, **kwargs)
         return ModelEntity(name, 3, coor_sys, model)
     
@@ -127,15 +127,15 @@ class PythonModeler():
         dim = closed + 1 # 2D when closed, 1D when open
         return ModelEntity(name, dim, self.coor_sys)
     
-    def rect_corner(self, pos, size, model = 'True', **kwargs):
+    def rect_corner(self, pos, size, model= 'True', **kwargs):
 #        pos = local_ref(pos)
 #        size = local_ref(size)
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, model)
     
-    def rect_center(self, referential, pos, size, model = 'True', **kwargs):
+    def rect_center(self, pos, size, model = 'True', **kwargs):
         name = self.interface.draw_rect_center(pos, size, **kwargs)
-        return ModelEntity(name, 2, referential, model)
+        return ModelEntity(name, 2, self.coor_sys, model)
 
     def cylinder(self, name, coor_sys, pos, size, model = 'True', **kwargs):
         return ModelEntity(name, 3, coor_sys, model, **kwargs)
@@ -211,9 +211,11 @@ class PythonModeler():
         
         return Intersection
     
-    def substract(self):
-        # What does this function ?
-        pass
+    def subtract(self, blank_entity, tool_entities):
+        self.interface.subtract(blank_entity, tool_entities)
+        for i in tool_entities:
+            self.delete(i)
+        return blank_entity
 
     def translate(self, entities, vector=[0,0,0]):
         self.interface.translate(entities, vector)
@@ -224,6 +226,11 @@ class PythonModeler():
     def separate_bodies(self,name):
         #This looks hard
         pass
+    
+    def _fillet(self, radius, vertex_index, entity):
+        self.interface._fillet(radius, vertex_index, entity.name)
+#        print(vertices)
+#        print(radius)
     
     def assign_perfect_E(self, entity):
         entity.boundaries.append('PerfE')
@@ -277,9 +284,14 @@ class Body(PythonModeler, KeyElt):
     pos_elt = [0,0]
     ori_elt = 0
     
-    def __init__(self, interface, coor_sys):
+    def __init__(self, interface, coor_sys, name):
         self.interface = interface
         self.coor_sys = coor_sys
+        self.name = name
+        self.maskObjects = []
+        self.trackObjects = []
+        self.gapObjects = []        
+
         
     # 2D means in plane
     def polyline_2D(self, points, z=0, closed=True, **kwargs): # among kwargs, name and layer should be given
@@ -287,7 +299,19 @@ class Body(PythonModeler, KeyElt):
         for point in points:
             points_3D.append(point+(z,))
         return self.polyline(points_3D, closed=closed, **kwargs)
-
+    
+    def rect_corner_2D(self, pos, size, z=0, **kwargs):
+#        pos = local_ref(pos)
+#        size = local_ref(size)
+        pos.append(z)
+        size.append(0)
+        return self.rect_corner(pos, size, **kwargs)
+    
+    def rect_center_2D (self, pos, size, z=0, **kwargs):
+        pos.append(z)
+        size.append(0)
+        return self.rect_center(pos, size, **kwargs)
+    
     def rot(self, x, y=0):
         return Vector(x, y).rot(self.ori)
 
