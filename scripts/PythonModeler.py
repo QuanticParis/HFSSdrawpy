@@ -45,7 +45,7 @@ class PythonModeler():
             self.interface = self.modeler
 
         if interface=="gds":
-            self.interface = GdsModeler('body')
+            self.interface = GdsModeler()
         self.mode = interface
     
     def body(self, body_name, coor_name='Global', coor_sys=None):
@@ -114,40 +114,40 @@ class PythonModeler():
         else:
             return self.eval_var_str(name)
 
-    def box_corner(self, coor_sys, pos, size, model = 'True', **kwargs):  
+    def box_corner(self, pos, size, layer, **kwargs):  
         name = self.interface.draw_box_corner(pos, size, **kwargs)
-        return ModelEntity(name, 3, coor_sys, model)
+        return ModelEntity(name, 3, self.coor_sys, layer=layer)
     
-    def box_center(self, coor_sys, pos, size, model = 'True', **kwargs):
+    def box_center(self, pos, size, layer, **kwargs):
         name = self.interface.draw_box_center(pos, size, **kwargs)
-        return (name, 3, coor_sys, model)
+        return ModelEntity(name, 3, self.coor_sys, layer=layer)
   
     def polyline(self, points, layer, closed=True, **kwargs): # among kwargs, name should be given
         name = self.interface.draw_polyline(points, layer, closed=closed, **kwargs)
         dim = closed + 1 # 2D when closed, 1D when open
-        return ModelEntity(name, dim, self.coor_sys)
+        return ModelEntity(name, dim, self.coor_sys, layer=layer)
     
-    def rect_corner(self, pos, size, model= 'True', **kwargs):
+    def rect_corner(self, coor_sys, pos, size, layer, **kwargs):
 #        pos = local_ref(pos)
 #        size = local_ref(size)
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, model)
+        return ModelEntity(name, 2, self.coor_sys, layer=layer)
     
-    def rect_center(self, pos, size, model = 'True', **kwargs):
+    def rect_center(self, pos, size, layer, **kwargs):
         name = self.interface.draw_rect_center(pos, size, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, model)
+        return ModelEntity(name, 2, self.coor_sys, layer=layer)
 
-    def cylinder(self, name, coor_sys, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 3, coor_sys, model, **kwargs)
+    def cylinder(self, name, pos, radius, height, axis, layer, **kwargs):
+        name = self.interface.draw_cylinder(pos, radius, height, axis, **kwargs)
+        return ModelEntity(name, 3, self.coor_sys, layer=layer)
+ 
+    def disk(self, name, pos, radius, axis, layer, **kwargs):
+        name = self.interface.draw_cylinder(pos, radius, axis, **kwargs)
+        return ModelEntity(name, 2, self.coor_sys, layer=layer)
     
-    def cylinder_center(self, name, coor_sys, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 3, coor_sys, pos, size, model)
-    
-    def disk(self, name, coor_sys, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 2, coor_sys, model)
-    
-    def wirebond(self, name, coor_sys, pos, size, model = 'True', **kwargs):
-        return ModelEntity(name, 2, coor_sys, model)
+    def wirebond(self, name, pos, ori, width, layer, **kwargs):
+        name = self.interface.draw_cylinder(pos, ori, width, **kwargs)
+        return ModelEntity(name, 2, self.coor_sys, layer=layer)
     
     def connect_faces(self, name, entity1, entity2):
         assert entity1.dimension == entity2.dimension
@@ -263,7 +263,10 @@ class PythonModeler():
         for entity in entities:
             self.delete(entity)
     
-    
+    def mesh_zone(self, zone, mesh_length):
+        mesh_length = parse_entry(mesh_length)
+        self.interface.assign_mesh_length(zone, mesh_length)
+
         
         
     

@@ -941,7 +941,7 @@ class HfssModeler(COMWrapper):
         return asserted_name
 
     @assert_name
-    def draw_box_corner(self, pos, size, **kwargs):
+    def draw_box_corner(self, pos, size, layer, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         name = self._modeler.CreateBox(
@@ -956,7 +956,7 @@ class HfssModeler(COMWrapper):
         )
         return name
 
-    def draw_box_center(self, pos, size, **kwargs):
+    def draw_box_center(self, pos, size, layer, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
@@ -1004,7 +1004,7 @@ class HfssModeler(COMWrapper):
         return name
     
     @assert_name
-    def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
+    def draw_rect_corner(self, pos, layer, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
@@ -1024,14 +1024,14 @@ class HfssModeler(COMWrapper):
         )
         return name
 
-    def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
+    def draw_rect_center(self, pos, layer, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
         return self.draw_rect_corner(corner_pos, size, **kwargs)
     
     @assert_name
-    def draw_cylinder(self, pos, radius, height, axis, **kwargs):
+    def draw_cylinder(self, pos, radius, height, axis, layer, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
@@ -1045,7 +1045,7 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
     
-    def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
+    def draw_cylinder_center(self, pos, radius, height, axis, layer, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
@@ -1053,7 +1053,7 @@ class HfssModeler(COMWrapper):
         return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
     
     @assert_name
-    def draw_disk(self, pos, radius, axis, **kwargs):
+    def draw_disk(self, pos, radius, axis, layer, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateEllipse(
             ["NAME:EllipsdeParameters",
@@ -1067,7 +1067,7 @@ class HfssModeler(COMWrapper):
         return name
     
     @assert_name
-    def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
+    def draw_wirebond(self, pos, ori, width, layer, height='0.1mm', **kwargs): #ori should be normed
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
         xpad = pos[0]-width/2.*ori[1]
         ypad = pos[1]+width/2.*ori[0]
@@ -1094,7 +1094,7 @@ class HfssModeler(COMWrapper):
     
     def connect_faces(self, entity1, entity2):
         name = self._modeler.Connect(["NAME:Selections",
-                               "Selections:=", ','.join([entity1, entity2])])
+                               "Selections:=", ','.join([entity1.name, entity2.name])])
         return name
     
     def delete(self, entity):
@@ -1103,7 +1103,7 @@ class HfssModeler(COMWrapper):
     def rename_entity(self, entity, name):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
-                                    			["NAME:PropServers", str(entity)],
+                                    			["NAME:PropServers", str(entity.name)],
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
 
     def unite(self, entities, name=None, keep_originals=False):
@@ -1433,18 +1433,25 @@ class HfssModeler(COMWrapper):
 #        super(ModelEntity, self).__init__()#val) #Comment out keyword to match arguments
 #        self.modeler = modeler
 #        self.prop_server = self + ":" + self.model_command + ":1"
-      
+
+
 class ModelEntity():
-    def __init__(self, name, dimension, coor_sys, layer="layer0"):# model,
+    instances = []
+    def __init__(self, name, dimension, coor_sys, model = 'True', layer="layer0"):# model,
         self.name = name
         self.dimension = dimension
         self.coor_sys = coor_sys
         self.history = []    
-#        self.model = model
+        self.model = model
 #        self.boundaries = boundaries
         self.layer = layer #in the chip
+        self.__class__.instances.append(self)
 
-
+    @classmethod
+    def printInstances(cls):
+        for instance in cls.instances:
+            print(instance)
+            
     def append_history(self, entity):
         self.history.append(entity)
         
@@ -1468,7 +1475,9 @@ class ModelEntity():
     def thicken_sheet(self, thickness, bothsides=False):
         self.dimension = 3
         return self
-    
+
+
+
 class Box(ModelEntity):
     model_command = "CreateBox"
     position = make_float_prop("Position")

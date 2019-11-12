@@ -134,7 +134,7 @@ class KeyElt(CustomElt):
                   (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev),
                   (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev),
                   (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev)]
-        track = self.polyline_2D(points, name=name+'_track', layer='track')
+        track = self.polyline_2D(points, name=name+'_track', layer='TRACK')
         
 #        self.trackObjects.append(self.draw(points, ))
        
@@ -145,7 +145,7 @@ class KeyElt(CustomElt):
                  (self.pcb_gap+iBondLength, -self.pcb_gap-self.pcb_track/2+self.overdev),
                  (self.pcb_gap/2+self.overdev, -self.pcb_gap-self.pcb_track/2+self.overdev)]
     
-        gap = self.polyline_2D(points, name=name+'_gap', layer='gap')
+        gap = self.polyline_2D(points, name=name+'_gap', layer='GAP')
 #        self.gapObjects.append(self.draw(self.name+"_gap", points))
 
         if self.is_mask:
@@ -156,10 +156,10 @@ class KeyElt(CustomElt):
                      (self.pcb_gap+iBondLength, (self.pcb_gap)+(iTrack-self.pcb_track)*0.5-self.gap_mask),
                      (self.pcb_gap/2-self.gap_mask, (self.pcb_gap)+(iTrack-self.pcb_track)*0.5-self.gap_mask)]
             
-            mask = self.polyline_2D(points, name=self.name+"_mask", layer="mask")
+            mask = self.polyline_2D(points, name=self.name+"_mask", layer="MASK")
             self.rotate([mask], angle=angle)
             self.translate([mask], vector=[pos[0], pos[1], 0])
-            self.maskObjects.append(cutout_rect)
+            self.maskObjects.append(mask)
             ''' PROBLEME'''
             
             
@@ -177,6 +177,7 @@ class KeyElt(CustomElt):
             
         return [portOut], [track, gap,]
         #on renvoie track, gap, mask
+        
     @move
     def draw_quarter_circle(self, name, fillet, ori=Vector([1,1])):
         print(ori*2*fillet)
@@ -187,15 +188,6 @@ class KeyElt(CustomElt):
         quarter = self.subtract(temp, [temp_fillet])
         return [],[quarter,None,None]
     
-    
-    def mesh_zone(self, pos, angle, zone_size, mesh_length):
-        '''IN PLACE doesn't allow the use of @move'''
-        zone_size, mesh_length = parse_entry((zone_size, mesh_length))
-        if not self.is_litho:
-            zone = self.rect_center_2D([0, 0], zone_size, name=self.name)
-            self.rotate([zone], angle=angle)
-            self.translate([zone], vector=[pos[0], pos[1], 0])
-            self.interface.assign_mesh_length(zone, mesh_length)
             
     def cutout(self, name, pos, angle, zone_size):
         '''IN PLACE doesn't allow the use of @move'''
@@ -257,20 +249,20 @@ class KeyElt(CustomElt):
     def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
         iTrack, iGap = parse_entry((iTrack, iGap))
         if typeEnd=='open' or typeEnd=='Open':
-            cutout = self.draw_rect(self.name+'_cutout', self.coor([iGap,-(iTrack+2*iGap)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*iGap-2*self.overdev]))
+            cutout = self.rect_center([iGap,-(iTrack+2*iGap)/2+self.overdev], [-iGap+self.overdev, iTrack+2*iGap-2*self.overdev],self.name+'_cutout')
             if fillet is not None:
                 if abs(self.ori[0])==1:
                     cutout.fillet(iGap-self.overdev-eps,[2,1])
                 else:
                     cutout.fillet(iGap-self.overdev-eps,[2,3])
             self.gapObjects.append(cutout)
-            portOut = [self.coor([iGap, 0]), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+            portOut = [[iGap, 0], self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
             
             if self.is_overdev:
-                track = self.draw_rect(self.name+'_track', self.coor([iGap,-iTrack/2-self.overdev]), self.coor_vec([-self.overdev, iTrack+2*self.overdev]))
+                track = self.rect_center([iGap,-iTrack/2-self.overdev], [-self.overdev, iTrack+2*self.overdev],self.name+'_track')
                 self.trackObjects.append(track)
             if self.is_mask:
-                mask = self.draw_rect(self.name+'_mask', self.coor([-self.gap_mask,-(iTrack+2*iGap)/2-self.gap_mask]), self.coor_vec([iGap+self.gap_mask, iTrack+2*iGap+2*self.gap_mask]))
+                mask = self.rect_center([-self.gap_mask,-(iTrack+2*iGap)/2-self.gap_mask],[iGap+self.gap_mask, iTrack+2*iGap+2*self.gap_mask],self.name+'_mask')
                 if fillet is not None:
                     if abs(self.ori[0])==1:
                         mask.fillet(iGap+self.gap_mask-eps,[0,3])
@@ -279,8 +271,8 @@ class KeyElt(CustomElt):
                 self.maskObjects.append(mask)
                 
         elif typeEnd=='short' or typeEnd=='Short':
-            cutout1 = self.draw_rect(self.name+'_cutout1', self.coor([iGap/2,-(iTrack/2+iGap)+self.overdev]), self.coor_vec([-iGap/2+self.overdev, iGap-2*self.overdev]))
-            cutout2 = self.draw_rect(self.name+'_cutout2', self.coor([iGap/2,(iTrack/2+iGap)-self.overdev]), self.coor_vec([-iGap/2+self.overdev, -iGap+2*self.overdev]))
+            cutout1 = self.rect_center_2D([iGap/2,-(iTrack/2+iGap)+self.overdev], [-iGap/2+self.overdev, iGap-2*self.overdev], self.name+'_cutout1')
+            cutout2 = self.rect_center_2D([iGap/2,(iTrack/2+iGap)-self.overdev], [-iGap/2+self.overdev, -iGap+2*self.overdev], self.name+'_cutout2')
             if fillet is not None:
                 if abs(self.ori[0])==1:
                     cutout1.fillet(iGap/2-self.overdev-eps,[2,1])
@@ -290,10 +282,10 @@ class KeyElt(CustomElt):
                     cutout2.fillet(iGap/2-self.overdev-eps,[2,3])
             cutout = self.unite([cutout1, cutout2], self.name+'_cutout')
             self.gapObjects.append(cutout)
-            portOut = [self.coor([iGap/2, 0]), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+            portOut = [[iGap/2, 0], self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
             
             if self.is_mask:
-                mask = self.draw_rect(self.name+'_mask', self.coor([-self.gap_mask,-(iTrack+2*iGap)/2-self.gap_mask]), self.coor_vec([iGap/2+self.gap_mask, iTrack+2*iGap+2*self.gap_mask]))
+                mask = self.rect_center_2D([-self.gap_mask,-(iTrack+2*iGap)/2-self.gap_mask], [iGap/2+self.gap_mask, iTrack+2*iGap+2*self.gap_mask], self.name+'_mask')
                 if fillet is not None:
                     if abs(self.ori[0])==1:
                         mask.fillet(iGap/2+self.gap_mask-eps,[0,3])
@@ -305,13 +297,13 @@ class KeyElt(CustomElt):
         self.ports[self.name] = portOut
         
     def size_dc_gap(self, length, positions, widths, border):
-        
+        # Ne pas s'en préoccuper
         length, positions, widths, border = parse_entry((length, positions, widths, border))
         
         low = np.argmin(positions)
         high = np.argmax(positions)
-        pos_cutout = self.coor([-length/2, positions[low]-widths[low]/2-border])
+        pos_cutout = [-length/2, positions[low]-widths[low]/2-border]
         width_cutout = positions[high]-positions[low]+widths[high]/2+widths[low]/2+2*border
-        vec_cutout = self.coor_vec([length, width_cutout])
+        vec_cutout = [length, width_cutout]
       
         return pos_cutout, width_cutout, vec_cutout

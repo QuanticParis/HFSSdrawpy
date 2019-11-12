@@ -8,23 +8,28 @@ Created on Mon Nov  4 11:13:09 2019
 import gdspy
 from hfss import parse_entry, var
 # Create the geometry: a single rectangle.
-
+class Cell( object ):
+    theWholeList= []
+    def __call__( self, *args, **kw ):
+         x= gdspy.Cell( *args, **kw )
+         self.theWholeList.append( x )
+         return x
 
 class GdsModeler():
     dict_units = {'km':1.0e3,'m':1.0,'cm':1.0e-2,'mm':1.0e-3}
 
-    def __init__(self, body, unit=1.0e-6, precision=1.0e-9):
+    def __init__(self, unit=1.0e-6, precision=1.0e-9):
         self.unit = unit
         self.precision = precision
-        self.body = body
-        self.cell = gdspy.Cell(body)
+    
+    def reset_cell(self):
+        del self.cell
         
-    def change_body(self,body):
-        self.body = body
-        self.cell = gdspy.Cell(body)
+    def change_cell(self,name):
+        self.cell = Cell(name)
 
-    def generate_gds(self,name_file):
-        gdspy.write_gds(name_file, unit= 1.0e-6, precision=10.e-9)
+    def generate_gds(self,name_file, cell):
+        self.cell.to_gds(name_file)
 
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
@@ -50,7 +55,13 @@ class GdsModeler():
     def _selections_array(self, *names):
         return ["NAME:Selections", "Selections:=", ",".join(names)]
 
-
+    def draw_box_corner(self, pos, size, **kwargs):
+        print("ERROR : The function --draw_box_corner-- cannot be used for GDSmodeler")
+        pass
+    def draw_box_center(self, pos, size, **kwargs):
+        print("ERROR : The function --draw_box_center-- cannot be used for GDSmodeler")
+        pass     
+    
     def draw_polyline(self, points, layer, closed=True, **kwargs):
         points = parse_entry(points)
         if (closed==True):
@@ -58,53 +69,54 @@ class GdsModeler():
         else:
             poly1 = gdspy.PolyPath(points, layer)
         self.cell.add(poly1)
-        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer=10))
-
+        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer="labels"))
         return kwargs['name']
 
-    def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
+    def draw_rect_corner(self, pos, layer, size=[0,0,0], **kwargs):
+        '''This function neglects the z coordinate'''
         pos = parse_entry(pos)
         size = parse_entry(size)
         points = [(pos[0],pos[1]), (pos[0]+size[0],pos[1]+0), (pos[0]+size[0],pos[1]+size[1]), (pos[0],pos[1]+size[1])]
-        print(points)
-        assert ('0' in size or 0 in size)
-        poly1 = gdspy.Polygon(points, pos[2])
+        poly1 = gdspy.Polygon(points, layer)
         self.cell.add(poly1)
-        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer=10))
+        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer="labels"))
 
         return kwargs['name']
 
-    def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
+    def draw_rect_center(self, pos, layer, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        print(corner_pos)
         return self.draw_rect_corner(corner_pos, size, **kwargs)
 
     def draw_cylinder(self, pos, radius, height, axis, **kwargs):
+        print("ERROR : The function --draw_cylinder-- cannot be used for GDSmodeler")
         pass
     
     def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
+        #Useless ?
+        print("ERROR : The function --draw_cylinder_center-- cannot be used for GDSmodeler")
         pass
     
     def draw_disk(self, pos, radius, axis, layer, **kwargs):
-        assert axis=='Z'
+        assert axis=='Z', "axis must be 'Z' for the gdsModeler"
         self.cell.add(
               gdspy.Round(
                   (pos[0],pos[1]),
                   radius,
                   layer))
-        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer=10))
+        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer="labels"))
         return kwargs['name']
            
     def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pass
     
     def connect_faces(self, entity1, entity2):
+        print("ERROR : The function --connect_faces-- cannot be used for GDSmodeler")
         pass
     
     def delete(self, entity):
-        # a verifier
+        
         pass
             
     def rename_entity(self, entity, name):
@@ -429,8 +441,9 @@ class GdsModeler():
         return self._modeler.GetMatchedObjectName(name+'*')
     
     
-
-
+    def create_coor_sys(self, name, coor_sys):
+        self.cell = gdspy.Cell(name)
+        self.coor_sys = coor_sys
 
 
 
