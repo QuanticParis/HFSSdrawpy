@@ -114,7 +114,7 @@ class PythonModeler():
         else:
             return self.eval_var_str(name)
 
-    def box_corner(self, pos, size, layer, **kwargs):  
+    def box_corner(self, pos, size, layer, **kwargs):
         name = self.interface.draw_box_corner(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
     
@@ -122,32 +122,63 @@ class PythonModeler():
         name = self.interface.draw_box_center(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
   
-    def polyline(self, points, layer, closed=True, **kwargs): # among kwargs, name should be given
-        name = self.interface.draw_polyline(points, layer, closed=closed, **kwargs)
+    def polyline(self, points3D, closed=True, **kwargs): # among kwargs, name should be given
+        if self.mode=='hffs':
+            name = self.interface.draw_polyline(points3D, closed=closed, **kwargs)
+        elif self.mode=='gds':
+            points2D = []
+            for point in points3D:
+                points2D.append(points3D[0:2])
+            name = self.interface.draw_polyline(points2D, closed=closed, **kwargs)
         dim = closed + 1 # 2D when closed, 1D when open
-        return ModelEntity(name, dim, self.coor_sys, layer=layer)
+        return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
+
+    def rect_corner(self, pos3D, size3D, **kwargs):
+        if self.mode=='hffs': 
+            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
+        elif self.mode=='gds':
+            pos2D = pos3D[0:2]
+            size2D = size3D[0:2]
+            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
-    def rect_corner(self, coor_sys, pos, size, layer, **kwargs):
-#        pos = local_ref(pos)
-#        size = local_ref(size)
-        name = self.interface.draw_rect_corner(pos, size, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=layer)
+    def rect_center(self, pos3D, size3D, **kwargs):
+        if self.mode=='hffs': 
+            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
+        elif self.mode=='gds':
+            pos2D = pos3D[0:2]
+            size2D = size3D[0:2]
+            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
-    def rect_center(self, pos, size, layer, **kwargs):
-        name = self.interface.draw_rect_center(pos, size, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=layer)
+    def polyline_2D(self, points2D, z=0, closed=True, **kwargs): # among kwargs, name should be given
+        #z=0 ??
+        name = self.interface.draw_polyline(points2D, [0,0], z=0, closed=closed, **kwargs)
+        dim = closed + 1 # 2D when closed, 1D when open
+        return ModelEntity(name, dim, self.coor_sys, z, layer=kwargs['layer'])
+
+    def rect_corner_2D(self, pos2D, size2D, z=0, **kwargs):
+        name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
+    
+    def rect_center_2D(self, pos2D, size2D, z=0, **kwargs):
+        name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
+    
+    def rot(self, x, y=0):
+        return Vector(x, y).rot(self.ori)
 
     def cylinder(self, name, pos, radius, height, axis, layer, **kwargs):
         name = self.interface.draw_cylinder(pos, radius, height, axis, **kwargs)
-        return ModelEntity(name, 3, self.coor_sys, layer=layer)
+        return ModelEntity(name, 3, self.coor_sys, layer=kwargs['layer'])
  
     def disk(self, name, pos, radius, axis, layer, **kwargs):
         name = self.interface.draw_cylinder(pos, radius, axis, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=layer)
+        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
     def wirebond(self, name, pos, ori, width, layer, **kwargs):
         name = self.interface.draw_cylinder(pos, ori, width, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=layer)
+        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
     def connect_faces(self, name, entity1, entity2):
         assert entity1.dimension == entity2.dimension
@@ -296,27 +327,7 @@ class Body(PythonModeler, KeyElt):
         self.gapObjects = []        
 
         
-    # 2D means in plane
-    def polyline_2D(self, points, z=0, closed=True, **kwargs): # among kwargs, name and layer should be given
-        points_3D = []
-        for point in points:
-            points_3D.append(point+(z,))
-        return self.polyline(points_3D, closed=closed, **kwargs)
-    
-    def rect_corner_2D(self, pos, size, z=0, **kwargs):
-#        pos = local_ref(pos)
-#        size = local_ref(size)
-        pos.append(z)
-        size.append(0)
-        return self.rect_corner(pos, size, **kwargs)
-    
-    def rect_center_2D (self, pos, size, z=0, **kwargs):
-        pos.append(z)
-        size.append(0)
-        return self.rect_center(pos, size, **kwargs)
-    
-    def rot(self, x, y=0):
-        return Vector(x, y).rot(self.ori)
+
 
     def append_points(self, coor_list): # is deprecated ! Should not be used anymOOOOOre
         points = [coor_list[0]]
@@ -354,50 +365,4 @@ class Body(PythonModeler, KeyElt):
 
     def coor_vec(self, vec): # Change of coordinate for a vector
         return self.rot(*vec)
-            
-
-
     
-    
-#            
-#chip1 = PM.chip()
-#chip1.transmon(..)
-#            
-#            
-#HfssModeler1 = HfssModeler(...)
-#GdsModeler1 = GdsModeler(...)
-#PM = PythonModeler(HffsModeler1)
-
-#PM.transmon(**args)
-
-
-
-
-
-
-
-
-class banque_du_labo1(KeyElt):
-        
-    
-    def draw_JJ(self, iTrack, iGap, iTrackJ, iLength, iInduct='1nH', fillet=None):
-
-        iTrack, iGap, iTrackJ, iLength = parse_entry((iTrack, iGap, iTrackJ, iLength))
-        portOut1 = [self.coor([iLength/2,0]), self.coor_vec([1,0]), iTrack, iGap]
-        portOut2 = [self.coor([-iLength/2,0]), self.coor_vec([-1,0]), iTrack, iGap]
-        self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
-        junction = self.connect_elt(self.name, self.name+'_1', self.name+'_2')
-        pads = junction._connect_JJ(iTrackJ, iInduct=iInduct, fillet=None)
-        self.trackObjects.append(pads)
-        self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([iLength, iTrack+2*iGap])))
-
-
-#class PythonModeler():
-#    def __init__(interfaceModeler, elt_bank):
-#        self.interface = interfaceModeler
-#        self.elt_bank = elt_bank
-#        
-#PM.transmon(**args)
-
-

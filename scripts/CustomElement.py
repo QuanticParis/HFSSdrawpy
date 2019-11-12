@@ -20,9 +20,26 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
+#We can assume the class Port exists in the following code
+class Port():
+    instances = {}
+    def __init__(self, name, pos, ori, track, gap):
+        self.name = name
+        self.pos = pos
+        self.ori = ori # in degrees
+        self.track = track
+        self.gap = gap
+        self.__class__.instances[name] = self
+        
+    # TODO several track within one gap for a port
+    # TODO Be able to split a port which returns several ports
+    # TODO Draw a port
+    # TODO Adaptor should be defined here
+    # TODO redundancy with name and layer
+    
 class CustomElt():
 
-    def draw_JJ(self, iTrack, iGap, iTrackJ, iLength, iInduct='1nH', fillet=None):
+    def draw_JJ(self, name, iTrack, iGap, iTrackJ, iLength, iInduct='1nH', fillet=None):
         '''
         Draws a Joseph's Son Junction.
 
@@ -47,12 +64,10 @@ class CustomElt():
         '''
         iTrack, iGap, iTrackJ, iLength = parse_entry((iTrack, iGap, iTrackJ, iLength))
 
-        portOut1 = [self.coor([iLength/2,0]), self.coor_vec([1,0]), iTrack, iGap]
-        portOut2 = [self.coor([-iLength/2,0]), self.coor_vec([-1,0]), iTrack, iGap]
-        self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
+        portOut1 = Port(name+'_1',[iLength/2,0], 0, iTrack, iGap)
+        portOut2 = Port(name+'_2',[-iLength/2,0], 180, iTrack, iGap)
 
-        junction = self.connect_elt(self.name, self.name+'_1', self.name+'_2')
+        junction = self.connect_elt(name, portOut1, portOut2)
         pads = junction._connect_JJ(iTrackJ, iInduct=iInduct, fillet=None)
         self.trackObjects.append(pads)
         

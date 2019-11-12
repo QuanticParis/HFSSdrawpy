@@ -6,6 +6,7 @@ Created on Wed Oct 30 15:39:44 2019
 """
 
 from PythonModeler import PythonModeler
+import traceback
 
 PM = PythonModeler('hfss')
 
@@ -25,14 +26,55 @@ info = 'con1', ['1mm','1mm'], 90
 
 #draw_quarter_circle(self, name, coor, ori, size ?):
 info1 = 'quarter1', ['0mm','0mm'], 90
-#chip.draw_quarter_circle(*info1, 0.01)
 
-##rect_corner_2D(self, pos, size, z=0, **kwargs):
-#chip.rect_corner_2D([0,0],[5,5], name='rectangle1')
-##rect_center_2D (self, pos, size, z=0, **kwargs):
-#chip.rect_center_2D([0,0],[5,5], name='rectangle2')
 
-#chip.mesh_zone(['0mm','0mm'], 90,[10,20],0.1)
+# TEST BATCH
+try:
+    print("Quarter Cirle")
+    chip.draw_quarter_circle(*info1, 'track', 0.01)
+except Exception:
+    print("Quarter Cirle error")
+    
+try:
+    print("Rect Corner")
+    chip.rect_corner_2D([0,0],[5,5], name='rectangle1', layer ='layer1')
+except Exception:
+    print("Rectangle error")
+    
+try:
+    print("mesh_zone")
 
-#chip.cutout('cutout', [0,0],90, [1,2])
-chip.draw_T('T', 0.3, 0.2)
+    a = chip.rect_center_2D([0,0],[5,5], name='rectangle2', layer ='layer1')
+    chip.mesh_zone(a,0.1)
+
+except Exception:
+    print("Mesh Zone error")
+
+try:
+    print("cutout")
+    chip.cutout('cutout', [0,0],90, [1,2])
+except Exception:
+    print("Cutout error")
+
+try:
+    print("draw_T")
+    chip.draw_T('T', [1,1,1], 90, 0.3, 0.2)
+except Exception:
+    print("DrawT error")
+    traceback.print_exc()
+
+    
+try:
+    print("end_cable")
+    chip.draw_end_cable('end_cable', [1,1,1], 90, 5,2)
+except Exception:
+    print("Draw_end_cable error")
+    traceback.print_exc()
+    
+#try:
+#    print("draw_JJ")
+#    chip.draw_JJ('JJ', 5, 2, 4, 2)
+#except Exception:
+#    print("Draw_JJ error")   
+#    traceback.print_exc()
+

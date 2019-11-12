@@ -903,6 +903,32 @@ class HfssModeler(COMWrapper):
         self._modeler = modeler
         self._boundaries = boundaries
         self._mesh = mesh
+    
+    def resize(func):
+        def resized(*args, **kwargs):
+            '''3D or 2D points to 3D points'''
+            print(args)
+            args[2].append(0)
+            print(args[3])
+            
+            if isinstance(args[1][0], tuple):
+                # Cas d'une polyline
+                for p in args[1]:
+
+                    try:
+                        p=p+(args[3],)
+                    except Exception:
+                        print(p)
+            else:
+                # Cas d'un rectangle
+
+                args[1].append(0)
+                
+
+
+            return func(*args, **kwargs)
+        return resized
+    
 
     def set_units(self, units='m'):
         self._modeler.SetModelUnits(["NAME:Units Parameter",
@@ -939,9 +965,9 @@ class HfssModeler(COMWrapper):
                 print(msg)
             return name
         return asserted_name
-
+    
     @assert_name
-    def draw_box_corner(self, pos, size, layer, **kwargs):
+    def draw_box_corner(self, pos, size, z, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         name = self._modeler.CreateBox(
@@ -956,7 +982,7 @@ class HfssModeler(COMWrapper):
         )
         return name
 
-    def draw_box_center(self, pos, size, layer, **kwargs):
+    def draw_box_center(self, pos, size, z, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
@@ -980,8 +1006,12 @@ class HfssModeler(COMWrapper):
 #                   'new box named \'%s\'' % (kwargs['name'], name))
 #            print(msg)
 #        return Box(name, self, pos, size)
+        
+    @resize
     @assert_name
-    def draw_polyline(self, points, layer, closed=True, **kwargs):
+    def draw_polyline(self, points, size, z, closed=True, **kwargs):
+        kwargs2 = kwargs.copy()
+        kwargs2.pop('layer', None)
         points = parse_entry(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
@@ -1000,11 +1030,15 @@ class HfssModeler(COMWrapper):
             *params_closed,
             pointsStr,
             indexsStr],
-            self._attributes_array(**kwargs))
+            self._attributes_array(**kwargs2))
+        del kwargs2
         return name
     
+    @resize
     @assert_name
-    def draw_rect_corner(self, pos, layer, size=[0,0,0], **kwargs):
+    def draw_rect_corner(self, pos, size, z, **kwargs):
+        kwargs2 = kwargs.copy()
+        kwargs2.pop('layer', None)
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
@@ -1020,18 +1054,19 @@ class HfssModeler(COMWrapper):
              "Width:=", size[w_idx],
              "Height:=", size[h_idx],
              "WhichAxis:=", axis],
-            self._attributes_array(**kwargs)
+            self._attributes_array(**kwargs2)
         )
+        del kwargs2
         return name
 
-    def draw_rect_center(self, pos, layer, size=[0,0,0], **kwargs):
+    def draw_rect_center(self, pos, size, z, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
         return self.draw_rect_corner(corner_pos, size, **kwargs)
     
     @assert_name
-    def draw_cylinder(self, pos, radius, height, axis, layer, **kwargs):
+    def draw_cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
@@ -1045,7 +1080,7 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
     
-    def draw_cylinder_center(self, pos, radius, height, axis, layer, **kwargs):
+    def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
@@ -1053,7 +1088,7 @@ class HfssModeler(COMWrapper):
         return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
     
     @assert_name
-    def draw_disk(self, pos, radius, axis, layer, **kwargs):
+    def draw_disk(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateEllipse(
             ["NAME:EllipsdeParameters",
@@ -1067,7 +1102,7 @@ class HfssModeler(COMWrapper):
         return name
     
     @assert_name
-    def draw_wirebond(self, pos, ori, width, layer, height='0.1mm', **kwargs): #ori should be normed
+    def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
         xpad = pos[0]-width/2.*ori[1]
         ypad = pos[1]+width/2.*ori[0]
@@ -1107,7 +1142,11 @@ class HfssModeler(COMWrapper):
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
 
     def unite(self, entities, name=None, keep_originals=False):
-        names = [entity.name for entity in entities]
+        names = []
+        for entity in entities:
+            if entity!=None:
+                names.append(entity.name)
+                
         self._modeler.Unite(
             self._selections_array(*names),
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
@@ -1119,7 +1158,10 @@ class HfssModeler(COMWrapper):
             return self.rename_obj(names[0], name)
 
     def intersect(self, entities, keep_originals=False):
-        names = [entity.name for entity in entities]
+        names = []
+        for entity in entities:
+            if entity!=None:
+                names.append(entity.name)
         self._modeler.Intersect(
             self._selections_array(*names),
             ["NAME:IntersectParameters", "KeepOriginals:=", keep_originals]
@@ -1127,8 +1169,10 @@ class HfssModeler(COMWrapper):
         return names[0]
 
     def subtract(self, blank_entity, tool_entities, keep_originals=False):
-        tool_names = [entity.name for entity in tool_entities]
-
+        tool_names = []
+        for entity in tool_entities:
+            if entity!=None:
+                tool_names.append(entity.name)
         selection_array= ["NAME:Selections",
                           "Blank Parts:=", blank_entity.name,
                           "Tool Parts:=", ",".join(tool_names)]
@@ -1139,7 +1183,11 @@ class HfssModeler(COMWrapper):
         return blank_entity.name
 
     def translate(self, entities, vector):
-        names = [entity.name for entity in entities]
+        names = []
+        for entity in entities:
+            if entity!=None:
+                names.append(entity.name)
+        
         self._modeler.Move(
             self._selections_array(*names),
             ["NAME:TranslateParameters",
@@ -1149,7 +1197,11 @@ class HfssModeler(COMWrapper):
         )
         
     def rotate(self, entities, angle):
-        names = [entity.name for entity in entities]
+        names = [] 
+        for entity in entities:
+            if entity!=None:
+                names.append(entity.name)
+                
         self._modeler.Rotate(self._selections_array(*names), 
             ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
 
@@ -1221,11 +1273,9 @@ class HfssModeler(COMWrapper):
         vertices = self._modeler.GetVertexIDsFromObject(obj)
         if isinstance(vertex_index, list):
             to_fillet = [int(vertices[v]) for v in vertex_index]
-        else:
-            to_fillet = [int(vertices[vertex_index])]
-#        print(vertices)
+        else:#        print(vertices)
 #        print(radius)
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
+            self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
                               ["NAME:Parameters",
                                ["NAME:FilletParameters",
                                 "Edges:=", [],
@@ -1436,7 +1486,7 @@ class HfssModeler(COMWrapper):
 
 
 class ModelEntity():
-    instances = []
+    instances = {}
     def __init__(self, name, dimension, coor_sys, model = 'True', layer="layer0"):# model,
         self.name = name
         self.dimension = dimension
@@ -1445,7 +1495,10 @@ class ModelEntity():
         self.model = model
 #        self.boundaries = boundaries
         self.layer = layer #in the chip
-        self.__class__.instances.append(self)
+        try:
+            self.__class__.instances[layer].append(self)
+        except Exception:
+            self.__class__.instances[layer]=self
 
     @classmethod
     def printInstances(cls):

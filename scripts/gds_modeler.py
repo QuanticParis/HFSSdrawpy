@@ -7,27 +7,38 @@ Created on Mon Nov  4 11:13:09 2019
 
 import gdspy
 from hfss import parse_entry, var
+import numpy as np
+
 # Create the geometry: a single rectangle.
-class Cell( object ):
-    theWholeList= []
-    def __call__( self, *args, **kw ):
-         x= gdspy.Cell( *args, **kw )
-         self.theWholeList.append( x )
-         return x
+#class Cell( object ):
+#    theWholeList= []
+#    def __call__( self, *args, **kw ):
+#         x= gdspy.Cell( *args, **kw )
+#         self.theWholeList.append( x )
+#         return x
+
 
 class GdsModeler():
+    gds_object_instances = {}
     dict_units = {'km':1.0e3,'m':1.0,'cm':1.0e-2,'mm':1.0e-3}
-
+    
     def __init__(self, unit=1.0e-6, precision=1.0e-9):
         self.unit = unit
         self.precision = precision
     
+
     def reset_cell(self):
         del self.cell
         
-    def change_cell(self,name):
-        self.cell = Cell(name)
-
+    def create_coor_sys(self, coor_name, coor_sys):
+        print('initialisation cell')
+        try:
+            self.cell = gdspy.Cell(coor_name)
+        except Exception:
+            self.cell = gdspy.current_library.cell_dict[coor_name]
+        self.coor_sys = coor_sys
+        
+        
     def generate_gds(self,name_file, cell):
         self.cell.to_gds(name_file)
 
@@ -62,28 +73,35 @@ class GdsModeler():
         print("ERROR : The function --draw_box_center-- cannot be used for GDSmodeler")
         pass     
     
-    def draw_polyline(self, points, layer, closed=True, **kwargs):
+    def draw_polyline(self, points, size=[0,0,0], closed=True, **kwargs):
+        '''size is useless'''
+        name = kwargs['name']
+        layer = kwargs['layer']
         points = parse_entry(points)
         if (closed==True):
             poly1 = gdspy.Polygon(points, layer)
         else:
             poly1 = gdspy.PolyPath(points, layer)
+        self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
-        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer="labels"))
-        return kwargs['name']
+        return name
+    
+    def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
+        name = kwargs['name']
+        layer = kwargs['layer']
 
-    def draw_rect_corner(self, pos, layer, size=[0,0,0], **kwargs):
-        '''This function neglects the z coordinate'''
+        #This function neglects the z coordinate
         pos = parse_entry(pos)
         size = parse_entry(size)
         points = [(pos[0],pos[1]), (pos[0]+size[0],pos[1]+0), (pos[0]+size[0],pos[1]+size[1]), (pos[0],pos[1]+size[1])]
         poly1 = gdspy.Polygon(points, layer)
+        
+        self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
-        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer="labels"))
 
-        return kwargs['name']
-
-    def draw_rect_center(self, pos, layer, size=[0,0,0], **kwargs):
+        return name
+    
+    def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
@@ -98,16 +116,15 @@ class GdsModeler():
         print("ERROR : The function --draw_cylinder_center-- cannot be used for GDSmodeler")
         pass
     
-    def draw_disk(self, pos, radius, axis, layer, **kwargs):
+    def draw_disk(self, pos, radius, axis, **kwargs):
+        name = kwargs['name']
+        layer = kwargs['layer']
         assert axis=='Z', "axis must be 'Z' for the gdsModeler"
-        self.cell.add(
-              gdspy.Round(
-                  (pos[0],pos[1]),
-                  radius,
-                  layer))
-        self.cell.add(gdspy.Label(kwargs['name'],(0, 0), 'nw', layer="labels"))
-        return kwargs['name']
-           
+        round1 = gdspy.Round((pos[0],pos[1]), radius, layer)
+        self.cell.add(round1)
+        self.gds_object_instances[name] = round1
+        return name
+        
     def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pass
     
@@ -166,25 +183,7 @@ class GdsModeler():
             self.cell.add(gdspy.fast_boolean(polygon_0, polygon_i , 'or'), blank_entity.layer)
 
 
-    def translate(self, name, vector):
-        self._modeler.Move(
-            self._selections_array(name),
-            ["NAME:TranslateParameters",
-        		"TranslateVectorX:="	, vector[0],
-        		"TranslateVectorY:="	, vector[1],
-        		"TranslateVectorZ:="	, vector[2]]
-        )
-
-
-    def separate_bodies(self, name):
-        self._modeler.SeparateBody(["NAME:Selections",
-                                		"Selections:=", name,
-                                		"NewPartsModelFlag:="	, "Model"
-                                	], 
-                                	[
-                                		"CreateGroupsForNewObjects:=", False
-                                	])
-
+   
 #    def make_perfect_E(self, *objects):
 #        print(self._boundaries.GetBoundaries())
 #        name = increment_name("PerfE", self._boundaries.GetBoundaries())
@@ -192,105 +191,24 @@ class GdsModeler():
 #        self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", objects, "InfGroundPlane:=", False])
 
     def assign_perfect_E(self, obj, name='PerfE'):
-#        print(obj)
-
-        if isinstance(obj, list):
-            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", obj, "InfGroundPlane:=", False])
-        else:
-            name = str(obj)+'_'+name
-            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [obj], "InfGroundPlane:=", False])
+        '''useless'''
+        pass
             
     def assign_perfect_E_faces(self, name):
-        # this is very peculiar to cavity Si chips
-        faces = list(self._modeler.GetFaceIDs(name))
-        faces = [int(ii) for ii in faces]
-        faces.sort()
-        faces_perfE = [faces[1]]+faces[6:]
-        faces_loss = faces[2:6]
-
-        self._boundaries.AssignPerfectE(
-        	[
-        		"NAME:"+str(name)+'_PerfE',
-        		"Faces:="		, faces_perfE,
-        		"InfGroundPlane:="	, False
-        	])
-            
-        self._boundaries.AssignFiniteCond([ "NAME:FiniteCond3",
-                                        		"Faces:="		, faces_loss,
-                                        		"UseMaterial:="		, True,
-                                        		"Material:="		, "lossy conductor",
-                                        		"UseThickness:="	, False,
-                                        		"Roughness:="		, "0um",
-                                        		"InfGroundPlane:="	, False,
-                                        		"IsTwoSided:="		, False,
-                                        		"IsInternal:="		, True ])
+        print("ERROR : The function --assign_perfect_E-- cannot be used for GDSmodeler")
+        pass
 
     def assign_mesh_length(self, obj, length):#, suff = '_mesh'):
-        name = str(obj)
-#        print(obj)
-        params = ["NAME:"+name]
-        params += ["RefineInside:=", False, "Enabled:=", True]
-        ######## RefineInside Should be False for planar object
-        params += ["Objects:=", [str(obj)]]
-        params += ["RestrictElem:=", False,
-			         "RestrictLength:=",  True,
-			         "MaxLength:=", length]
-        self._mesh.AssignLengthOp(params)
+        print("ERROR : The function --assign_mesh_length-- cannot be used for GDSmodeler")
+        pass
         
     def create_object_from_face(self, name):
-        faces = list(self._modeler.GetFaceIDs(name))
-        faces.sort()
-        face = faces[0]
-        self._modeler.CreateObjectFromFaces(["NAME:Selections",
-                                            "Selections:="		, name,
-                                            "NewPartsModelFlag:="	, "Model"],
-            ["NAME:Parameters",["NAME:BodyFromFaceToParameters","FacesToDetach:="	, [int(face)]]], 
-            ["CreateGroupsForNewObjects:=", False])
-        return name+'_ObjectFromFace1'
+        print("ERROR : The function --create_object_from_face-- cannot be used for GDSmodeler")
+        pass
 
     def _fillet(self, radius, vertex_index, obj):
-        vertices = self._modeler.GetVertexIDsFromObject(obj)
-        if isinstance(vertex_index, list):
-            to_fillet = [int(vertices[v]) for v in vertex_index]
-        else:
-            to_fillet = [int(vertices[vertex_index])]
-#        print(vertices)
-#        print(radius)
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
-                              ["NAME:Parameters",
-                               ["NAME:FilletParameters",
-                                "Edges:=", [],
-                                "Vertices:=", to_fillet,
-                                "Radius:=", radius,
-                                "Setback:=", "0mm"]])
-            
-     
-    def _fillet_edges(self, radius, edge_index, obj):
-        edges = self._modeler.GetEdgeIDsFromObject(obj)
-        print(edges)
-        if isinstance(edge_index, list):
-            to_fillet = [int(edges[e]) for e in edge_index]
-        else:
-            to_fillet = [int(edges[edge_index])]
-#        print(vertices)
-#        print(radius)
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
-                              ["NAME:Parameters",
-                               ["NAME:FilletParameters",
-                                "Edges:=", to_fillet,
-                                "Vertices:=", [],
-                                "Radius:=", radius,
-                                "Setback:=", "0mm"]])   
-            
-
-    def _fillets(self, radius, vertices, obj):
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
-                              ["NAME:Parameters",
-                               ["NAME:FilletParameters",
-                                "Edges:=", [],
-                                "Vertices:=", vertices,
-                                "Radius:=", radius,
-                                "Setback:=", "0mm"]])
+        # TODO Define a fillet for gdsModel            
+        pass
 
     def _sweep_along_path(self, to_sweep, path_obj):
         self.rename_obj(path_obj, str(path_obj)+'_path')
@@ -439,12 +357,25 @@ class GdsModeler():
         
     def get_matched_object_name(self, name):
         return self._modeler.GetMatchedObjectName(name+'*')
-    
-    
-    def create_coor_sys(self, name, coor_sys):
-        self.cell = gdspy.Cell(name)
-        self.coor_sys = coor_sys
 
+        
+        
+    def translate(self, entities, vector):
+        '''vector is 3-dimentional but with a z=0 component'''
+        translation_vector = [vector[0], vector[1]]
+        for entity in entities:
+            if entity!=None:
+                gds_entity = self.gds_object_instances[entity.name]
+                gds_entity.translate(*translation_vector)
+            
+        
+    def rotate(self, entities, angle):
+        print(angle)
+        for entity in entities:
+            if entity!=None:
+                gds_entity = self.gds_object_instances[entity.name]
+                print(gds_entity.polygons)
+                gds_entity.rotate(angle/360*2*np.pi)
 
 
 
