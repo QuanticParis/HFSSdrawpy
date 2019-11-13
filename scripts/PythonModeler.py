@@ -129,7 +129,7 @@ class PythonModeler():
             points2D = []
             for point in points3D:
                 points2D.append(points3D[0:2])
-            name = self.interface.draw_polyline(points2D, closed=closed, **kwargs)
+            name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
         dim = closed + 1 # 2D when closed, 1D when open
         return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
 
@@ -153,7 +153,7 @@ class PythonModeler():
     
     def polyline_2D(self, points2D, z=0, closed=True, **kwargs): # among kwargs, name should be given
         #z=0 ??
-        name = self.interface.draw_polyline(points2D, [0,0], z=0, closed=closed, **kwargs)
+        name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
         dim = closed + 1 # 2D when closed, 1D when open
         return ModelEntity(name, dim, self.coor_sys, z, layer=kwargs['layer'])
 
@@ -162,7 +162,7 @@ class PythonModeler():
         return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
     
     def rect_center_2D(self, pos2D, size2D, z=0, **kwargs):
-        name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+        name = self.interface.draw_rect_center(pos2D, size2D, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
     
     def rot(self, x, y=0):

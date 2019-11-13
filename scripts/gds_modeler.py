@@ -140,49 +140,71 @@ class GdsModeler():
         pass
 
     def unite(self, entities, name=None, keep_originals=False):
-        polygons = self.cell.get_polygons
-        names_polygons = self.cell.get_labels
+        final_name = entities[0].name if name==None else name
         
         if len(entities)>=2:
-            polygon_0 = polygons[names_polygons.index(entities[0].name)]
-            for i in range(len(entities)):
-                assert entities[i].name in names_polygons
-                if i>=1:
-                    polygon_i = polygons[names_polygons.index(entities[i].name)]
-                    self.cell.add(gdspy.fast_boolean(polygon_0, polygon_i , 'or'), entities[0].layer)
+            #We fuse all gds_entities on the first element of the list
+            polygon_0 = self.gds_object_instances[entities.pop(0).name]
+            polygon_list = []
+            for entity in entities:
+                polygon_list.append(self.gds_object_instances[entity.name])
+            polygon_set = gdspy.PolygonSet(polygon_list)
+            fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'or')
+            self.cell.add(fused_polygon, polygon_0.layer)
+        
+        if not(keep_originals):
+            for entity in entities:
+                polygon = self.gds_object_instances.pop(entity.name, None)
+                self.cell.remove_polygons(polygon)
+                self.cell.remove_labels(entity.name)
+            
+        self.gds_object_instances[final_name]=fused_polygon
+        
+        return final_name
 
-        if name is None:
-            return entities[0].name
-        else:
-            return name
-
-    def intersect(self, entities, name =None, keep_originals=False):
-        polygons = self.cell.get_polygons
-        names_polygons= self.cell.get_labels
+    def intersect(self, entities, name=None, keep_originals=False):
+        final_name = entities[0].name if name==None else name
         
         if len(entities)>=2:
-            polygon_0 = polygons[names_polygons.index(entities[0].name)]
-            for i in range(len(entities)):
-                assert entities[i].name in names_polygons
-                if i>=1:
-                    polygon_i = polygons[names_polygons.index(entities[i].name)]
-                    self.cell.add(gdspy.fast_boolean(polygon_0, polygon_i , 'or'), entities[0].layer)
+            #We fuse all gds_entities on the first element of the list
+            polygon_0 = self.gds_object_instances[entities.pop(0).name]
+            polygon_list = []
+            for entity in entities:
+                polygon_list.append(self.gds_object_instances[entity.name])
+            polygon_set = gdspy.PolygonSet(polygon_list)
+            fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'and')
+            self.cell.add(fused_polygon, entities[0].layer)
+        
+        if not(keep_originals):
+            for entity in entities:
+                polygon = self.gds_object_instances.pop(entity.name, None)
+                self.cell.remove_polygons(polygon)
+                self.cell.remove_labels(entity.name)
+        self.gds_object_instances[final_name]=fused_polygon
+        return final_name
 
-        if name is None:
-            return entities[0].name
-        else:
-            return name
-
-    def subtract(self, blank_entity, tool_entities, keep_originals=False):
-        polygons = self.cell.get_polygons
-        names_polygons= self.cell.get_labels
-        polygon_0 = polygons[names_polygons.index(blank_entity.name)]
-        for i in range(len(tool_entities)):
-            assert tool_entities[i].name in names_polygons
-            polygon_i = polygons[names_polygons.index(tool_entities[i].name)]
-            self.cell.add(gdspy.fast_boolean(polygon_0, polygon_i , 'or'), blank_entity.layer)
-
-
+    def subtract(self, blank_entity, tool_entities):
+        final_name = blank_entity.name
+        #We fuse all gds_entities on the first element of the list
+        polygon_0 = self.gds_object_instances[blank_entity.name]
+        print("instances : ", self.gds_object_instances)
+        for entity in tool_entities:
+            tool_polygon = self.gds_object_instances[entity.name]
+            print(polygon_0.polygons)
+            print(tool_polygon.polygons)
+            #Not isn't working
+            polygon_0 = gdspy.Polygon(gdspy.fast_boolean(polygon_0, tool_polygon, 'and').polygons[0])
+            print("fused_polygon", polygon_0)
+            
+        #self.cell.add(polygon_0, blank_entity.layer)
+    
+        for entity in tool_entities:
+            polygon = self.gds_object_instances.pop(entity.name, None)
+            self.cell.remove_polygon_modified(polygon.polygons[0])
+            self.cell.remove_labels(lambda lbl : lbl.string==entity.name)
+        
+        self.gds_object_instances[final_name]=polygon_0
+        return final_name
    
 #    def make_perfect_E(self, *objects):
 #        print(self._boundaries.GetBoundaries())
@@ -207,7 +229,8 @@ class GdsModeler():
         pass
 
     def _fillet(self, radius, vertex_index, obj):
-        # TODO Define a fillet for gdsModel            
+        # We need to define a convention for the choice of vertices.
+                 
         pass
 
     def _sweep_along_path(self, to_sweep, path_obj):

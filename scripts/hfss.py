@@ -907,23 +907,15 @@ class HfssModeler(COMWrapper):
     def resize(func):
         def resized(*args, **kwargs):
             '''3D or 2D points to 3D points'''
-            print(args)
             args[2].append(0)
-            print(args[3])
-            
             if isinstance(args[1][0], tuple):
-                # Cas d'une polyline
-                for p in args[1]:
-
-                    try:
-                        p=p+(args[3],)
-                    except Exception:
-                        print(p)
+                # Case of a polyline
+                for p in range(len(args[1])):
+                    args[1][p]=args[1][p]+(0,)
             else:
-                # Cas d'un rectangle
-
+                # Case of a rectangle
                 args[1].append(0)
-                
+
 
 
             return func(*args, **kwargs)
@@ -967,7 +959,7 @@ class HfssModeler(COMWrapper):
         return asserted_name
     
     @assert_name
-    def draw_box_corner(self, pos, size, z, **kwargs):
+    def draw_box_corner(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         name = self._modeler.CreateBox(
@@ -982,7 +974,7 @@ class HfssModeler(COMWrapper):
         )
         return name
 
-    def draw_box_center(self, pos, size, z, **kwargs):
+    def draw_box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
@@ -1009,7 +1001,7 @@ class HfssModeler(COMWrapper):
         
     @resize
     @assert_name
-    def draw_polyline(self, points, size, z, closed=True, **kwargs):
+    def draw_polyline(self, points, size, closed=True, **kwargs):
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         points = parse_entry(points)
@@ -1036,7 +1028,7 @@ class HfssModeler(COMWrapper):
     
     @resize
     @assert_name
-    def draw_rect_corner(self, pos, size, z, **kwargs):
+    def draw_rect_corner(self, pos, size, **kwargs):
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         pos = parse_entry(pos)
@@ -1059,7 +1051,7 @@ class HfssModeler(COMWrapper):
         del kwargs2
         return name
 
-    def draw_rect_center(self, pos, size, z, **kwargs):
+    def draw_rect_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]

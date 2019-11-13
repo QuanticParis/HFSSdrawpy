@@ -34,12 +34,16 @@ try:
     chip.draw_quarter_circle(*info1, 'track', 0.01)
 except Exception:
     print("Quarter Cirle error")
+    traceback.print_exc()
+
     
 try:
     print("Rect Corner")
     chip.rect_corner_2D([0,0],[5,5], name='rectangle1', layer ='layer1')
 except Exception:
     print("Rectangle error")
+    traceback.print_exc()
+
     
 try:
     print("mesh_zone")
@@ -58,7 +62,7 @@ except Exception:
 
 try:
     print("draw_T")
-    chip.draw_T('T', [1,1,1], 90, 0.3, 0.2)
+    chip.draw_T('T', [0,0,0], 90, 0.3, 0.2)
 except Exception:
     print("DrawT error")
     traceback.print_exc()
@@ -71,10 +75,10 @@ except Exception:
     print("Draw_end_cable error")
     traceback.print_exc()
     
-#try:
-#    print("draw_JJ")
-#    chip.draw_JJ('JJ', 5, 2, 4, 2)
-#except Exception:
-#    print("Draw_JJ error")   
-#    traceback.print_exc()
+try:
+    print("draw_JJ")
+    chip.draw_JJ('JJ', 5, 2, 4, 2)
+except Exception:
+    print("Draw_JJ error")   
+    traceback.print_exc()
 

@@ -173,7 +173,7 @@ class KeyElt(CustomElt):
         #print(ori*2*fillet)
         temp = self.rect_corner_2D([0,0], ori*2*fillet, name=name ,layer=layer)
         temp_fillet = self.rect_corner_2D([0,0], ori*2*fillet, name=name+'_fillet', layer=layer)
-        self._fillet(fillet, 0, temp_fillet)
+        self._fillet(fillet, [1,0], temp_fillet)
         
         quarter = self.subtract(temp, [temp_fillet])
         return [],[quarter,None,None]
