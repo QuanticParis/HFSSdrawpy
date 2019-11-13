@@ -22,7 +22,7 @@ GAP = 3
     
 class ConnectElt(KeyElt, Circuit):
     
-    def __init__(self, name='connect_elt', iIn='iInt', iOut=None, layer=None):
+    def __init__(self, name='connect_elt', iIn='iInt', iOut='iOut', layer=None):
         print(name)
 
         self.name = name

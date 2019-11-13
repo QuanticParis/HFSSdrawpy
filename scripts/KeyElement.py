@@ -119,13 +119,13 @@ class KeyElt(CustomElt):
 #        print(adaptDist)
 #        print(self.pos+self.ori*(adaptDist+iGap+iBondLength), self.ori)
         points = [(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev),
-                  (self.pcb_gap+iBondLength, self.pcb_track/2+self.overdev, 0),
+                  (self.pcb_gap+iBondLength, self.pcb_track/2+self.overdev),
                   (self.pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2),
                   (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev),
                   (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev),
                   (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev)]
+
         track = self.polyline_2D(points, name=name+'_track', layer='TRACK')
-        
 #        self.trackObjects.append(self.draw(points, ))
        
         points = [(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev),

@@ -17,7 +17,6 @@ from hfss import extract_value_unit, \
 from pint import UnitRegistry
 from gds_modeler import GdsModeler
 
-
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
@@ -32,10 +31,11 @@ CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
 class PythonModeler():
-    def __init__(self, interface): #"Hfss" or "Gds"
+    def __init__(self, name_interface): #"Hfss" or "Gds"
         self.ports = {}
         self.variables = {}
-        if interface=="hfss":
+        
+        if name_interface=="hfss":
             project = get_active_project()
             design = project.get_active_design()
             self.design = design
@@ -44,17 +44,18 @@ class PythonModeler():
             self.modeler.delete_all_objects()
             self.interface = self.modeler
 
-        if interface=="gds":
+        if name_interface=="gds":
             self.interface = GdsModeler()
-        self.mode = interface
+            
+        self.mode = name_interface
     
     def body(self, body_name, coor_name='Global', coor_sys=None):
         if coor_name != 'Global':
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(coor_name, coor_sys)
-        return Body(self.interface, coor_name, body_name)
-        
+        return Body(self.interface, coor_name, body_name, self.mode)
+
     def set_units(self, units='m'):
         if (self.modeler != None):
             self.modeler.set_units('mm')
@@ -122,40 +123,56 @@ class PythonModeler():
         name = self.interface.draw_box_center(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
   
-    def polyline(self, points3D, closed=True, **kwargs): # among kwargs, name should be given
-        if self.mode=='hffs':
-            name = self.interface.draw_polyline(points3D, closed=closed, **kwargs)
-        elif self.mode=='gds':
-            points2D = []
-            for point in points3D:
-                points2D.append(points3D[0:2])
-            name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
-        dim = closed + 1 # 2D when closed, 1D when open
-        return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
+#    def polyline_3D(self, points3D, closed=True, **kwargs): # among kwargs, name should be given
+#        if self.mode=='hfss':
+#            name = self.interface.draw_polyline(points3D, closed=closed, **kwargs)
+#        elif self.mode=='gds':
+#            points2D = []
+#            for point in points3D:
+#                points2D.append(points3D[0:2])
+#            name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
+#
+#        dim = closed + 1 # 2D when closed, 1D when open
+#        return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
+#
+#    def rect_corner_3D(self, pos3D, size3D, **kwargs):
+#        if self.mode=='hffs': 
+#            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
+#        elif self.mode=='gds':
+#            pos2D = pos3D[0:2]
+#            size2D = size3D[0:2]
+#            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+#        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
+#    
+#    def rect_center_3D(self, pos3D, size3D, **kwargs):
+#        if self.mode=='hffs': 
+#            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
+#        elif self.mode=='gds':
+#            pos2D = pos3D[0:2]
+#            size2D = size3D[0:2]
+#            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+#        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
+    
+#    def polyline_2D(self, points2D, z=0, closed=True, **kwargs): # among kwargs, name should be given
+#        points3D = []
+#        for point in points2D:
+#            points3D.append(point+(z,))
+#        return self.polyline_3D(points3D, closed, **kwargs)
+#
+#    def rect_corner_2D(self, pos2D, size2D, z=0, **kwargs):
+#        name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
+#        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
+#    
+#    def rect_center_2D(self, pos2D, size2D, z=0, **kwargs):
+#        name = self.interface.draw_rect_center(pos2D, size2D, **kwargs)
+#        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
 
-    def rect_corner(self, pos3D, size3D, **kwargs):
-        if self.mode=='hffs': 
-            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
-        elif self.mode=='gds':
-            pos2D = pos3D[0:2]
-            size2D = size3D[0:2]
-            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
-    
-    def rect_center(self, pos3D, size3D, **kwargs):
-        if self.mode=='hffs': 
-            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
-        elif self.mode=='gds':
-            pos2D = pos3D[0:2]
-            size2D = size3D[0:2]
-            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
-    
+
+
     def polyline_2D(self, points2D, z=0, closed=True, **kwargs): # among kwargs, name should be given
-        #z=0 ??
         name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
-        dim = closed + 1 # 2D when closed, 1D when open
-        return ModelEntity(name, dim, self.coor_sys, z, layer=kwargs['layer'])
+        dim = closed + 1
+        return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
 
     def rect_corner_2D(self, pos2D, size2D, z=0, **kwargs):
         name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
@@ -164,6 +181,9 @@ class PythonModeler():
     def rect_center_2D(self, pos2D, size2D, z=0, **kwargs):
         name = self.interface.draw_rect_center(pos2D, size2D, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
+    
+    
+    
     
     def rot(self, x, y=0):
         return Vector(x, y).rot(self.ori)
@@ -318,15 +338,14 @@ class Body(PythonModeler, KeyElt):
     pos_elt = [0,0]
     ori_elt = 0
     
-    def __init__(self, interface, coor_sys, name):
+    def __init__(self, interface, coor_sys, name, mode):
         self.interface = interface
         self.coor_sys = coor_sys
         self.name = name
         self.maskObjects = []
         self.trackObjects = []
-        self.gapObjects = []        
-
-        
+        self.gapObjects = []
+        self.mode = mode # 'hfss' or 'gds'
 
 
     def append_points(self, coor_list): # is deprecated ! Should not be used anymOOOOOre

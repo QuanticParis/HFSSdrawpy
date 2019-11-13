@@ -1016,7 +1016,6 @@ class HfssModeler(COMWrapper):
         else:
             indexsStr = indexsStr[:-1]
             params_closed = ["IsPolylineCovered:=", True, "IsPolylineClosed:=", False]
-
         name = self._modeler.CreatePolyline(
             ["NAME:PolylineParameters",
             *params_closed,
