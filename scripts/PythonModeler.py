@@ -5,8 +5,6 @@ Created on Thu Oct 31 14:14:51 2019
 @author: antho
 """
 
-from KeyElement import KeyElt
-from designer import Vector
 from sympy.parsing import sympy_parser
 from hfss import extract_value_unit, \
                  extract_value_dim, \
@@ -16,6 +14,8 @@ from hfss import extract_value_unit, \
                  VariableString 
 from pint import UnitRegistry
 from gds_modeler import GdsModeler
+from Vector import Vector
+from KeyElement import KeyElt
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -30,10 +30,13 @@ INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
+
 class PythonModeler():
-    def __init__(self, name_interface): #"Hfss" or "Gds"
+
+    def __init__(self, name_interface, connector): #"Hfss" or "Gds"
         self.ports = {}
         self.variables = {}
+        self.connector = connector
         
         if name_interface=="hfss":
             project = get_active_project()
@@ -54,7 +57,7 @@ class PythonModeler():
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(coor_name, coor_sys)
-        return Body(self.interface, coor_name, body_name, self.mode)
+        return Body(self.interface, coor_name, body_name, self.mode, self.variables, self.connector)
 
     def set_units(self, units='m'):
         if (self.modeler != None):
@@ -92,6 +95,7 @@ class PythonModeler():
                                              # using the values stored in self.variables
         # TODO: parse several times
         # can only parse 2 times for now
+
         try:
             _val = float(eval(str(sympy_parser.parse_expr(str(sympy_parser.parse_expr(str(name), self.variables)), self.variables))))
         except Exception:
@@ -212,33 +216,26 @@ class PythonModeler():
         entity.rename_entity(name)
         
     def unite(self, entities, name=None, keep_originals=False):
+        loc_entities = entities.copy()
         dim_Union = 0;
-        for entity in entities:
-            if entity.dimension>dim_Union:
-                dim_Union = entity.dim
+        for entity in loc_entities:
+            if isinstance(entity, tuple) or isinstance(entity, list):
+                for element in entity:
+                    loc_entities.append(element)
+            if isinstance(entity, ModelEntity):
+                if entity.dimension>dim_Union:
+                    dim_Union = entity.dimension
+                
+                if not(keep_originals):
+                    self.delete(entity)
+                 
         if name is None:
-            if dim_Union == 0:
-                pass
-            elif dim_Union == 1:
-                union = ModelEntity(entities[0].name,1 , entities[0].coor_sys, entities[0].model)
-            elif dim_Union == 2:
-                union = ModelEntity(entities[0].name,2 , entities[0].coor_sys, entities[0].model, entities[0].boundaries)
-            elif dim_Union == 3:
-                union = ModelEntity(entities[0].name,3 , entities[0].coor_sys, entities[0].model, entities[0].boundaries)
-       
+            union = entities[0].copy(dim_Union)
         else:
-            if dim_Union == 0:
-                pass
-            elif dim_Union == 1:
-                union = ModelEntity(name, 1, entities[0].coor_sys, entities[0].model)
-            elif dim_Union == 2:
-                union = ModelEntity(name, 2, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
-            elif dim_Union == 3:
-                union = ModelEntity(name, 3, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
-       
-        if not(keep_originals):
-            for entity in entities:
-                self.delete(entity)
+            union = entities[0].copy(dim_Union)
+            union.rename_entity(name)
+        
+        
         return union
         
     def intersect(self, entities, keep_originals = False):
@@ -303,8 +300,10 @@ class PythonModeler():
         #Create clones
         pass
     
-    def _make_lumped_rlc(self, entity):
-        entity.boundaries.append('lumpedRLC')
+    def assign_lumped_RLC(self, entity, ori, parameters):
+#        entity.boundaries.append('lumpedRLC')
+# TODO
+        pass
     
     def make_material(self, entity, material):
         # Problème pour les unions de matériaux si on ajoute un attribut
@@ -335,10 +334,11 @@ class PythonModeler():
 #        plt.plot(pos,size)
 #        
 class Body(PythonModeler, KeyElt):
+
     pos_elt = [0,0]
     ori_elt = 0
     
-    def __init__(self, interface, coor_sys, name, mode):
+    def __init__(self, interface, coor_sys, name, mode, variables, connector):
         self.interface = interface
         self.coor_sys = coor_sys
         self.name = name
@@ -346,12 +346,16 @@ class Body(PythonModeler, KeyElt):
         self.trackObjects = []
         self.gapObjects = []
         self.mode = mode # 'hfss' or 'gds'
+        self.variables = variables
+        self.connector = connector
 
 
-    def append_points(self, coor_list): # is deprecated ! Should not be used anymOOOOOre
-        points = [coor_list[0]]
+    def append_points(self, coor_list):
+        # coor_list can be [()()] or [[][]]
+        points = [(coor_list[0][0],coor_list[0][1])]
+
         for coor in coor_list[1:]:
-            points.append(points[-1] + coor)
+            points.append((points[-1][0] + coor[0],points[-1][1] + coor[1]))
         return points
 
     def refx_points(self, coor_list, offset=0, absolute=False):

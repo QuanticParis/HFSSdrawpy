@@ -11,6 +11,7 @@ import numpy
 import signal
 import pythoncom
 import time
+import numpy as np
 
 from sympy.parsing import sympy_parser
 from pint import UnitRegistry
@@ -1004,6 +1005,10 @@ class HfssModeler(COMWrapper):
     def draw_polyline(self, points, size, closed=True, **kwargs):
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
+        print('kwargs2', kwargs2)
+        
+        
+
         points = parse_entry(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
@@ -1016,6 +1021,13 @@ class HfssModeler(COMWrapper):
         else:
             indexsStr = indexsStr[:-1]
             params_closed = ["IsPolylineCovered:=", True, "IsPolylineClosed:=", False]
+        print("pointsStr",pointsStr)
+        print("\n")
+        print("\n")
+        print("indexStr",indexsStr)
+        print("\n")
+        print("\n")
+
         name = self._modeler.CreatePolyline(
             ["NAME:PolylineParameters",
             *params_closed,
@@ -1023,6 +1035,7 @@ class HfssModeler(COMWrapper):
             indexsStr],
             self._attributes_array(**kwargs2))
         del kwargs2
+
         return name
     
     @resize
@@ -1189,12 +1202,20 @@ class HfssModeler(COMWrapper):
         
     def rotate(self, entities, angle):
         names = [] 
+        if isinstance(angle, list):
+            if len(angle)==2:
+                new_angle=np.dot(angle, [1,0])
+                new_angle= new_angle/np.pi*180
+            else:
+                raise Exception("angle should be either a float or a 2-dim array")
+        elif isinstance(angle, float) or isinstance(angle, int):
+            new_angle = angle
         for entity in entities:
             if entity!=None:
                 names.append(entity.name)
                 
         self._modeler.Rotate(self._selections_array(*names), 
-            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
+            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(new_angle)])
 
 #    def separate_bodies(self, name):
 #        self._modeler.SeparateBody(["NAME:Selections",
@@ -1501,7 +1522,12 @@ class ModelEntity():
         
     def delete(self):
         del self
-        
+    
+    def copy(self, dimension=None):
+        #TODO complete
+        if dimension==None:
+            dimension = self.dimension
+        return ModelEntity(self.name, dimension, self.coor_sys)
     
     def rename_entity(self, name):
         self.name = name

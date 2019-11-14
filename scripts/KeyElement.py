@@ -4,11 +4,11 @@ Created on Mon Oct 28 16:18:36 2019
 
 @author: Zaki
 """
-from designer import Vector, way, equal_float, eps
+from designer import Vector, eps
 import numpy as np
 from hfss import parse_entry
-from hfss import VariableString
-from CustomElement import CustomElt, Port
+from CustomElement import CustomElt
+from CustomElement import Port
 
 
 TOP = [0, 1]
@@ -62,11 +62,11 @@ class KeyElt(CustomElt):
     
     def create_port(self, name, iTrack=0, iGap=0):
         iTrack, iGap = parse_entry((iTrack, iGap))
-        portOut = Port(name, [0,0], 0, iTrack+2*self.overdev, iGap-2*self.overdev)
+        portOut = Port(name, [0,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
         return portOut
     
     def create_dc_port(self, name, layer, cut, rel_pos, wid):
-        portOut = [layer+'_'+ name, [0,0], 0, cut, rel_pos, wid, len(rel_pos)]
+        portOut = [layer+'_'+ name, [0,0], [1,0], cut, rel_pos, wid, len(rel_pos)]
         return portOut
     
 #    draw_connector(name, pos, ori, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=None, pcbGap=None, tr_line=True)
@@ -114,7 +114,7 @@ class KeyElt(CustomElt):
             
         adaptDist = (self.pcb_track/2-iTrack/2)/iSlope
 
-        portOut = Port('iOut', [adaptDist+self.pcb_gap+iBondLength,0], 0, iTrack+2*self.overdev, iGap-2*self.overdev)
+        portOut = Port('iOut', [adaptDist+self.pcb_gap+iBondLength,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
 #        print(self.pos, self.ori)
 #        print(adaptDist)
 #        print(self.pos+self.ori*(adaptDist+iGap+iBondLength), self.ori)
@@ -228,11 +228,11 @@ class KeyElt(CustomElt):
         
         self.trackObjects.append(track)
         
-        portOut1 = Port('portOut1', [iTrack/2+iGap, 0], 0, iTrack+2*self.overdev, iGap-2*self.overdev)
+        portOut1 = Port('portOut1', [iTrack/2+iGap, 0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
         #ports[self.name+'_1'] = portOut1
-        portOut2 = Port('portOut2', [-(iTrack/2+iGap), 0], 180, iTrack+2*self.overdev, iGap-2*self.overdev)
+        portOut2 = Port('portOut2', [-(iTrack/2+iGap), 0], [-1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
         #ports[self.name+'_2'] = portOut2
-        portOut3 = Port('portOut2', [0, -(iTrack/2+iGap)], 270, iTrack+2*self.overdev, iGap-2*self.overdev)
+        portOut3 = Port('portOut2', [0, -(iTrack/2+iGap)], [0,-1], iTrack+2*self.overdev, iGap-2*self.overdev)
         #ports[self.name+'_3'] = portOut3
         
         return [portOut1,portOut2,portOut3], [track, cutout,]
@@ -248,7 +248,7 @@ class KeyElt(CustomElt):
                 cutout.fillet(iGap-self.overdev-eps,[2,1])
 
             self.gapObjects.append(cutout)
-            portOut = Port('portOut'+name, [iGap, 0], 0, iTrack+2*self.overdev, iGap-2*self.overdev)
+            portOut = Port('portOut'+name, [iGap, 0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
             
             if self.is_overdev:
                 track = self.rect_center_2D([iGap,-iTrack/2-self.overdev], [-self.overdev, iTrack+2*self.overdev], name=name+'_track' ,layer='track')
@@ -269,7 +269,7 @@ class KeyElt(CustomElt):
 
             cutout = self.unite([cutout1, cutout2], self.name+'_cutout')
             self.gapObjects.append(cutout)
-            portOut = Port([iGap/2, 0], 0, iTrack+2*self.overdev, iGap-2*self.overdev)
+            portOut = Port([iGap/2, 0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
             
             if self.is_mask:
                 mask = self.rect_center_2D([-self.gap_mask,-(iTrack+2*iGap)/2-self.gap_mask], [iGap/2+self.gap_mask, iTrack+2*iGap+2*self.gap_mask], name=name+'_mask', layer='mask')

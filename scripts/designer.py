@@ -52,6 +52,7 @@ def equal_float(float1, float2):
             return True
         else:
             return False
+        
     elif float2!=0:
         rel_diff = abs((float1-float2)/float2)
         if rel_diff<1e-5:

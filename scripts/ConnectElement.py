@@ -4,11 +4,10 @@ Created on Mon Oct 28 16:21:38 2019
 
 @author: Zaki
 """
-from designer import Vector, Circuit, way, equalfloat, eps
+from designer import Vector, Circuit, way, eps, equal_float
 from KeyElement import KeyElt
 import numpy as np
-from .hfss import parse_entry
-from .hfss import VariableString
+from hfss import parse_entry
 
 TOP = [0, 1]
 DOWN = [0, -1]
@@ -185,8 +184,8 @@ class ConnectElt(KeyElt, Circuit):
         self.iOut = retOut
 #        return [retIn, retOut]
 
-
 #        CreateBondwire(name+"_bondwire", iIn)
+        
     def find_slanted_path(self):
         
         iIn_pos = self.pos
@@ -1276,14 +1275,14 @@ class ConnectElt(KeyElt, Circuit):
             snail=[]
             snail.append(self.draw_rect(self.name+'_left', self.coor([x_pos-squid_size[0]/2-width_track/2, (-squid_size[1]/2-width_bot)-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([width_track/2, squid_size[1]+width_top+width_bot])))
             snail.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -squid_size[1]/2-width_bot-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([width_track/2, squid_size[1]+width_top+width_bot])))
-            for width, n, way in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
+            for width, n, way1 in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
                 if n==1:
-                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([(squid_size[0]-width_bridge)/2, way*width])))
-                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way*width])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([(squid_size[0]-width_bridge)/2, way1*width])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way1*width])))
                 elif n>1:
                     length_island = (squid_size[0]-n*width_bridge)/(n-1)
                     for ii in range(n_top-1):
-                        snail.append(self.draw_rect(self.name+'_islandtop_'+str(ii), self.coor([x_pos-squid_size[0]/2+width_bridge+ii*(length_island+width_bridge), way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([length_island, way*width])) )
+                        snail.append(self.draw_rect(self.name+'_islandtop_'+str(ii), self.coor([x_pos-squid_size[0]/2+width_bridge+ii*(length_island+width_bridge), way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)]), self.coor_vec([length_island, way1*width])) )
             snail.append(self.draw_rect(self.name+'_connect_left', self.coor([x_pos-squid_size[0]/2-width_track/2, -width_track/2]), self.coor_vec([-width_track/2, width_track])))
             snail.append(self.draw_rect(self.name+'_connect_right', self.coor([x_pos+squid_size[0]/2+width_track/2, -width_track/2]), self.coor_vec([width_track/2, width_track])))
             
@@ -1320,19 +1319,19 @@ class ConnectElt(KeyElt, Circuit):
             snail=[]
             snail.append(self.draw_rect(self.name+'_left', self.coor([x_pos-squid_size[0]/2, -0.1e-6+(-squid_size[1]/2-width_bot+0.1e-6)-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([-3*width_track/2, squid_size[1]+width_top+width_bot+2*0.1e-6])))
             snail.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -squid_size[1]/2-((-squid_size[1]/2)+width_track/2)-offset]), self.coor_vec([3*width_track/2, squid_size[1]+width_top+width_bot+0.1e-6])))
-            for width, n, way in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
+            for width, n, way1 in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
                 if n==1:
-                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot-0.1e-6)+width_track/2)-offset]), self.coor_vec([(squid_size[0]-width_bridge)/2, way*width-2*0.1e-6])))
-                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way*width])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot-0.1e-6)+width_track/2)-offset]), self.coor_vec([(squid_size[0]-width_bridge)/2, way1*width-2*0.1e-6])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way1*width])))
                 if n==3: #TODO
-                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([(squid_size[0]-2*width_bridge-spacing_bridge)/2, way*width+2*0.1e-6])))
-                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([-(squid_size[0]-2*width_bridge-spacing_bridge)/2, way*width+2*0.1e-6])))
-                    snail.append(self.draw_rect(self.name+'_island_middle_', self.coor([x_pos-spacing_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([spacing_bridge, way*width])) )
+                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([(squid_size[0]-2*width_bridge-spacing_bridge)/2, way1*width+2*0.1e-6])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([-(squid_size[0]-2*width_bridge-spacing_bridge)/2, way1*width+2*0.1e-6])))
+                    snail.append(self.draw_rect(self.name+'_island_middle_', self.coor([x_pos-spacing_bridge/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([spacing_bridge, way1*width])) )
                 if n==4:
-                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way*width+2*0.1e-6])))
-                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([-(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way*width])))
-                    snail.append(self.draw_rect(self.name+'_island_middle_left', self.coor([x_pos-spacing_bridge-width_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([spacing_bridge, way*width])) )
-                    snail.append(self.draw_rect(self.name+'_island_middle_right', self.coor([x_pos+spacing_bridge+width_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([-spacing_bridge, way*width+2*0.1e-6])) )
+                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way1*width+2*0.1e-6])))
+                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([-(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way1*width])))
+                    snail.append(self.draw_rect(self.name+'_island_middle_left', self.coor([x_pos-spacing_bridge-width_bridge/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset]), self.coor_vec([spacing_bridge, way1*width])) )
+                    snail.append(self.draw_rect(self.name+'_island_middle_right', self.coor([x_pos+spacing_bridge+width_bridge/2, way1*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset]), self.coor_vec([-spacing_bridge, way1*width+2*0.1e-6])) )
             snail.append(self.draw_rect(self.name+'_connect_left', self.coor([x_pos-squid_size[0]/2-3*width_track/2, -width_track/2]), self.coor_vec([-1.5*width_track, width_track]))) #ZL
             snail.append(self.draw_rect(self.name+'_connect_right', self.coor([x_pos+squid_size[0]/2+3*width_track/2, -width_track/2]), self.coor_vec([1.5*width_track, width_track])))
             
@@ -1418,5 +1417,5 @@ class ConnectElt(KeyElt, Circuit):
             else:
                 _width_loc = width
             self.draw_rect(self.name+'_middle', self.coor([x_pos,-_width_loc/2]), self.coor_vec([spacing_bridge, _width_loc]))
-            x_pos = x_
+            pos = x_pos
             pos+spacing_bridge+width_bridge
