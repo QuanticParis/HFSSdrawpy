@@ -916,9 +916,7 @@ class HfssModeler(COMWrapper):
             else:
                 # Case of a rectangle
                 args[1].append(0)
-
-
-
+            print(args)
             return func(*args, **kwargs)
         return resized
     
@@ -1005,10 +1003,6 @@ class HfssModeler(COMWrapper):
     def draw_polyline(self, points, size, closed=True, **kwargs):
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
-        print('kwargs2', kwargs2)
-        
-        
-
         points = parse_entry(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
@@ -1021,12 +1015,7 @@ class HfssModeler(COMWrapper):
         else:
             indexsStr = indexsStr[:-1]
             params_closed = ["IsPolylineCovered:=", True, "IsPolylineClosed:=", False]
-        print("pointsStr",pointsStr)
-        print("\n")
-        print("\n")
-        print("indexStr",indexsStr)
-        print("\n")
-        print("\n")
+
 
         name = self._modeler.CreatePolyline(
             ["NAME:PolylineParameters",
@@ -1046,6 +1035,7 @@ class HfssModeler(COMWrapper):
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
+        print(size)
         axis = "XYZ"[size.index(0)]
         w_idx, h_idx = {'X': (1, 2),
                         'Y': (2, 0),
@@ -1177,6 +1167,7 @@ class HfssModeler(COMWrapper):
         for entity in tool_entities:
             if entity!=None:
                 tool_names.append(entity.name)
+                
         selection_array= ["NAME:Selections",
                           "Blank Parts:=", blank_entity.name,
                           "Tool Parts:=", ",".join(tool_names)]
@@ -1191,7 +1182,8 @@ class HfssModeler(COMWrapper):
         for entity in entities:
             if entity!=None:
                 names.append(entity.name)
-        
+        print("breakpoint3")
+        print(names, vector)
         self._modeler.Move(
             self._selections_array(*names),
             ["NAME:TranslateParameters",
@@ -1202,20 +1194,17 @@ class HfssModeler(COMWrapper):
         
     def rotate(self, entities, angle):
         names = [] 
-        if isinstance(angle, list):
-            if len(angle)==2:
-                new_angle=np.dot(angle, [1,0])
-                new_angle= new_angle/np.pi*180
-            else:
-                raise Exception("angle should be either a float or a 2-dim array")
-        elif isinstance(angle, float) or isinstance(angle, int):
-            new_angle = angle
         for entity in entities:
-            if entity!=None:
-                names.append(entity.name)
-                
-        self._modeler.Rotate(self._selections_array(*names), 
-            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(new_angle)])
+            if isinstance(entity, list):
+                self.rotate(entity, angle)
+            else:
+                #TODO Deal with other cases
+                if entity!=None:
+                    names.append(entity.name)
+        if len(names)!=0:
+            print(names)
+            self._modeler.Rotate(self._selections_array(*names), 
+                ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
 
 #    def separate_bodies(self, name):
 #        self._modeler.SeparateBody(["NAME:Selections",
@@ -1281,19 +1270,21 @@ class HfssModeler(COMWrapper):
             ["CreateGroupsForNewObjects:=", False])
         return name+'_ObjectFromFace1'
 
-    def _fillet(self, radius, vertex_index, obj):
-        vertices = self._modeler.GetVertexIDsFromObject(obj)
+    def _fillet(self, radius, vertex_index, name_entity):
+        vertices = self._modeler.GetVertexIDsFromObject(name_entity)
+        print("vertices", vertices)
         if isinstance(vertex_index, list):
             to_fillet = [int(vertices[v]) for v in vertex_index]
-        else:#        print(vertices)
-#        print(radius)
-            self._modeler.Fillet(["NAME:Selections", "Selections:=", obj],
-                              ["NAME:Parameters",
-                               ["NAME:FilletParameters",
-                                "Edges:=", [],
-                                "Vertices:=", to_fillet,
-                                "Radius:=", radius,
-                                "Setback:=", "0mm"]])
+        elif isinstance(vertex_index, int):
+            to_fillet = [int(vertices[vertex_index])]  
+            
+        self._modeler.Fillet(["NAME:Selections", "Selections:=", name_entity],
+                          ["NAME:Parameters",
+                           ["NAME:FilletParameters",
+                            "Edges:=", [],
+                            "Vertices:=", to_fillet,
+                            "Radius:=", radius,
+                            "Setback:=", "0mm"]])
      
     def _fillet_edges(self, radius, edge_index, obj):
         edges = self._modeler.GetEdgeIDsFromObject(obj)

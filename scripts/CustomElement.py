@@ -8,6 +8,7 @@ Created on Mon Oct 28 16:27:24 2019
 from designer import Vector, eps
 import numpy as np
 from hfss import parse_entry
+#from PythonModeler import PythonModeler
 
 TOP = [0, 1]
 DOWN = [0, -1]
@@ -19,22 +20,7 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
-class Port():
-    instances = {}
-    def __init__(self, name, pos, ori, track, gap):
-        self.name = name
-        self.pos = Vector(pos)
-        self.ori = Vector(ori)
-        self.track = track
-        self.gap = gap
-        self.__class__.instances[name] = self
-        
-    # TODO several track within one gap for a port
-    # TODO Be able to split a port which returns several ports
-    # TODO Draw a port
-    # TODO Adaptor should be defined here
-    # TODO redundancy with name and layer
-    
+
 
 class CustomElt():
 
@@ -261,7 +247,6 @@ class CustomElt():
                       (0, pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2+2*self.overdev),
                       (-pad_size_right[0]-2*self.overdev, 0)]
         points = self.append_points(raw_points)
-        print("points", points)
         right_pad = self.polyline_2D(points, name=self.name+"_pad1", layer="TRACK") 
             
         raw_points = [(-pad_spacing/2+self.overdev, -pad_size_left[1]/2-self.overdev),
@@ -328,14 +313,14 @@ class CustomElt():
                 self._fillet(track_right/2+gap_right-eps-self.overdev,[2,1], right_short)
                 
                 fillet_right1 = (pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4-self.overdev
-                right_quarter_up = self.draw_quarter_circle('quarter_up_right1', [cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [-1,1], 'TRACK', fillet_right1)
-                right_quarter_down = self.draw_quarter_circle('quarter_down_right1', [cutout_size[0]/2-self.overdev, -(track_right/2+gap_right+short_right)-self.overdev], [-1,-1], 'TRACK', fillet_right1)
-                right_short = self.unite([right_short, right_quarter_up, right_quarter_down])
+                right_quarter_up1 = self.draw_quarter_circle('right_quarter_up1', [cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [-1,1], 'TRACK', fillet_right1)
+                right_quarter_down1 = self.draw_quarter_circle('right_quarter_down1', [cutout_size[0]/2-self.overdev, -(track_right/2+gap_right+short_right)-self.overdev], [-1,-1], 'TRACK', fillet_right1)
+                right_short = self.unite([right_short, right_quarter_up1, right_quarter_down1])
             else:
                 fillet_right2 = (pad_size_right[1]/2-spacing_right-gap_right-track_right/2)/4+self.overdev
-                right_quarter_up = self.draw_quarter_circle('quarter_up_right1', [cutout_size[0]/2-self.overdev, track_right/2+gap_right-self.overdev], [1,1], 'TRACK', fillet_right2)
-                right_quarter_down = self.draw_quarter_circle('quarter_down_right1', [cutout_size[0]/2-self.overdev, -(track_right/2+gap_right)+self.overdev], [1,-1] ,'TRACK' , fillet_right2)
-                cutout = self.unite([cutout, right_quarter_up, right_quarter_down])
+                right_quarter_up2 = self.draw_quarter_circle('right_quarter_up2', [cutout_size[0]/2-self.overdev, track_right/2+gap_right-self.overdev], [1,1], 'TRACK', fillet_right2)
+                right_quarter_down2 = self.draw_quarter_circle('right_quarter_down2', [cutout_size[0]/2-self.overdev, -(track_right/2+gap_right)+self.overdev], [1,-1] ,'TRACK' , fillet_right2)
+                cutout = self.unite([cutout, right_quarter_up2, right_quarter_down2])
                 
             if short_left!=0:
                 self._fillet(track_left/2+gap_left+short_left-eps+self.overdev,[6,5], left_short)

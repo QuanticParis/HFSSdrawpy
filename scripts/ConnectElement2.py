@@ -301,8 +301,6 @@ class ConnectElt2(Body):
             for ii, point in enumerate(points[1:]):
                 A = left_p_start[-1]
                 B = point
-                print("A", type(A))
-                print("B", type(B))
                 AB = B-A
                 vec = way(self.val(B-A))
                 if self.val(AB).norm() > self.val(min_dist):
@@ -847,7 +845,7 @@ class ConnectElt2(Body):
         # No parsing needed, should not be called from outside
         iInPort['pos'] = (iInPort['pos']+iOutPort['pos'])/2
         iTrack = parse_entry(iInPort['track']) # assume both track are identical
-
+        iTrackJ = parse_entry(iTrackJ)
         adaptDist = iTrack/2-iTrackJ/2
         print('a',self.val(adaptDist))
         print('b',self.val(iLength/2-iTrackJ/2))

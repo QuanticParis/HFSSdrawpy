@@ -21,6 +21,7 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
+eps = 0.00000001
 
 
 class KeyElt(CustomElt):
@@ -55,6 +56,7 @@ class KeyElt(CustomElt):
             pos = args[2]
             angle = args[3]
             ports, entities = func(*(args[:2]+args[4:]), **kwargs)
+            print("entities",entities)
             args[0].rotate(entities, angle=angle)
             args[0].translate(entities, vector=[pos[0], pos[1], 0])
             return ports, entities
@@ -169,14 +171,15 @@ class KeyElt(CustomElt):
         #on renvoie track, gap, mask
         
     @move
-    def draw_quarter_circle(self, name, layer, fillet, ori=Vector([1,1])):
-        #print(ori*2*fillet)
-        temp = self.rect_corner_2D([0,0], ori*2*fillet, name=name ,layer=layer)
-        temp_fillet = self.rect_corner_2D([0,0], ori*2*fillet, name=name+'_fillet', layer=layer)
-        self._fillet(fillet, [1,0], temp_fillet)
-        
-        quarter = self.subtract(temp, [temp_fillet])
-        return [],[quarter,None,None]
+    def draw_quarter_circle(self, name, layer, fillet):
+        # Usual case which is then rotated with ori and translated with pos
+
+        temp = self.rect_corner_2D([0,0], 2*fillet*Vector([1,1]), name=name ,layer=layer)
+        #print("temp \n",temp)
+        temp_fillet = self.rect_center_2D([0,0], 2*(fillet-eps)*Vector([1,1]), name=name+'_fillet', layer=layer)
+        self._fillet(fillet, [1,2], temp_fillet)
+        #self.subtract(temp, [temp_fillet])
+        return [],[temp, temp_fillet]
     
             
     def cutout(self, name, pos, angle, zone_size):

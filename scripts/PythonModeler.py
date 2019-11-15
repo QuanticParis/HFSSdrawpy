@@ -16,6 +16,7 @@ from pint import UnitRegistry
 from gds_modeler import GdsModeler
 from Vector import Vector
 from KeyElement import KeyElt
+import numpy as np
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -33,10 +34,9 @@ RESISTANCE_UNIT = 'ohm'
 
 class PythonModeler():
 
-    def __init__(self, name_interface, connector): #"Hfss" or "Gds"
+    def __init__(self, name_interface): #"Hfss" or "Gds"
         self.ports = {}
         self.variables = {}
-        self.connector = connector
         
         if name_interface=="hfss":
             project = get_active_project()
@@ -52,12 +52,13 @@ class PythonModeler():
             
         self.mode = name_interface
     
+    
     def body(self, body_name, coor_name='Global', coor_sys=None):
         if coor_name != 'Global':
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(coor_name, coor_sys)
-        return Body(self.interface, coor_name, body_name, self.mode, self.variables, self.connector)
+        return Body(self.interface, coor_name, body_name, self.mode, self.variables)
 
     def set_units(self, units='m'):
         if (self.modeler != None):
@@ -263,13 +264,23 @@ class PythonModeler():
         self.interface.subtract(blank_entity, tool_entities)
         for i in tool_entities:
             self.delete(i)
-        return blank_entity
 
     def translate(self, entities, vector=[0,0,0]):
         self.interface.translate(entities, vector)
     
     def rotate(self, entities, angle=0):
-        self.interface.rotate(entities, angle)
+        if isinstance(angle, list):
+            if len(angle)==2:
+                new_angle= np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
+                new_angle= new_angle/np.pi*180
+            else:
+                raise Exception("angle should be either a float or a 2-dim array")
+        elif isinstance(angle, float) or isinstance(angle, int):
+            new_angle = angle
+        else:
+            raise Exception("angle should be either a float or a 2-dim array")
+            
+        self.interface.rotate(entities, new_angle)
     
     def separate_bodies(self,name):
         #This looks hard
@@ -338,7 +349,7 @@ class Body(PythonModeler, KeyElt):
     pos_elt = [0,0]
     ori_elt = 0
     
-    def __init__(self, interface, coor_sys, name, mode, variables, connector):
+    def __init__(self, interface, coor_sys, name, mode, variables):
         self.interface = interface
         self.coor_sys = coor_sys
         self.name = name
@@ -347,7 +358,10 @@ class Body(PythonModeler, KeyElt):
         self.gapObjects = []
         self.mode = mode # 'hfss' or 'gds'
         self.variables = variables
-        self.connector = connector
+        
+    def new_connector(self):
+        from ConnectElement2 import ConnectElt2
+        self.connector = ConnectElt2(self)
 
 
     def append_points(self, coor_list):
@@ -388,4 +402,31 @@ class Body(PythonModeler, KeyElt):
 
     def coor_vec(self, vec): # Change of coordinate for a vector
         return self.rot(*vec)
+    
+    
+class Port(PythonModeler):
+    instances = {}
+    def __init__(self, name, pos, ori, track, gap):
+        self.name = name
+        self.pos = Vector(pos)
+        self.ori = Vector(ori)
+        self.track = track
+        self.gap = gap
+        self.__class__.instances[name] = self
+        
+    @classmethod
+    def _connect_JJ(port1_name, port2_name):
+        points= [[0,0], [0,1], [1,1]]
+        right_pad = self.polyline_2D(points, name="pad1", layer="TRACK")
+        pass
+    
+    
+        
+    # TODO several track within one gap for a port
+    # TODO Be able to split a port which returns several ports
+    # TODO Draw a port
+    # TODO Adaptor should be defined here
+    # TODO redundancy with name and layer
+    
+    
     

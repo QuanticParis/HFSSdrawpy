@@ -129,19 +129,37 @@ from CustomElement import Port
 import traceback
 from ConnectElement2 import ConnectElt2
 
-connector = ConnectElt2(chip)      
-PM = PythonModeler('hfss', connector)
+PM = PythonModeler('hfss')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
 info = 'con1', ['1mm','1mm'], 90
+chip.new_connector()
 
 P1 = Port('port1', Vector([0,0]), Vector([0,1]), '30mm', '10mm')
 P2 = Port('port2', Vector([1,1]), Vector([0,1]), '20mm','20mm')
-#SL_PTH = connector._connect_JJ('jojo', 'port1', 'port2', 2)
+SL_PTH = chip ._connect_JJ('jojo', 'port1', 'port2', "2mm")
 
-#chip.draw_IBM_tansmon(['1.47', '0.75'],'0.12',['0.5', '0.5'],'30mm', '25mm','42mm' ,'25nH')
+#chip.draw_IBM_tansmon(['1.47', '0.75'],'0.12',['0.5', '0.5'],'30mm', '25mm','42mm' ,'25nH')right_quarter_up1 = self.draw_quarter_circle('right_quarter_up1', [cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [-1,1], 'TRACK', fillet_right1)
 
 
-chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+#chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+
+#%%
+from PythonModeler import PythonModeler
+from CustomElement import Port
+import traceback
+from ConnectElement2 import ConnectElt2
+
+PM = PythonModeler('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
+
+rect1 = chip.rect_corner_2D([0,0],[0.5,0.5], name='rectangle1', layer ='layer1')
+rect2 = chip.rect_corner_2D([0,0],[0.5,0.5], name='rectangle2', layer ='layer1')
+chip._fillet(0.1, [1,2], rect1)
+quarter = chip.subtract(rect2, [rect1])
+chip.rotate(([None],[quarter]), [1,1])
+right_quarter_up1 = chip.draw_quarter_circle('right_quarter_up1', [0.735, 0.21+0.25], [1,1], 'TRACK', 1)
 

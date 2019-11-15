@@ -119,6 +119,8 @@ class Vector(list):
         return -self + other
 
     def __mul__(self, other):
+        print(self, other)
+        print("breakpoint1")
         if self.check(other):
             return Vector([self[0]*other[0], self[1]*other[1]])
         elif self.check_nb(other):
