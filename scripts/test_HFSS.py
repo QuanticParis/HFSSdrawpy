@@ -5,12 +5,12 @@ Created on Wed Oct 30 15:39:44 2019
 @author: antho
 """
 
-from PythonModeler import PythonModeler
-from CustomElement import Port
+from PythonModeler import PythonMdlr
+from PythonModeler import Port
 import traceback
 from ConnectElement2 import ConnectElt2, Vector
 
-PM = PythonModeler('hfss')
+PM = PythonMdlr('hfss')
 
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
@@ -96,12 +96,11 @@ print("capa")
 connector.draw_capa('capacite', 'port1', 'port2', 10, 5, 1)
 
 #%% TEST BATCH 3
-from PythonModeler import PythonModeler
-from CustomElement import Port
+from PythonModeler import PythonMdlr
+from PythonModeler import Port
 from ConnectElement2 import ConnectElt2
 
-connector = ConnectElt2(chip)      
-PM = PythonModeler('hfss', connector)
+PM = PythonMdlr('hfss')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
@@ -111,34 +110,88 @@ chip.rect_corner_2D([0,1],[0.5,0.5], name='rectangle2', layer ='layer1')
 P1 = Port('port1', Vector([0,0]), Vector([0,1]), '2mm', '3mm')
 P2 = Port('port2', Vector([1,1]), Vector([0,1]), '1mm','2mm')
 #SL_PTH = connector.find_slanted_path('slanded_path', 'port1', 'port2')
+chip.new_connector()
+
 chip.draw_connector(*info, PM.track, '25um', PM.bond*2+'100um')
 
-final_choice1 = PM.connector.find_path('path', 'port1', 'port2', 0.05, True, [0,2,0,0,0,0,0], 0.4, 0.1)
-final_choice2 = PM.connector.find_path('path', 'port1', 'port2', 0.05, False, [0,2,0,0,0,0,0], 0.4, 0.1)
+final_choice1 = chip.connector.find_path('path', 'port1', 'port2', 0.05, True, [0,2,0,0,0,0,0], 0.4, 0.1)
+final_choice2 = chip.connector.find_path('path', 'port1', 'port2', 0.05, False, [0,2,0,0,0,0,0], 0.4, 0.1)
 print("final_choice1",final_choice1)
 print("final_choice1",final_choice2)
 
-longueur2 = connector.length(final_choice2, 0, 3, 0.05)
-longueur1 = connector.length(final_choice1, 0, 3, 0.05)
+longueur2 = chip.connector.length(final_choice2, 0, 3, 0.05)
+longueur1 = chip.connector.length(final_choice1, 0, 3, 0.05)
 
-cable_starter(self, width = 'track', index=None, border=parse_entry('15um'))
+#cable_starter(self, width = 'track', index=None, border=parse_entry('15um'))
 
 #%% TEST BATCH 4
-from PythonModeler import PythonModeler
-from CustomElement import Port
+from PythonModeler import PythonMdlr
 import traceback
 from ConnectElement2 import ConnectElt2
+from Vector import Vector
 
-PM = PythonModeler('hfss')
+PM = PythonMdlr('hfss')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
 info = 'con1', ['1mm','1mm'], 90
 chip.new_connector()
 
-P1 = Port('port1', Vector([0,0]), Vector([0,1]), '30mm', '10mm')
-P2 = Port('port2', Vector([1,1]), Vector([0,1]), '20mm','20mm')
-SL_PTH = chip ._connect_JJ('jojo', 'port1', 'port2', "2mm")
+P1 = chip.port('port1', Vector([0,0]), Vector([0,1]), '30mm', '10mm')
+P2 = chip.port('port2', Vector([1,1]), Vector([0,1]), '20mm','20mm')
+SL_PTH = chip.connector._connect_JJ('jojo', 'port1', 'port2', "2mm")
+
+#chip.draw_IBM_tansmon(['1.47', '0.75'],'0.12',['0.5', '0.5'],'30mm', '25mm','42mm' ,'25nH')right_quarter_up1 = self.draw_quarter_circle('right_quarter_up1', [cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [-1,1], 'TRACK', fillet_right1)
+
+
+chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+
+#%%
+from PythonModeler import PythonMdlr
+
+PM = PythonMdlr('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
+
+#rect1 = chip.rect_corner_2D([0,0],[0.5,0.5], name='rectangle1', layer ='layer1')
+#rect2 = chip.rect_corner_2D([0,0],[0.5,0.5], name='rectangle2', layer ='layer1')
+#chip._fillet(0.1, [1,2], rect1)
+#quarter = chip.subtract(rect2, [rect1])
+#chip.rotate(([None],[quarter]), [1,1])
+right_quarter_up1 = chip.draw_quarter_circle('right_quarter_up1', [0.735, 0.21+0.25], [1,1], 'TRACK', 1)
+
+#%%
+from PythonModeler import PythonMdlr
+import traceback
+PM = PythonMdlr('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
+try:
+    print("draw_T")
+    chip.draw_T('T', [0,0,0], 90, 0.3, 0.2)
+except Exception:
+    print("DrawT error")
+    traceback.print_exc()
+    
+#%%
+    
+from PythonModeler import PythonMdlr, Port
+import traceback
+#from ConnectElement2 import ConnectElt2
+from Vector import Vector
+
+PM = PythonMdlr('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+chip, network = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
+info = 'con1', ['1mm','1mm'], 90
+
+P1 = network.port('port1', Vector([0,0]), Vector([0,1]), '30mm', '10mm')
+P2 = network.port('port2', Vector([1,1]), Vector([0,1]), '20mm','20mm')
+SL_PTH = network._connect_JJ('jojo', 'port1', 'port2', "2mm")
+
 
 #chip.draw_IBM_tansmon(['1.47', '0.75'],'0.12',['0.5', '0.5'],'30mm', '25mm','42mm' ,'25nH')right_quarter_up1 = self.draw_quarter_circle('right_quarter_up1', [cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [-1,1], 'TRACK', fillet_right1)
 
@@ -146,20 +199,12 @@ SL_PTH = chip ._connect_JJ('jojo', 'port1', 'port2', "2mm")
 #chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
 
 #%%
-from PythonModeler import PythonModeler
-from CustomElement import Port
-import traceback
-from ConnectElement2 import ConnectElt2
 
-PM = PythonModeler('hfss')
+from PythonModeler import PythonMdlr
+import traceback
+PM = PythonMdlr('gds')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
-chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
 
-rect1 = chip.rect_corner_2D([0,0],[0.5,0.5], name='rectangle1', layer ='layer1')
-rect2 = chip.rect_corner_2D([0,0],[0.5,0.5], name='rectangle2', layer ='layer1')
-chip._fillet(0.1, [1,2], rect1)
-quarter = chip.subtract(rect2, [rect1])
-chip.rotate(([None],[quarter]), [1,1])
+chip, network = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
 right_quarter_up1 = chip.draw_quarter_circle('right_quarter_up1', [0.735, 0.21+0.25], [1,1], 'TRACK', 1)
-

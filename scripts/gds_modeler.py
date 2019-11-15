@@ -73,8 +73,8 @@ class GdsModeler():
         print("ERROR : The function --draw_box_center-- cannot be used for GDSmodeler")
         pass     
     
-    def draw_polyline(self, points, size=[0,0,0], closed=True, **kwargs):
-        '''size is useless'''
+    def draw_polyline(self, points, size=[0,0], closed=True, **kwargs):
+        #size is useless, I just needed a list as the second argument
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
@@ -86,22 +86,22 @@ class GdsModeler():
         self.cell.add(poly1)
         return name
     
-    def draw_rect_corner(self, pos, size=[0,0,0], **kwargs):
+    def draw_rect_corner(self, pos, size, **kwargs):
+        #The cas of an already existing name is not dealt with.
+        pos = parse_entry(pos)
+        size = parse_entry(size)
         name = kwargs['name']
         layer = kwargs['layer']
-
         #This function neglects the z coordinate
         pos = parse_entry(pos)
         size = parse_entry(size)
         points = [(pos[0],pos[1]), (pos[0]+size[0],pos[1]+0), (pos[0]+size[0],pos[1]+size[1]), (pos[0],pos[1]+size[1])]
         poly1 = gdspy.Polygon(points, layer)
-        
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
-
         return name
     
-    def draw_rect_center(self, pos, size=[0,0,0], **kwargs):
+    def draw_rect_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
@@ -117,12 +117,15 @@ class GdsModeler():
         pass
     
     def draw_disk(self, pos, radius, axis, **kwargs):
+        pos = parse_entry(pos)
+        radius = parse_entry(radius)
         name = kwargs['name']
         layer = kwargs['layer']
         assert axis=='Z', "axis must be 'Z' for the gdsModeler"
         round1 = gdspy.Round((pos[0],pos[1]), radius, layer)
-        self.cell.add(round1)
+        
         self.gds_object_instances[name] = round1
+        self.cell.add(round1)
         return name
         
     def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
@@ -133,18 +136,25 @@ class GdsModeler():
         pass
     
     def delete(self, entity):
-        
-        pass
+        self.cell.remove_polygon_modified(self.gds_object_instances[entity.name])
+        self.gds_object_instances.pop(entity.name, None)
             
     def rename_entity(self, entity, name):
-        pass
+        polygon = self.gds_object_instances.pop(entity.name, None)
+        self.gds_object_instances[name] = polygon
 
     def unite(self, entities, name=None, keep_originals=False):
+        if not(isinstance(entities, list)):
+            raise Exception('Union takes a list of entities as an argument')
+        if len(entities)==0:
+            raise Exception('Union takes a non-empty list of entities as an argument')
+            
+        entity_0 = entities.pop(0)
+        polygon_0 = self.gds_object_instances[entity_0.name]
         final_name = entities[0].name if name==None else name
         
         if len(entities)>=2:
             #We fuse all gds_entities on the first element of the list
-            polygon_0 = self.gds_object_instances[entities.pop(0).name]
             polygon_list = []
             for entity in entities:
                 polygon_list.append(self.gds_object_instances[entity.name])
@@ -185,7 +195,9 @@ class GdsModeler():
 
     def subtract(self, blank_entity, tool_entities):
         final_name = blank_entity.name
-        #We fuse all gds_entities on the first element of the list
+        print("blank_entity", blank_entity)
+        print("tool_entities", tool_entities)
+
         polygon_0 = self.gds_object_instances[blank_entity.name]
         print("instances : ", self.gds_object_instances)
         for entity in tool_entities:
@@ -194,7 +206,8 @@ class GdsModeler():
             print(tool_polygon.polygons)
             #Not isn't working
             polygon_0 = gdspy.Polygon(gdspy.fast_boolean(polygon_0, tool_polygon, 'and').polygons[0])
-            print("fused_polygon", polygon_0)
+            print("fused", polygon_0)
+#            print("fused_polygon", polygon_0)
             
         #self.cell.add(polygon_0, blank_entity.layer)
     
@@ -228,8 +241,18 @@ class GdsModeler():
         print("ERROR : The function --create_object_from_face-- cannot be used for GDSmodeler")
         pass
 
-    def _fillet(self, radius, vertex_index, obj):
-        # We need to define a convention for the choice of vertices.
+    def _fillet(self, radius, vertex_index, name_entity):
+        # We need to adapt the format of vertex_index
+        
+        #1 We need to create a PolygonSet from a Polygon
+        polygon = self.gds_object_instances[name_entity]
+        points = polygon.polygons[0]
+        polygon_set = gdspy.PolygonSet([points], polygon.layers[0])
+        polygon_set.fillet()
+        #2 We fillet the polygon_set
+        
+    
+        
                  
         pass
 
@@ -393,11 +416,11 @@ class GdsModeler():
             
         
     def rotate(self, entities, angle):
-        print(angle)
+#        print(angle)
         for entity in entities:
             if entity!=None:
                 gds_entity = self.gds_object_instances[entity.name]
-                print(gds_entity.polygons)
+#                print(gds_entity.polygons)
                 gds_entity.rotate(angle/360*2*np.pi)
 
 

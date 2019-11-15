@@ -7,7 +7,7 @@ Created on Wed Nov 13 11:54:00 2019
 from hfss import parse_entry
 from PythonModeler import Vector
 from PythonModeler import Body
-from CustomElement import Port
+from PythonModeler import Port
 import matplotlib as plt
 from matplotlib.patches import Circle, Wedge, Polygon
 from matplotlib.collections import PatchCollection
@@ -63,7 +63,6 @@ class ConnectElt2(Body):
             iIn = args[2]
             iOut = args[3]
             print('\n')
-            print('Ports ', Port.instances)
             print('\n')
             if iIn in Port.instances:
                 iInPort = Port.instances[iIn].__dict__
