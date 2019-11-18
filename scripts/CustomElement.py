@@ -229,7 +229,7 @@ def draw_ZR_transmon(self,
 #        self.ports[self.name+'_in_jct'] = in_junction
 #        self.ports[self.name+'_out_jct'] = out_junction
 #        junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-    junction_pads = self.connector.f('JJ', self.name+'_in_jct', self.name+'_out_jct', Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
+    junction_pads = self.network._connect_JJ('JJ', self.name+'_in_jct', self.name+'_out_jct', Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
     
     raw_points = [(pad_spacing/2-self.overdev, -pad_size_right[1]/2-self.overdev),
                   (pad_size_right[0]+2*self.overdev, 0),

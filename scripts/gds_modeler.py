@@ -8,6 +8,7 @@ Created on Mon Nov  4 11:13:09 2019
 import gdspy
 from hfss import parse_entry, var
 import numpy as np
+eps = 1e-7
 
 # Create the geometry: a single rectangle.
 #class Cell( object ):
@@ -75,15 +76,15 @@ class GdsModeler():
         print("ERROR : The function --draw_box_center-- cannot be used for GDSmodeler")
         pass     
     
-    def draw_polyline(self, points, size=[0,0], closed=True, **kwargs):
-        #size is useless, I just needed a list as the second argument
+    def draw_polyline(self, points, size=[eps, eps], closed=True, **kwargs):
+        #size is the thickness of the polyline for gds, must be a 2D-list with idential elements
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
         if (closed==True):
             poly1 = gdspy.Polygon(points, layer)
         else:
-            poly1 = gdspy.PolyPath(points, layer)
+            poly1 = gdspy.FlexPath(points, size[0], layer=layer)
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
         return name
