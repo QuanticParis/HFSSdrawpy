@@ -76,7 +76,9 @@ class PythonMdlr():
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(coor_name, coor_sys)
-        return Body(self.interface, coor_name, body_name, self.mode, self.variables), Network(self.interface, coor_name, body_name, self.mode, self.variables)
+        N = Network(self.interface, coor_name, body_name, self.mode, self.variables)
+        B = Body(self.interface, coor_name, body_name, self.mode, self.variables, N)
+        return B, N
     
     @classmethod
     def append_points(self, coor_list):
@@ -444,7 +446,6 @@ class Network(PythonMdlr):
             else:
                 raise ValueError('outPort %s does not exist' % iOut)
             return func(*((self1, name, iInPort, iOutPort)+args[4:]))
-        
         return decorated
     
     def port(self, name, pos, ori, track, gap):
@@ -1255,7 +1256,7 @@ class Body(PythonMdlr):
     ori_elt = 0
 
     
-    def __init__(self, interface, coor_sys, name, mode, variables):
+    def __init__(self, interface, coor_sys, name, mode, variables, network):
         self.interface = interface
         self.coor_sys = coor_sys
         self.name = name
@@ -1264,11 +1265,10 @@ class Body(PythonMdlr):
         self.gapObjects = []
         self.mode = mode # 'hfss' or 'gds'
         self.variables = variables
-        
-    def new_connector(self):
-        from ConnectElement2 import ConnectElt2
-        self.connector = ConnectElt2(self)
+        self.network = network
 
+    def port(self, name, pos, ori, track, gap):
+        return self.network.port(name, pos, ori, track, gap)
 
     
     

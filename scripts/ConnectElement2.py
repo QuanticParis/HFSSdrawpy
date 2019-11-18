@@ -887,7 +887,4 @@ class ConnectElt2(Body):
             #TODO
             #self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, capa_plasma))
 
-        return pads
-    
-    f = _connect_JJ
-        
+        return pads        
