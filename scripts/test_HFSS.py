@@ -207,4 +207,9 @@ PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 
 chip, network = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
-right_quarter_up1 = chip.draw_quarter_circle('right_quarter_up1', [0.735, 0.21+0.25], [1,1], 'TRACK', 1)
+#right_quarter_up1 = chip.draw_quarter_circle('right_quarter_up1', [0.735, 0.21+0.25], [1,1], 'TRACK', 1)
+chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+PM.interface.generate_gds("test_quarter_circle.gds")
+
+print("breakpoint 2", chip.interface.cell.polygons)
+print("breakpoint 2", chip.interface.gds_object_instances)

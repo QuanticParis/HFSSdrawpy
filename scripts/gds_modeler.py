@@ -39,8 +39,10 @@ class GdsModeler():
         self.coor_sys = coor_sys
         
         
-    def generate_gds(self,name_file, cell):
-        self.cell.to_gds(name_file)
+    def generate_gds(self,name_file):
+        writer = gdspy.GdsWriter(name_file)
+        writer.write_cell(self.cell)
+        writer.close()
 
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
@@ -173,50 +175,86 @@ class GdsModeler():
         return final_name
 
     def intersect(self, entities, name=None, keep_originals=False):
+        if not(isinstance(entities, list)):
+            raise Exception('Union takes a list of entities as an argument')
+        if len(entities)==0:
+            raise Exception('Union takes a non-empty list of entities as an argument')
+            
+        entity_0 = entities.pop(0)
+        polygon_0 = self.gds_object_instances[entity_0.name]
         final_name = entities[0].name if name==None else name
         
         if len(entities)>=2:
             #We fuse all gds_entities on the first element of the list
-            polygon_0 = self.gds_object_instances[entities.pop(0).name]
             polygon_list = []
             for entity in entities:
                 polygon_list.append(self.gds_object_instances[entity.name])
             polygon_set = gdspy.PolygonSet(polygon_list)
-            fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'and')
-            self.cell.add(fused_polygon, entities[0].layer)
+            fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'or')
+            self.cell.add(fused_polygon, polygon_0.layer)
         
         if not(keep_originals):
             for entity in entities:
                 polygon = self.gds_object_instances.pop(entity.name, None)
                 self.cell.remove_polygons(polygon)
                 self.cell.remove_labels(entity.name)
+            
         self.gds_object_instances[final_name]=fused_polygon
+        
         return final_name
 
     def subtract(self, blank_entity, tool_entities):
         final_name = blank_entity.name
-        print("blank_entity", blank_entity)
-        print("tool_entities", tool_entities)
-
-        polygon_0 = self.gds_object_instances[blank_entity.name]
-        print("instances : ", self.gds_object_instances)
-        for entity in tool_entities:
-            tool_polygon = self.gds_object_instances[entity.name]
-            print(polygon_0.polygons)
-            print(tool_polygon.polygons)
-            #Not isn't working
-            polygon_0 = gdspy.Polygon(gdspy.fast_boolean(polygon_0, tool_polygon, 'and').polygons[0])
-            print("fused", polygon_0)
+        print("blank_entity", blank_entity.name)
+        print("tool_entities", tool_entities[0].name)
+        
+        #1 We clear the cell of all elements and create lists to store the polygons
+        blank_polygon = self.gds_object_instances[blank_entity.name]
+        self.cell.polygons.remove(blank_polygon)
+        
+        tool_polygons = []
+        for tool_entity in tool_entities:
+            tool_polygon = self.gds_object_instances[tool_entity.name]
+            tool_polygons.append(tool_polygon)
+            self.cell.polygons.remove(tool_polygon)
+            self.gds_object_instances.pop(tool_entity.name, None)
+        
+        #2 Then, we perform fast boolean
+        for tool_polygon in tool_polygons:
+            blank_polygon = gdspy.Polygon(gdspy.fast_boolean(blank_polygon, tool_polygon, 'not').polygons[0])
+        
+        
+        #3 At last we update the cell and the gds_object_instance
+        print(type(blank_polygon))
+        self.gds_object_instances[final_name] = blank_polygon
+        
+        self.cell.add(blank_polygon)
+        
+#        for entity in tool_entities:
+#            blank_polygon = self.gds_object_instances[final_name]
+#            tool_polygon = self.gds_object_instances[entity.name]
+#            self.cell.polygons.remove(self.gds_object_instances[final_name])
+#            blank_polygon = gdspy.Polygon(gdspy.fast_boolean(blank_polygon, tool_polygon, 'not').polygons[0])
+#            self.gds_object_instances[final_name] = blank_polygon
+#            self.cell.polygons.remove(tool_polygon)
+#            self.cell.add(blank_polygon)
+#            print(polygon_0.polygons)
+#            print(tool_polygon.polygons)
+#            Not isn't working
+#            polygon_0 = gdspy.Polygon(gdspy.fast_boolean(polygon_0, tool_polygon, 'not').polygons[0])
 #            print("fused_polygon", polygon_0)
             
-        #self.cell.add(polygon_0, blank_entity.layer)
-    
-        for entity in tool_entities:
-            polygon = self.gds_object_instances.pop(entity.name, None)
-            self.cell.remove_polygon_modified(polygon.polygons[0])
-            self.cell.remove_labels(lambda lbl : lbl.string==entity.name)
-        
-        self.gds_object_instances[final_name]=polygon_0
+#            
+#        self.cell.add(polygon_0)
+#    
+#        for entity in tool_entities:
+#            polygon = self.gds_object_instances.pop(entity.name, None)
+##            print("polygon",polygon.polygons[0])
+##            self.cell.remove_polygon_modified(polygon.polygons[0])
+#            self.cell.polygons.remove(polygon)
+##            self.cell.remove_labels(lambda lbl : lbl.string==entity.name)
+#        
+#        self.gds_object_instances[final_name]=polygon_0
         return final_name
    
 #    def make_perfect_E(self, *objects):
@@ -241,20 +279,21 @@ class GdsModeler():
         print("ERROR : The function --create_object_from_face-- cannot be used for GDSmodeler")
         pass
 
-    def _fillet(self, radius, vertex_index, name_entity):
-        # We need to adapt the format of vertex_index
-        
-        #1 We need to create a PolygonSet from a Polygon
+    def _fillet(self, radius, vertex_index, name_entity):     
+        #1 We need to extract the associated polygon
         polygon = self.gds_object_instances[name_entity]
         points = polygon.polygons[0]
-        polygon_set = gdspy.PolygonSet([points], polygon.layers[0])
-        polygon_set.fillet()
-        #2 We fillet the polygon_set
+        print("points = ", points)
+        #2 We adapt the format of the list of radius
+        vertices_number = len(points)
+#        new radius = [(i in vertex_index) for i in range(vertices_number)]
+        new_radius=[0]*vertices_number
+        for i in vertex_index:
+            new_radius[i]=radius
+
+        #3 We apply fillet on the polygon
+        polygon.fillet(new_radius)
         
-    
-        
-                 
-        pass
 
     def _sweep_along_path(self, to_sweep, path_obj):
         self.rename_obj(path_obj, str(path_obj)+'_path')
