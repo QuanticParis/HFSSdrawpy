@@ -11,7 +11,8 @@ import numpy as np
 from Vector import Vector
 import sys
 from functools import wraps
-
+eps = 1e-7
+from collections import OrderedDict
 
 
 #IMPORT GDS / HFSS Modelers
@@ -21,7 +22,7 @@ from hfss import extract_value_unit, \
                  get_active_project, \
                  ModelEntity, \
                  VariableString 
-import gds_modeler
+#import gds_modeler
 #IMPORT KEY / CUSTOM Elements
 import Lib
 import KeyElement
@@ -42,6 +43,36 @@ INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
+def way(vec):
+    if vec[1] != 0:
+        if abs(vec[0]/vec[1])<1e-2:
+            if vec[1]>0:
+                return Vector(0,1)
+            elif vec[1]<0:
+                return Vector(0,-1)
+    if vec[0] != 0 :
+        if abs(vec[1]/vec[0])<1e-2:
+            if vec[0]>0:
+                return Vector(1,0)
+            elif vec[0]<0:
+                return Vector(-1,0)
+            
+def equal_float(float1, float2):
+    if float1!=0:
+        rel_diff = abs((float1-float2)/float1)
+        if rel_diff<1e-5:
+            return True
+        else:
+            return False
+        
+    elif float2!=0:
+        rel_diff = abs((float1-float2)/float2)
+        if rel_diff<1e-5:
+            return True
+        else:
+            return False
+    else:
+        return True
 
 class PythonMdlr():
     is_overdev = False
@@ -53,7 +84,6 @@ class PythonMdlr():
     overdev = parse_entry('0um')
 
     def __init__(self, name_interface): #"Hfss" or "Gds"
-        self.ports = {}
         self.variables = {}
         
         if name_interface=="hfss":
@@ -70,16 +100,31 @@ class PythonMdlr():
             
         self.mode = name_interface
     
+    
+    def set_active_coor_system(func):
+        def updated(*args, **kwargs):
+            args[0].interface.set_coor_sys(args[0].coor_sys)
+            return func(*args, **kwargs)
+        return updated
 
     def body(self, body_name, coor_name='Global', coor_sys=None):
+        print("coor_name",coor_name)
         if coor_name != 'Global':
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(coor_name, coor_sys)
-        N = Network(self.interface, coor_name, body_name, self.mode, self.variables)
-        B = Body(self.interface, coor_name, body_name, self.mode, self.variables, N)
+        N = Network(body_name, coor_name, self.interface, self.variables)
+        B = Body(self.interface, coor_name, body_name, N, self.mode, self.variables)
+
         return B, N
     
+#    def network(self, network_name, coor_name='Global', coor_sys=None):
+#        if coor_name != 'Global':
+#            if not(coor_sys is None):
+#                coor_sys = parse_entry(coor_sys)
+#                self.interface.create_coor_sys(coor_name, coor_sys)
+#        N = Network(network_name, coor_name, self.interface, self.variables)
+        return N
     @classmethod
     def append_points(self, coor_list):
         # coor_list can be [()()] or [[][]]
@@ -156,8 +201,6 @@ class PythonMdlr():
                                              # using the values stored in self.variables
         # TODO: parse several times
         # can only parse 2 times for now
-        print(self.variables)
-        print(name)
         try:
             _val = float(eval(str(sympy_parser.parse_expr(str(sympy_parser.parse_expr(str(name), self.variables)), self.variables))))
         except Exception:
@@ -180,11 +223,12 @@ class PythonMdlr():
                 return name_list
         else:
             return self.eval_var_str(name)
-
+    
+    @set_active_coor_system
     def box_corner(self, pos, size, layer, **kwargs):
         name = self.interface.draw_box_corner(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
-    
+    @set_active_coor_system
     def box_center(self, pos, size, layer, **kwargs):
         name = self.interface.draw_box_center(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
@@ -234,17 +278,24 @@ class PythonMdlr():
 #        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
 
 
-
+    @set_active_coor_system
     def polyline_2D(self, points2D, z=0, closed=True, **kwargs): # among kwargs, name should be given
+        #TODO Z=?
+#        print("body-ZR")
+#        print(self, self.coor_sys)
+        kwargs['coor_sys']=self.coor_sys
         name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
         dim = closed + 1
         return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
-
+    @set_active_coor_system
     def rect_corner_2D(self, pos2D, size2D, z=0, **kwargs):
+        kwargs['coor_sys']=self.coor_sys
+
         name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
-    
+    @set_active_coor_system
     def rect_center_2D(self, pos2D, size2D, z=0, **kwargs):
+        kwargs['coor_sys']=self.coor_sys
         name = self.interface.draw_rect_center(pos2D, size2D, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
     
@@ -253,16 +304,19 @@ class PythonMdlr():
     
     def rot(self, x, y=0):
         return Vector(x, y).rot(self.ori)
-
-    def cylinder(self, name, pos, radius, height, axis, layer, **kwargs):
+    @set_active_coor_system
+    def cylinder(self, pos, radius, height, axis, **kwargs):
+        kwargs['coor_sys']=self.coor_sys
         name = self.interface.draw_cylinder(pos, radius, height, axis, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=kwargs['layer'])
- 
-    def disk(self, name, pos, radius, axis, layer, **kwargs):
+    @set_active_coor_system
+    def disk(self, pos, radius, axis, **kwargs):
+        kwargs['coor_sys']=self.coor_sys
         name = self.interface.draw_cylinder(pos, radius, axis, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
-    
-    def wirebond(self, name, pos, ori, width, layer, **kwargs):
+    @set_active_coor_system
+    def wirebond(self, pos, ori, width, **kwargs):
+        kwargs['coor_sys']=self.coor_sys
         name = self.interface.draw_cylinder(pos, ori, width, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
@@ -272,32 +326,56 @@ class PythonMdlr():
         return ModelEntity(name, 3, entity1.coor_sys, entity1.model)
         
     def delete(self, entity):
+        if (entity.name in entity.__class__.instances_to_move):
+            entity.__class__.instances_to_move.pop(entity.name)
+        if (entity.name in entity.__class__.instances_moved):
+            entity.__class__.instances_moved.pop(entity.name)    
         del entity
         
     def rename_entity(self, entity, name):
+
+        if entity.name in ModelEntity.instances_moved:
+            ModelEntity.instances_moved.pop(entity.name,None)
+            ModelEntity.instances_moved[name]=entity
+        elif entity.name in ModelEntity.instances_to_move:
+            ModelEntity.instances_to_move.pop(entity.name,None)
+            ModelEntity.instances_to_move[name]=entity
+        
+        self.interface.rename_entity(entity,name)
         entity.rename_entity(name)
-        
+
     def unite(self, entities, name=None, keep_originals=False):
-        loc_entities = entities.copy()
-        dim_Union = 0;
-        for entity in loc_entities:
-            if isinstance(entity, tuple) or isinstance(entity, list):
-                for element in entity:
-                    loc_entities.append(element)
-            if isinstance(entity, ModelEntity):
-                if entity.dimension>dim_Union:
-                    dim_Union = entity.dimension
+        loc_entities = []     
+        dim_Union = 0
+
+        for entity in entities:
+            if entity!=None:
+                if isinstance(entity, list):
+                    union = self.unite(entity, keep_originals= keep_originals)
+                elif (isinstance(entity, ModelEntity) and entity!=None):
+                    union = entity
+                else:
+                    union= None
+            else:
+                union = None
+            if union!=None:    
+                    loc_entities.append(union)
+                    if union.dimension>dim_Union:
+                        dim_Union = union.dimension
+                    if not(keep_originals):
+                        self.delete(union)
                 
-                if not(keep_originals):
-                    self.delete(entity)
-                 
-        if name is None:
-            union = entities[0].copy(dim_Union)
-        else:
-            union = entities[0].copy(dim_Union)
-            union.rename_entity(name)
-        
-        
+
+        if len(loc_entities)>1:
+            new_name = self.interface.unite(loc_entities)
+            if name is None:
+                union = entities[0].copy(dim_Union)
+                self.rename_entity(union, new_name)
+
+            else:
+                union = entities[0].copy(dim_Union)
+                self.rename_entity(union, name)
+            
         return union
         
     def intersect(self, entities, keep_originals = False):
@@ -348,12 +426,18 @@ class PythonMdlr():
         pass
     
     def _fillet(self, radius, vertex_index, entity):
+        #Small twist : we translate entity by 2*eps because Hfss doesn't appreciate matching vertices
+#        self.interface.translate([entity], [2*eps, 2*eps,0])
         self.interface._fillet(radius, vertex_index, entity.name)
 #        print(vertices)
 #        print(radius)
-    
-    def assign_perfect_E(self, entity):
-        entity.boundaries.append('PerfE')
+        
+    def _fillets(self, radius, entity):
+        vertices = self.inteface.get_vertex_ids(entity.name)
+        self.interface._fillet(radius, vertices, entity.name)
+        
+    def assign_perfect_E(self, entities):
+        self.interface.assign_perfect_E(entities)
     
     def mirrorZ(self, obj):
         pass
@@ -378,18 +462,24 @@ class PythonMdlr():
         pass
     
     def make_material(self, entity, material):
-        # Problème pour les unions de matériaux si on ajoute un attribut
+        self.interface.make_material(entity, material)
         pass
     
     def delete_all_objects(self, entities):
         for entity in entities:
             self.delete(entity)
     
-    def mesh_zone(self, zone, mesh_length):
+    def mesh_entity(self, entity, mesh_length):
         mesh_length = parse_entry(mesh_length)
-        self.interface.assign_mesh_length(zone, mesh_length)
+#        print("mesh_length",mesh_length)
+        self.interface.assign_mesh_length(entity, mesh_length)
 
-        
+    def _sweep_along_path(self, entity_to_sweep, path_entity):
+        name = self.interface._sweep_along_path(entity_to_sweep, path_entity)
+        self.delete(path_entity)
+        # TODO Check the effect of sweep on entities
+        entity_to_sweep.modify_dimension(entity_to_sweep.dimension+1)
+#        entity_to_sweep.rename(name)
         
     
 #    def rectangle(pos,size):
@@ -406,25 +496,81 @@ class PythonMdlr():
 #        plt.plot(pos,size)
 
 class Port():
-    instances = {}
+    instances_moved = OrderedDict()
+    instances_to_move = OrderedDict()
+    items_shall_be_moved = False
     def __init__(self, name, pos, ori, track, gap):
-        self.name = name
+        new_name = self.check_name(name)
+        self.name = new_name
         self.pos = Vector(pos)
         self.ori = Vector(ori)
-        self.track = track
-        self.gap = gap
-        self.__class__.instances[name] = self
+        self.track = parse_entry(track)
+        self.gap = parse_entry(gap)
+        self.__class__.instances_to_move[new_name] = self
+#        print("ports = " ,self.instances_to_move)
 
+        
+    @staticmethod
+    def merge(n):
+        key_list = []
+        for idx, key in enumerate(Port.instances_moved):
+            if idx>=n:
+                key_list.append(key)
+        for key in key_list:
+            entity = Port.instances_moved.pop[key]
+            Port.instances_to_move[key]=entity
+
+    @staticmethod
+    def reset():
+        Port.instances_moved = OrderedDict()
+        Port.instances_to_move = OrderedDict()
+        
+    def check_name(self, name):
+        i = 0
+        new_name = name
+        while((new_name in self.instances_to_move.keys()) or (new_name in self.instances_moved.keys())):
+            i+=1
+            new_name = name+'_'+str(i)
+        return new_name
+            
+
+    def cable_starter(self, name, width = 'track', index=None, border=parse_entry('15um')): # width can also be 'gap'
+        
+        if width=='track' or width=='Track':
+            points = self.append_points([(0, self.track/2),
+                                         (0, -self.track)])
+        elif width=='gap' or width=='Gap':
+            points = self.append_points([(0, self.gap+self.track/2),
+                                         (0, -2*self.gap-self.track)])
+        elif width=='mask' or width=='Mask':
+            points = self.append_points([(0, self.gap+self.track/2+self.gap_mask),
+                                         (0, -2*self.gap-self.track-2*self.gap_mask)])
+        track = self.polyline_2D(points, closed=False, name=name+'_width_'+width+'_'+str(index), layer=width.upper())
+         #TODO Find unknown variables   
+#        elif width=='dc_track':
+#            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2),\
+#                                                  (0, self.rel_posIn[index]+self.widIn[index]/2)])
+#        elif width=='dc_gap':
+#            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2-border),\
+#                                                  (0, self.rel_posIn[index]+self.widIn[index]/2+border)])
+#        elif width=='dc_cutout':
+#            points = self.append_absolute_points([(0, -self.cutIn/2),(0, self.cutIn/2)])
+            
+        return fig
 
 class Network(PythonMdlr):
     variables= None
-    def __init__(self, interface, coor_sys, name, mode, variables):
+    to_bond=[]
+    def __init__(self, name, coor_sys, interface, variables):
+        
         self.interface = interface
         self.coor_sys = coor_sys
         self.name = name
-        self.mode = mode # 'hfss' or 'gds'
         self.variables = variables
-        self.__class__.variables = variables
+#        self.__class__.variables = variables
+    
+    def update(self,coor_sys):
+        self.coor_sys = coor_sys
         
     def decorator(func):
         @wraps(func)
@@ -434,19 +580,59 @@ class Network(PythonMdlr):
             name = args[1]
             iIn = args[2]
             iOut = args[3]
-            print('\n')
-            print('Ports ', Port.instances)
-            print('\n')
-            if iIn in Port.instances:
-                iInPort = Port.instances[iIn].__dict__
+#            print('\n')
+#            print('Ports ', iOut in Port.instances_to_move)
+#            print('\n')
+            if iIn in Port.instances_to_move:
+                iInPort = Port.instances_to_move[iIn].__dict__
+            elif iIn in Port.instances_moved:
+                iInPort = Port.instances_moved[iIn].__dict__
             else:
                 raise ValueError('inPort %s does not exist' % iIn)
-            if iOut in Port.instances:
-                iOutPort = Port.instances[iOut].__dict__
+            if iOut in Port.instances_to_move:
+                iOutPort = Port.instances_to_move[iOut].__dict__
+            elif iOut in Port.instances_moved:
+                iOutPort = Port.instances_moved[iOut].__dict__
             else:
                 raise ValueError('outPort %s does not exist' % iOut)
             return func(*((self1, name, iInPort, iOutPort)+args[4:]))
         return decorated
+    
+    def decorator_In(func):
+        @wraps(func)
+        def decorated(*args, **kwargs):
+            # parse the instructions of the user
+            self1  = args[0]
+            name = args[1]
+            iIn = args[2]
+#            print('\n')
+#            print('Ports ', Port.instances)
+#            print('\n')
+            if iIn in Port.instances:
+                iInPort = Port.instances[iIn].__dict__
+            else:
+                raise ValueError('inPort %s does not exist' % iIn)
+            return func(*((self1, name, iInPort)+args[3:]))
+        return decorated
+    
+    def translate(self, ports, vector):
+        for port in ports:
+            port.pos = port.pos+Vector(vector)
+        
+    def rotate(self, ports, angle):
+        
+        if isinstance(angle, list):
+            if len(angle)==2:
+                new_angle= np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
+                new_angle= new_angle/np.pi*180
+            else:
+                raise Exception("angle should be either a float or a 2-dim array")
+        else : 
+            new_angle=angle
+        rad = new_angle/180*np.pi
+        rotate_matrix = np.array([[np.cos(rad) ,np.sin(rad)],[np.sin(-rad) ,np.cos(rad)]])
+        for port in ports:
+            port.ori = rotate_matrix.dot(port.ori)
     
     def port(self, name, pos, ori, track, gap):
         return Port(name, pos, ori, track, gap)
@@ -511,8 +697,8 @@ class Network(PythonMdlr):
 #        patches.append(Polygon(points))
 #        p = PatchCollection(patches, alpha=0.4)
 #        ax.add_collection(p)
-        print(raw_points)
-        print(points)
+#        print(raw_points)
+#        print(points)
         right_pad = self.polyline_2D(points, name =name+"_pad1", layer="TRACK")
 
         points = self.append_points(self.refy_points(raw_points))
@@ -522,7 +708,7 @@ class Network(PythonMdlr):
         
         if not self.is_litho:
             mesh = self.rect_center_2D([0,0], [iLength, iTrack], name=name+'_mesh', layer='MESH')
-            self.mesh_zone(mesh, iTrackJ/2)
+            self.mesh_entity(mesh, iTrackJ/2)
     
             points = self.append_points([(iTrackJ/2,0),(-iTrackJ,0)])
             self.polyline_2D(points, closed = False, name=name+'_line', layer="MESH")
@@ -565,8 +751,8 @@ class Network(PythonMdlr):
         
         
         iLength, iWidth,iSize = parse_entry((iLength, iWidth, iSize))
-        retIn = [[0,0], 0, iInPort['track'], iInPort['gap']]
-        retOut = [[0,0]+[iInPort['gap']+iOutPort['gap']+iSize+2*iWidth,0],0 , iOutPort['track'], iOutPort['gap']]
+        retIn = [[0,0,0], 0, iInPort['track'], iInPort['gap']]
+        retOut = [[iInPort['gap']+iOutPort['gap']+iSize+2*iWidth,0],0 , iOutPort['track'], iOutPort['gap']]
 
         points1 = self.append_points([(iInPort['gap']+iWidth, 0),
                                      (0, -iLength/2),
@@ -580,7 +766,7 @@ class Network(PythonMdlr):
 
     
         trackIn = self.polyline_2D(points1, name=name+'_track1', layer='TRACK')
-        self.chip.trackObjects.append(trackIn)
+#        self.chip.trackObjects.append(trackIn)
 
         points2 = self.append_points([(iInPort['gap']+iWidth+iSize, 0),
                                      (0, -iLength/2),
@@ -592,7 +778,7 @@ class Network(PythonMdlr):
                                      (0, iLength/2-iOutPort['track']/2),
                                      (-iWidth, 0)])
         trackOut = self.polyline_2D(points2, name=name+'_track2', layer='TRACK')
-        self.chip.trackObjects.append(trackOut)
+#        self.chip.trackObjects.append(trackOut)
 
         points3 = self.append_points([(0, 0),
                                      (0, iLength/2+iInPort['gap']),
@@ -604,9 +790,9 @@ class Network(PythonMdlr):
                                      (0, iOutPort['gap']-iInPort['gap']),
                                      (-(iInPort['gap']+iWidth+iSize/2),0)
                                      ])
-        print(points3)
+#        print(points3)
         gap1 = self.polyline_2D(points3, name=name+'_gap1', layer='GAP')
-        self.chip.gapObjects.append(gap1)
+#        self.chip.gapObjects.append(gap1)
 #    
 #    
 
@@ -636,7 +822,8 @@ class Network(PythonMdlr):
         
         pointA = iIn_pos+iIn_ori*dist/3
         pointB = iOut_pos+iOut_ori*dist/3
-        
+
+        # TODO
         self.to_bond.append([iIn_pos, pointA])
         self.to_bond.append([pointB, iOut_pos])
         return [iIn_pos, pointA, pointB, iOut_pos], dist/3      
@@ -1057,9 +1244,10 @@ class Network(PythonMdlr):
 
         to_bond_points = add_fillet_points(final_choice, fillet)
         for ii, point in enumerate(to_bond_points[::2]):
-#            self.draw('bef_test', [to_bond_points[2*ii], to_bond_points[2*ii+1]], closed=False)
+            points = [to_bond_points[2*ii], to_bond_points[2*ii+1]]
+#            print("points", points)
+            self.polyline_2D([to_bond_points[2*ii], to_bond_points[2*ii+1]] , closed=False, name='bef_test', layer="WIRE")
             self.to_bond.append([to_bond_points[2*ii], to_bond_points[2*ii+1]])
-
         return final_choice     
         
     def length(self, points, A, B, fillet): # A and B are integer point indices
@@ -1078,28 +1266,10 @@ class Network(PythonMdlr):
             return value-(B-A-1)*self.val(fillet*(2-np.pi/2))
         else:
             return self.length(points, B, A, fillet)
-        
-    def cable_starter(self, width = 'track', index=None, border=parse_entry('15um')): # width can also be 'gap'
-        if width=='track' or width=='Track':
-            points = self.append_points([(0, self.inTrack/2),
-                                         (0, -self.inTrack)])
-        elif width=='gap' or width=='Gap':
-            points = self.append_points([(0, self.inGap+self.inTrack/2),
-                                         (0, -2*self.inGap-self.inTrack)])
-        elif width=='mask' or width=='Mask':
-            points = self.append_points([(0, self.inGap+self.inTrack/2+self.gap_mask),
-                                         (0, -2*self.inGap-self.inTrack-2*self.gap_mask)])
-        elif width=='dc_track':
-            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2),\
-                                                  (0, self.rel_posIn[index]+self.widIn[index]/2)])
-        elif width=='dc_gap':
-            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2-border),\
-                                                  (0, self.rel_posIn[index]+self.widIn[index]/2+border)])
-        elif width=='dc_cutout':
-            points = self.append_absolute_points([(0, -self.cutIn/2),(0, self.cutIn/2)])
-            
-        return self.draw(self.name+'_width_'+width+'_'+str(index), points, closed=False) #used to be +'_width'
+    
 
+
+    @decorator
     def draw_cable(self, name, iInPort, iOutPort, fillet="0.3mm", is_bond=False, is_meander=False, to_meanders = [1,0,1,0,1,0,1,0,1,0], meander_length=0, meander_offset=0, is_mesh=False, constrains=[], reverse_adaptor=False, layer=None):
             '''
             Draws a CPW transmission line between iIn and iOut
@@ -1132,31 +1302,33 @@ class Network(PythonMdlr):
             self.to_bond=[]
             adaptor_length=0
             track_adaptor = None
-            if (not equal_float(self.val(self.inTrack), self.val(self.outTrack))) or (not equal_float(self.val(self.inGap), self.val(self.outGap))):
+            if (not equal_float(self.val(iInPort['track']), self.val(iOutPort['track']))) or (not equal_float(self.val(iInPort['gap']), self.val(iOutPort['gap']))):
                 if reverse_adaptor:
-                    if self.val(self.inTrack+self.inGap) > self.val(self.outTrack+self.outGap):
-                        adaptor = ConnectElt(self.name+'_adaptor', self.iIn, [self.outTrack, self.outGap])
-                        iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                        self.__init__(self.name, iIn, self.iOut)
+                    if self.val(iInPort['track']+iInPort['gap']) > self.val(iOutPort['track']+iOutPort['gap']):
+                        #adaptor = ConnectElt(self.name+'_adaptor', self.iIn, [self.outPort['track'], self.outPort['gap']])
+                        iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',iInPort['name'],iOutPort['name'])
+#                        self.__init__(self.name, iIn, self.iOut)
                     else:
-                        adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.inTrack, self.inGap])
-                        iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                        self.__init__(self.name, self.iIn, iOut)
+#                        adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.iInPort['track'], self.inPort['gap']])
+                        iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',iInPort['name'],iOutPort['name'])
+#                        self.__init__(self.name, self.iIn, iOut)
                 else:
-                    if self.val(self.inTrack+self.inGap) > self.val(self.outTrack+self.outGap):
-                        adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.inTrack, self.inGap])
-                        iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                        self.__init__(self.name, self.iIn, iOut)
+                    if self.val(iInPort['track']+iInPort['gap']) > self.val(iOutPort['track']+iOutPort['gap']):
+#                        adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.iInPort['track'], self.iInPort['gap']])
+                        iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',iInPort['name'],iOutPort['name'])
+#                        self.__init__(self.name, self.iIn, iOut)
                     else:
-                        adaptor = ConnectElt(self.name+'_adaptor', self.iIn, [self.outTrack, self.outGap])
-                        iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                        self.__init__(self.name, iIn, self.iOut)
+#                        adaptor = ConnectElt(self.name+'_adaptor', self.iIn, [self.outPort['track'], self.outPort['gap']])
+                        iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',iInPort['name'],iOutPort['name'])
+#                        self.__init__(self.name, iIn, self.iOut)
       
             all_constrains = []
             for constrain in constrains:
-                all_constrains.append([self.ports[constrain][POS], -self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-                all_constrains.append(constrain)#[self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-                # preivous modification to tackle the case where a cable is drawn between two ports defined on the fly
+                all_constrains.append(Port.instances[constrain])                
+                all_constrains.append(Port.instances[constrain])
+
+#                all_constrains.append(constrain)#[self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
+#                previous modification to tackle the case where a cable is drawn between two ports defined on the fly
                 
             if not isinstance(to_meanders[0], list):
                 to_meanders = [to_meanders for ii in range(len(constrains)+1)]
@@ -1167,8 +1339,9 @@ class Network(PythonMdlr):
             tracks = []
             gaps = []
             masks = []
-            port_names = [self.iIn]+all_constrains+[self.iOut]
-            print(port_names)
+            port_names = [iInPort]+all_constrains+[iOutPort] # List of ports
+            
+#            print(meander_length)
             for ii in range(len(constrains)+1):
                 to_meander = to_meanders[ii]
                 if isinstance(meander_length, (list, np.ndarray)):
@@ -1179,84 +1352,181 @@ class Network(PythonMdlr):
                     to_add = '_'+str(ii)
                 else:
                     to_add = ''
-                print(port_names[2*ii:2*ii+2])
-                self.__init__(self.name, *port_names[2*ii:2*ii+2])
+#                print(port_names[2*ii:2*ii+2])
+#                self.__init__(self.name, *port_names[2*ii:2*ii+2]) CONNECT ELEMENT USELESS
                 
-                points = self.find_path(fillet, is_meander, to_meander, m_length, meander_offset)
-                connection = self.draw(self.name+'_track'+to_add, points, closed=False)
+                points = self.find_path('points', port_names[2*ii]['name'], port_names[2*ii+1]['name'], fillet, is_meander, to_meander, m_length, meander_offset)
+                connection_track = self.polyline_2D(points, name=name+'_track'+to_add, closed=False ,layer = "CABLE")
     #            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
                 cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
-                connection.fillets(fillet-eps)
+# TODO
+#                connection.fillets(fillet-eps)
         
-                connection_gap = connection.copy(self.name+"_gap"+to_add)
+                connection_gap = self.polyline_2D(points, name=name+'_gap'+to_add, closed=False ,layer = "CABLE")
         
-                track_starter = self.cable_starter('track')
-                gap_starter = self.cable_starter('gap')
+                track_starter = self.cable_starter('track', iInPort['name'])
+                gap_starter = self.cable_starter('gap', iInPort['name'])
             
                 if self.is_mask:
-                    connection_mask = connection.copy(self.name+"_mask"+to_add)
-                    mask_starter = self.cable_starter('mask')
-                    masks.append(connection_mask.sweep_along_path(mask_starter))
+                    connection_mask = self.polyline_2D(points, name=name+'_mask'+to_add, closed=False ,layer = "CABLE")
+                    mask_starter = self.cable_starter('mask', iInPort['name'])
+                    mask = self.sweep_along_path(mask_starter, connection_mask)
+#                    masks.append(connection_mask.sweep_along_path(mask_starter))
         
-                tracks.append(connection.sweep_along_path(track_starter))
-                gaps.append(connection_gap.sweep_along_path(gap_starter))
+                track = self._sweep_along_path(track_starter, connection_track)
+                tracks.append(track)
+                gap = self._sweep_along_path(gap_starter, connection_gap)
+                gaps.append(gap)
     
                 
             if is_bond:
-                self.draw_bond((self.inTrack+self.inGap*2)*1.5)
+                self.draw_bond((self.iInPort['track']+self.inPort['gap']*2)*1.5)
             
             if track_adaptor is not None:
-                self.trackObjects.pop()
-                self.gapObjects.pop()
+#                self.trackObjects.pop()
+#                self.gapObjects.pop()
                 tracks = [*tracks, track_adaptor]
                 gaps = [*gaps, gap_adaptor]
                 if self.is_mask:
-                    self.maskObjects.pop()
+#                    self.maskObjects.pop()
                     masks = [*masks, mask_adaptor]
                     
             if len(tracks)>1:
                 names = [self.name+'_track', self.name+'_gap', self.name+'_mask']
     #            if track_adaptor is not None:
     #                names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
-                track = self.unite(tracks, names[0])
-                gap = self.unite(gaps, names[1])
-                if layer is None:
-                    self.trackObjects.append(track)
-                    self.gapObjects.append(gap)
-                else:
-                    self.layers[layer]['trackObjects'].append(track)
-                    self.layers[layer]['gapObjects'].append(gap)
-                if self.is_mask:
-                    mask = self.unite(masks, names[2])
-                    self.maskObjects.append(mask)
+#                track = self.unite(track, names[0])
+#                gap = self.unite(gaps, names[1])
+#                if layer is None:
+#                    self.trackObjects.append(track)
+#                    self.gapObjects.append(gap)
+#                else:
+#                    self.layers[layer]['trackObjects'].append(track)
+#                    self.layers[layer]['gapObjects'].append(gap)
+#                if self.is_mask:
+#                    mask = self.unite(masks, names[2])
+#                    self.maskObjects.append(mask)
             else:
                 track = tracks[0]
                 gap = gaps[0]
-                if layer is None:
-                    self.trackObjects.append(track)
-                    self.gapObjects.append(gap)
-                else:
-                    self.layers[layer]['trackObjects'].append(track)
-                    self.layers[layer]['gapObjects'].append(gap)
-                if self.is_mask:
-                    self.maskObjects.append(*masks)
-            
+#                if layer is None:
+#                    self.trackObjects.append(track)
+#                    self.gapObjects.append(gap)
+#                else:
+#                    self.layers[layer]['trackObjects'].append(track)
+#                    self.layers[layer]['gapObjects'].append(gap)
+#                if self.is_mask:
+#                    self.maskObjects.append(*masks)
+#            
             if is_mesh is True:
                 if not self.is_litho:
-                    self.modeler.assign_mesh_length(track,2*self.inTrack)
+                    self.assign_mesh_length(track,2*self.iInPort['track'])
                     
             for length in cable_length:
-                print('{0}_length = {1:.3f} mm'.format(self.name, length*1000))
+                print('{0}_length = {1:.3f} mm'.format(name, length*1000))
             print('sum = %.3f mm'%(1000*np.sum(cable_length)))
+    
+    def draw_bond(self, width, min_dist='0.5mm'):
+        width, min_dist = parse_entry((width, min_dist))
+
+        min_dist = self.val(min_dist)
+        for elt in self.to_bond:
+            A = elt[0]
+            B = elt[1]
+            val_BA = self.val(B-A)
+            ori = way(val_BA)
+            length = Vector(val_BA).norm()
+            n_bond = int(length/min_dist)+1
+            spacing = (B-A).norm()/n_bond
+            pos = A+ori*spacing/2
+            self.draw_wirebond('wire', pos, ori, width)
+            for ii in range(n_bond-1):
+                pos = pos + ori*spacing
+                self.draw_wirebond('wire', pos, ori, width)
+    
+    @decorator           
+    def draw_adaptor(self, name, iInPort, iOutPort, iSlope=0.33):
+        '''
+        Draws an adaptor between two ports.
+        Given input port iIn, and slope of line iSlope, calculates iOut, and draws adpator.
+
+        Inputs:
+        -------
+        name:
+        iIn: tuple, input port
+        iOut: tuple, output port, usually Nones
+        iSlope: slope of line to connect iIn and iOut. If iSlope=1, 45 degrees.
+
+        Returns:
+        --------
+        reversed iIn and calculated iOut
+        '''
+#        if not self.isOut:
+#            # calculate the output
+#            # do not forget to add the new port to dict
+#            adaptDist = abs(self.outPort['track']/2-self.inPort['track']/2)/iSlope
+#            outPort = [self.pos+self.ori*adaptDist, self.ori, self.outPort['track'], self.outPort['gap']]
+#            self.ports[self.iIn+'_bis'] = outPort
+#            self.__init__(self.name, self.iIn, self.iIn+'_bis')
+#        else:
+
+        adaptDist = (iInPort['pos']-iOutPort['pos']).norm()
+        points = self.append_points([(0, iInPort['track']/2),
+                                     (adaptDist, iOutPort['track']/2-iInPort['track']/2),
+                                     (0, -iOutPort['track']),
+                                     (-adaptDist, iOutPort['track']/2-iInPort['track']/2)])
+        track = self.polyline_2D(points, name=name+"_track", layer = 'TRACK')
+#        self.trackObjects.append(track)
+
+        points = self.append_points([(0, iInPort['gap']+iInPort['track']/2),
+                                     (adaptDist, (iOutPort['gap']-iInPort['gap'])+(iOutPort['track']-iInPort['track'])/2),
+                                     (0, -2*iOutPort['gap']-iOutPort['track']),
+                                     (-adaptDist, (iOutPort['gap']-iInPort['gap'])+(iOutPort['track']-iInPort['track'])/2)])
+        gap = self.polyline_2D(points, name=name+"_GAP", layer = 'GAP')
+#        self.gapObjects.append(gap)
+        
+        mask = None
+        if self.is_mask:
+            points = self.append_points([(0, self.gap_mask+iInPort['gap']+iInPort['track']/2),
+                             (adaptDist, (iOutPort['gap']-iInPort['gap'])+(iOutPort['track']-iInPort['track'])/2),
+                             (0, -2*self.gap_mask-2*iOutPort['gap']-iOutPort['track']),
+                             (-adaptDist, (iOutPort['gap']-iInPort['gap'])+(iOutPort['track']-iInPort['track'])/2)])
+            mask = self.polyline_2D(points, name=name+"_MASK", layer = 'MASK')
+#            self.maskObjects.append(mask)
+
+        return iInPort['name']+'_bis', adaptDist, track, gap, mask
+
+    @decorator_In
+    def cable_starter(self, name, iInPort, width = 'track', index=None, border=parse_entry('15um')):
+        
+        if width=='track' or width=='Track':
+            points = self.append_points([(0, iInPort['track']/2),
+                                         (0, -iInPort['track'])])
+        elif width=='gap' or width=='Gap':
+            points = self.append_points([(0, iInPort['gap']+iInPort['track']/2),
+                                         (0, -2*iInPort['gap']-iInPort['track'])])
+        elif width=='mask' or width=='Mask':
+            points = self.append_points([(0, iInPort['gap']+iInPort['track']/2+self.gap_mask),
+                                         (0, -2*iInPort['gap']-iInPort['track']-2*self.gap_mask)])
+        track = self.polyline_2D(points, closed=False, name=name+'_width_'+width+'_'+str(index), layer=width.upper())
+         #TODO Find unknown variables   
+    #        elif width=='dc_track':
+    #            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2),\
+    #                                                  (0, self.rel_posIn[index]+self.widIn[index]/2)])
+    #        elif width=='dc_gap':
+    #            points = self.append_absolute_points([(0, self.rel_posIn[index]-self.widIn[index]/2-border),\
+    #                                                  (0, self.rel_posIn[index]+self.widIn[index]/2+border)])
+    #        elif width=='dc_cutout':
+    #            points = self.append_absolute_points([(0, -self.cutIn/2),(0, self.cutIn/2)])
+        return track
             
 @Lib.add_methods_from(KeyElement, CustomElement)
 class Body(PythonMdlr):
 
-    pos_elt = [0,0]
-    ori_elt = 0
-
+    current_pos = [0,0]
+    current_ori = [0,0]
     
-    def __init__(self, interface, coor_sys, name, mode, variables, network):
+    def __init__(self, interface, coor_sys, name, network, mode, variables):
         self.interface = interface
         self.coor_sys = coor_sys
         self.name = name
@@ -1265,10 +1535,53 @@ class Body(PythonMdlr):
         self.gapObjects = []
         self.mode = mode # 'hfss' or 'gds'
         self.variables = variables
+        network.update(coor_sys)
         self.network = network
 
+    def set_current_coor(self, pos, ori):
+        self.current_pos = pos
+        self.current_ori = ori
+        
     def port(self, name, pos, ori, track, gap):
         return self.network.port(name, pos, ori, track, gap)
 
+    @staticmethod    
+    def number_ports():
+        return len(Port.instances_to_move)
     
+    @staticmethod
+    def number_modelentities():
+        return len(ModelEntity.instances_to_move)
+
+    @staticmethod    
+    def ports_to_move(n):
+        lastP = OrderedDict()
+        for idx, key in enumerate(Port.instances_to_move):
+            if n <= idx:
+                lastP[key] = Port.instances_to_move[key]
+        return lastP
     
+    @staticmethod    
+    def modelentities_to_move(n):
+        lastM = OrderedDict()
+        for idx, key in enumerate(ModelEntity.instances_to_move):
+            if n <= idx:
+                lastM[key] = ModelEntity.instances_to_move[key]
+        return lastM
+    
+#    @staticmethod
+#    def ports_to_move():
+#        return Port.instances_to_move
+#
+#    @staticmethod
+#    def modelentities_to_move():
+#        return ModelEntity.instances_to_move
+#    
+    @staticmethod
+    def ports_were_moved(n):
+        Port.merge(n)
+    @staticmethod
+    def modelentities_were_moved(n):
+        ModelEntity.merge(n)
+            
+                

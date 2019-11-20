@@ -753,7 +753,7 @@ class ConnectElt(KeyElt, Circuit):
                 to_add = '_'+str(ii)
             else:
                 to_add = ''
-            print(port_names[2*ii:2*ii+2])
+#            print(port_names[2*ii:2*ii+2])
             self.__init__(self.name, *port_names[2*ii:2*ii+2])
             
             points = self.find_path(fillet, is_meander, to_meander, m_length, meander_offset)

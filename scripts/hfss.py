@@ -12,6 +12,9 @@ import signal
 import pythoncom
 import time
 import numpy as np
+from functools import wraps
+from collections import OrderedDict
+
 
 from sympy.parsing import sympy_parser
 from pint import UnitRegistry
@@ -906,17 +909,24 @@ class HfssModeler(COMWrapper):
         self._mesh = mesh
     
     def resize(func):
+        @wraps(func)
         def resized(*args, **kwargs):
             '''3D or 2D points to 3D points'''
+#            print(args[1])
             args[2].append(0)
             if isinstance(args[1][0], tuple):
                 # Case of a polyline
                 for p in range(len(args[1])):
                     args[1][p]=args[1][p]+(0,)
+            elif isinstance(args[1][0], list):
+                # Case of a polyline
+                for p in range(len(args[1])):
+                    args[1][p].append(0)
             else:
                 # Case of a rectangle
                 args[1].append(0)
-            print(args)
+
+
             return func(*args, **kwargs)
         return resized
     
@@ -928,7 +938,8 @@ class HfssModeler(COMWrapper):
     def _attributes_array(self, name=None, nonmodel=False, color=None,
                           transparency=0.9, material=None, solve_inside = None,
                           coor_sys='Global'):
-        arr = ["NAME:Attributes", "PartCoordinateSystem:=", coor_sys]
+#        print("ATTENTION ! ",coor_sys)
+        arr = ["NAME:Attributes", "PartCoordinateSystem:=", coor_sys, "Coordinate System:=", coor_sys]
         if name is not None:
             arr.extend(["Name:=", name])
         if nonmodel:
@@ -948,6 +959,7 @@ class HfssModeler(COMWrapper):
         return ["NAME:Selections", "Selections:=", ",".join(names)]
     
     def assert_name(func):
+        @wraps(func)
         def asserted_name(*args, **kwargs):
             name = func(*args, **kwargs)
             if name != kwargs['name']:
@@ -1006,6 +1018,7 @@ class HfssModeler(COMWrapper):
         points = parse_entry(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
+        
         for ii, point in enumerate(points):
             pointsStr.append(["NAME:PLPoint", "X:=", point[0], "Y:=", point[1], "Z:=", point[2]])
             indexsStr.append(["NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", ii, "NoOfPoints:=", 2])
@@ -1035,7 +1048,7 @@ class HfssModeler(COMWrapper):
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
-        print(size)
+#        print(size)
         axis = "XYZ"[size.index(0)]
         w_idx, h_idx = {'X': (1, 2),
                         'Y': (2, 0),
@@ -1061,6 +1074,9 @@ class HfssModeler(COMWrapper):
     
     @assert_name
     def draw_cylinder(self, pos, radius, height, axis, **kwargs):
+        kwargs2 = kwargs.copy()
+        kwargs2.pop('layer', None)
+#        print("coor_sys", kwargs['coor_sys'])
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
@@ -1071,7 +1087,7 @@ class HfssModeler(COMWrapper):
              "Height:=", height,
              "WhichAxis:=", axis,
              "NumSides:=", 0],
-            self._attributes_array(**kwargs))
+            self._attributes_array(**kwargs2))
         return name
     
     def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
@@ -1130,26 +1146,23 @@ class HfssModeler(COMWrapper):
         self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
         
     def rename_entity(self, entity, name):
-        self._modeler.ChangeProperty(["NAME:AllTabs",
+        new_name = self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
                                     			["NAME:PropServers", str(entity.name)],
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
+        return new_name
 
     def unite(self, entities, name=None, keep_originals=False):
         names = []
         for entity in entities:
             if entity!=None:
                 names.append(entity.name)
-                
         self._modeler.Unite(
             self._selections_array(*names),
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
         )
-        if name is None:
-            return names[0]
-        else:
-#            return names[0].rename(name)
-            return self.rename_obj(names[0], name)
+        new_name = names[0] if names!=None else None
+        return new_name
 
     def intersect(self, entities, keep_originals=False):
         names = []
@@ -1182,8 +1195,8 @@ class HfssModeler(COMWrapper):
         for entity in entities:
             if entity!=None:
                 names.append(entity.name)
-        print("breakpoint3")
-        print(names, vector)
+#        print("breakpoint3")
+#        print(names, vector)
         self._modeler.Move(
             self._selections_array(*names),
             ["NAME:TranslateParameters",
@@ -1201,8 +1214,10 @@ class HfssModeler(COMWrapper):
                 #TODO Deal with other cases
                 if entity!=None:
                     names.append(entity.name)
+        print("Object to rotate", names)
+#        print("angle = " ,angle)
         if len(names)!=0:
-            print(names)
+#            print(names)
             self._modeler.Rotate(self._selections_array(*names), 
                 ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
 
@@ -1215,12 +1230,12 @@ class HfssModeler(COMWrapper):
 #                                		"CreateGroupsForNewObjects:=", False
 #                                	])
 
-    def assign_perfect_E(self, obj, name='PerfE'):
-        if isinstance(obj, list):
-            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", obj, "InfGroundPlane:=", False])
+    def assign_perfect_E(self, entities, name='PerfE'):
+        if isinstance(entities, list):
+            entity_names = [entity.name for entity in entities]
+            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", entity_names, "InfGroundPlane:=", False])
         else:
-            name = str(obj)+'_'+name
-            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [obj], "InfGroundPlane:=", False])
+            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [entities.name], "InfGroundPlane:=", False])
             
     def assign_perfect_E_faces(self, name):
         # this is very peculiar to cavity Si chips
@@ -1272,7 +1287,6 @@ class HfssModeler(COMWrapper):
 
     def _fillet(self, radius, vertex_index, name_entity):
         vertices = self._modeler.GetVertexIDsFromObject(name_entity)
-        print("vertices", vertices)
         if isinstance(vertex_index, list):
             to_fillet = [int(vertices[v]) for v in vertex_index]
         elif isinstance(vertex_index, int):
@@ -1285,10 +1299,11 @@ class HfssModeler(COMWrapper):
                             "Vertices:=", to_fillet,
                             "Radius:=", radius,
                             "Setback:=", "0mm"]])
-     
+        return None
+    
     def _fillet_edges(self, radius, edge_index, obj):
         edges = self._modeler.GetEdgeIDsFromObject(obj)
-        print(edges)
+#        print(edges)
         if isinstance(edge_index, list):
             to_fillet = [int(edges[e]) for e in edge_index]
         else:
@@ -1312,17 +1327,17 @@ class HfssModeler(COMWrapper):
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
 
-    def _sweep_along_path(self, to_sweep, path_obj):
-        self.rename_obj(path_obj, str(path_obj)+'_path')
-        new_name = self.rename_obj(to_sweep, path_obj)
-        names = [path_obj, str(path_obj)+'_path']
+    def _sweep_along_path(self, to_sweep, path_entity):
+        name = self.rename_entity(path_entity, path_entity.name+'_path')
+        new_name= self.rename_entity(to_sweep, path_entity.name)
+        names = [path_entity.name, path_entity.name+'_path']
         self._modeler.SweepAlongPath(self._selections_array(*names),
                                      ["NAME:PathSweepParameters",
                                 		"DraftAngle:="		, "0deg",
                                 		"DraftType:="		, "Round",
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
-        return Polyline(new_name, self)
+        return new_name
     
     def sweep_along_vector(self, names, vector):
         self._modeler.SweepAlongVector(self._selections_array(*names), 
@@ -1405,10 +1420,10 @@ class HfssModeler(COMWrapper):
 
         self._boundaries.AssignLumpedPort(params)
         
-    def make_material(self, obj, material):
+    def make_material(self, entity, material):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                 		["NAME:Geometry3DAttributeTab",
-                                			["NAME:PropServers", obj],
+                                			["NAME:PropServers", entity.name],
                                 			["NAME:ChangedProps",
                                 				["NAME:Material","Value:=", material]
                                 			]
@@ -1455,6 +1470,7 @@ class HfssModeler(COMWrapper):
             "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
             "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
             "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]], 
+                  
             ["NAME:Attributes", "Name:=", name])
         else:
             
@@ -1465,7 +1481,13 @@ class HfssModeler(COMWrapper):
                                 ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
                                 ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
 				
-            
+    def get_coor_sys(self):
+        return self._modeler.GetActiveCoordinateSystem()
+
+    def set_coor_sys(self, coor_sys):
+        if coor_sys!= self.get_coor_sys():
+            self._modeler.SetWCS(["NAME:SetWCS Parameter","Working Coordinate System:=", coor_sys , "RegionDepCSOk:="	, False])
+        
     
     
 #class ModelEntity(str, HfssPropertyObject):
@@ -1490,6 +1512,8 @@ class HfssModeler(COMWrapper):
 
 class ModelEntity():
     instances = {}
+    instances_moved = OrderedDict()
+    instances_to_move = OrderedDict()
     def __init__(self, name, dimension, coor_sys, model = 'True', layer="layer0"):# model,
         self.name = name
         self.dimension = dimension
@@ -1498,6 +1522,8 @@ class ModelEntity():
         self.model = model
 #        self.boundaries = boundaries
         self.layer = layer #in the chip
+        self.__class__.instances_to_move[name] = self
+        
         try:
             self.__class__.instances[layer].append(self)
         except Exception:
@@ -1508,6 +1534,21 @@ class ModelEntity():
         for instance in cls.instances:
             print(instance)
             
+    @staticmethod
+    def merge(n):
+        key_list = []
+        for idx, key in enumerate(ModelEntity.instances_moved):
+            if idx>=n:
+                key_list.append(key)
+        for key in key_list:
+            entity = ModelEntity.instances_moved.pop[key]
+            ModelEntity.instances_to_move[key]=entity
+
+    @staticmethod
+    def reset():
+        ModelEntity.instances_moved = OrderedDict()
+        ModelEntity.instances_to_move = OrderedDict()
+                   
     def append_history(self, entity):
         self.history.append(entity)
         
@@ -1522,6 +1563,9 @@ class ModelEntity():
     
     def rename_entity(self, name):
         self.name = name
+        
+    def modify_dimension(self, dimension):
+        self.dimension = dimension
         
     def _sweep_along_path(self, path_obj):
         self.dimension = 2

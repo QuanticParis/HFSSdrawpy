@@ -97,7 +97,7 @@ connector.draw_capa('capacite', 'port1', 'port2', 10, 5, 1)
 
 #%% TEST BATCH 3
 from PythonModeler import PythonMdlr
-from PythonModeler import Port
+#from PythonModeler import Port
 from ConnectElement2 import ConnectElt2
 
 PM = PythonMdlr('hfss')
@@ -127,7 +127,7 @@ longueur1 = chip.connector.length(final_choice1, 0, 3, 0.05)
 #%% TEST BATCH 4
 from PythonModeler import PythonMdlr
 import traceback
-from ConnectElement2 import ConnectElt2
+#from ConnectElement2 import ConnectElt2
 from Vector import Vector
 
 PM = PythonMdlr('hfss')
@@ -200,16 +200,92 @@ chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','2
 
 #%%
 
-from PythonModeler import PythonMdlr
+import PythonModeler
 import traceback
-PM = PythonMdlr('gds')
+PM = PythonModeler.PythonMdlr('hfss')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 
 chip, network = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
+chip2, network2 = PM.body('coord_chip2', "chip_2", [['10mm','0mm','0mm'], [1,0,0], [0,1,0]])
 #right_quarter_up1 = chip.draw_quarter_circle('right_quarter_up1', [0.735, 0.21+0.25], [1,1], 'TRACK', 1)
-chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
-PM.interface.generate_gds("test_quarter_circle.gds")
+L1 = chip.draw_ZR_transmon(['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+print(PythonModeler.Port.instances)
+L2 = chip2.draw_ZR_transmon(['2.47mm', '1.75mm'],'0.15mm',['1mm', '1mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+print(PythonModeler.Port.instances)
+network.draw_cable("cable", "portOut1", "portOut1_1")
+#PM.interface.generate_gds("test_quarter_circle.gds")
+#print("breakpoint 2", chip.interface.cell.polygons)
+#print("breakpoint 2", chip.interface.gds_object_instances)
 
-print("breakpoint 2", chip.interface.cell.polygons)
-print("breakpoint 2", chip.interface.gds_object_instances)
+#%%
+
+
+from PythonModeler import PythonMdlr
+import traceback
+PM = PythonMdlr('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+
+chip = PM.body('coord_chip1', "chip_1", [['1mm','0mm','0mm'], [1,0,0], [0,1,0]])
+P1 = network.port('port1', Vector([0,0]), Vector([0,1,]), '30mm', '10mm')
+P2 = network.port('port2', Vector([1,1]), Vector([0,-1]), '30mm','10mm')    
+##cnctJJ = network._connect_JJ('jojo', 'port1', 'port2', "2mm")
+##capa = network.draw_capa('capa', 'port1', 'port2', 0.1, 0.2, 0.3)
+#SL_PTH = network.find_slanted_path("SL_PHT", "port1", "port2")
+#PTH = network.find_path('path', 'port1', 'port2', 0.05, True, [0,2,0,0,0,0,0], 0.4, 0.1)
+#longueur2 = network.length(PTH, 0, 3, 0.05)
+#CBL_STRTR = network.cable_starter('CBL_STARTER', 'port1')
+CBL = network.draw_cable("cable", "port1", "port2")
+
+
+#%%
+
+import PythonModeler
+import traceback
+import hfss
+# TODO refresh the dictionnaries each time we run the code
+# otherwise the number of variables doesnot change
+
+
+PM = PythonModeler.PythonMdlr('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+
+chip1, net1 = PM.body('chip1', "chip_1", [['0mm','0mm','0mm'], [0,-1,0], [0,0,-1]])
+chip1.set_current_coor(pos = ['0mm', '4mm','2mm'], ori=[0,1])
+L1 = chip1.draw_ZR_transmon('ZR_TRM', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+#chip2, net2 = PM.body('chip2', 'Global')
+#chip2, network2 = PM.body('coord_chip2', "chip_2", [['10mm','0mm','0mm'], [1,0,0], [0,1,0]])
+chip1.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
+#cavity = chip2.cavity_3D('cavity', '5mm', '6mm', '5mm', '0.5mm', '2.5mm')
+cavity = chip1.cavity_3D_simple('cavity', '3mm', '5mm', '0.5mm', '2.5mm')
+
+print(hfss.ModelEntity.instances_moved)
+print(hfss.ModelEntity.instances_to_move)
+PythonModeler.Port.reset()
+hfss.ModelEntity.reset()
+
+#%%
+
+import PythonModeler
+import traceback
+import hfss
+
+#1 Setup the Modeler
+PM = PythonModeler.PythonMdlr('hfss')
+PM.set_variable('track', '42um')
+PM.set_variable('bond', '100um')
+
+#2 draw a cylinder of vacuum with perfect_E boundaries in the center of the global coordinate system
+chip2, net2 = PM.body('chip2', 'Global')
+cavity = chip2.cavity_3D_simple('cavity', '3mm', '10mm', '0.5mm', '3mm')
+
+#3 Setup another body for the transmon and draw the transmon
+chip1, net1 = PM.body('chip1', "chip_1", [['0mm','3mm','2.5mm'], [0,0,-1], [0,-1,0]])
+chip1.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
+L1 = chip1.draw_ZR_transmon('ZR_TRM', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+
+#4 Reset the dictionnaries (at the end or at the begining ?)
+PythonModeler.Port.reset()
+hfss.ModelEntity.reset()

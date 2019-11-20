@@ -9,7 +9,6 @@ from functools import wraps
 def add_methods_from(*modules):
     def decorator(Class):
         for module in modules:
-            print(getattr(module, "__methods__"))
             for method in getattr(module, "__methods__"):
                 setattr(Class, method.__name__, method)
         return Class

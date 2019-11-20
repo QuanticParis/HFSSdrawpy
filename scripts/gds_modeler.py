@@ -84,7 +84,7 @@ class GdsModeler():
         if (closed==True):
             poly1 = gdspy.Polygon(points, layer)
         else:
-            poly1 = gdspy.FlexPath(points, size[0], layer=layer)
+            poly1 = gdspy.PolyPath(points, size[0], layer=layer)
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
         return name

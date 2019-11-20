@@ -52,16 +52,40 @@ register_method = Lib.register_method(__methods__)
 @register_method
 def move(func):
     @wraps(func)
+    # At the begining of the execution, we decide that all elements created go to instances_to_move
     def moved(*args, **kwargs):
         '''No movement along z axis'''
-        pos = args[2]
-        angle = args[3]
-        ports, entities = func(*(args[:2]+args[4:]), **kwargs)
-#        print("entities",entities)
-        args[0].rotate(entities, angle=angle)
-        args[0].translate(entities, vector=[pos[0], pos[1], 0])
-        return ports, entities
+        #1 We need to keep track of the entities created during the execution of a function
+        nb_ports = args[0].number_ports()
+        nb_modelentities = args[0].number_modelentities()
+        
+        #2 We store the current position on the chip where the piece is to be drawn. 
+        #2 It is modified during the execution of innner functions, which forces us to store them BEFORE the execution
+        pos = args[0].current_pos
+        angle = args[0].current_ori
+        
+        #3 We execute the actual function
+        result = func(*args, **kwargs)
+        
+        #4 To avoid moving two times the same object, we splitted ModelEntity.instances in 'to_move' and 'moved'
+        #4 But it does NOT mean that every 'to_move' object should be moved. We only move entities that were created during the execution
+        entities = args[0].modelentities_to_move(nb_modelentities)
+        list_entities = entities.values()
+        ports = args[0].ports_to_move(nb_ports)
+        list_ports = ports.values()
+        
+        #5 We move the entities_to_move with the right operation 
+        args[0].rotate(list_entities, angle=angle)
+        args[0].translate(list_entities, vector=[pos[0], pos[1], 0])
+        args[0].network.rotate(list_ports, angle)
+        args[0].network.translate(list_ports, vector=[pos[0], pos[1], 0])
+       
+        #3 We empty a part of the 'to_move' dictionnaries in 'moved' dictionnaries
+        args[0].ports_were_moved(nb_ports)
+        args[0].modelentities_were_moved(nb_modelentities)
+        return result
     return moved
+
 @register_method
 def create_port(self, name, iTrack=0, iGap=0):
     iTrack, iGap = parse_entry((iTrack, iGap))
@@ -174,21 +198,19 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=Non
 def draw_quarter_circle(self, name, layer, fillet):
     # Usual case which is then rotated with ori and translated with pos
     temp = self.rect_corner_2D([0,0], 2*fillet*Vector([1,1]), name=name ,layer=layer)
-    temp_fillet = self.rect_corner_2D([0,0], 2*(fillet-eps)*Vector([1,1]), name=name+'_fillet', layer=layer)
+    temp_fillet = self.rect_corner_2D([0,0], 2*(fillet)*Vector([1,1]), name=name+'_fillet', layer=layer)
     #Minus eps because hfss can't substract object of same size
     self._fillet(fillet-eps, [0], temp_fillet)
     self.subtract(temp, [temp_fillet])
-    return [],[None, None, temp]
+    return [[],[temp]]
 
-        
-def cutout(self, name, pos, angle, zone_size):
-    '''IN PLACE doesn't allow the use of @move'''
+@register_method
+@move        
+def cutout(self, name, zone_size):
     zone_size = parse_entry(zone_size)
     cutout_rect = self.rect_center_2D([0, 0], zone_size, name=name, layer='mask')
-    self.rotate([cutout_rect], angle=angle)
-    self.translate([cutout_rect], vector=[pos[0], pos[1], 0])
     #self.maskObjects.append(cutout_rect)
-    return [], [None,None,cutout_rect]
+    return [[], [cutout_rect]]
 
 @register_method
 @move
@@ -238,7 +260,7 @@ def draw_T(self, name, iTrack, iGap):
     portOut3 = self.port('portOut2', [0, -(iTrack/2+iGap)], [0,-1], iTrack+2*self.overdev, iGap-2*self.overdev)
     #ports[self.name+'_3'] = portOut3
     
-    return [portOut1,portOut2,portOut3], [track, cutout,]
+    return [[portOut1,portOut2,portOut3], [track, cutout]]
 
 @register_method
 @move
@@ -285,7 +307,8 @@ def draw_end_cable(self, name, iTrack, iGap, typeEnd = 'open', fillet=None):
     else:
         raise ValueError("typeEnd should be 'open' or 'short', given %s" % typeEnd)
         
-    return [portOut], [track, cutout, mask]
+    return [[portOut], [track, cutout, mask]]
+
 
 
 @register_method
@@ -301,3 +324,20 @@ def size_dc_gap(self, length, positions, widths, border):
   
     return pos_cutout, width_cutout, vec_cutout
 
+@register_method
+@move
+def cavity_3D(self, name, inner_radius, outer_radius, cylinder_height, antenna_radius, antenna_height):
+    inner_cylinder = self.cylinder([0,0,0], inner_radius , cylinder_height, "Z", name=name+"_inner_cylinder", layer="l1")
+    outer_cylinder = self.cylinder([0,0,0], outer_radius , cylinder_height, "Z", name=name+"_outer_cylinder", layer="l1")
+    tube = self.subtract(outer_cylinder, [inner_cylinder])
+    antenna = self.cylinder([0,0,0], antenna_radius ,antenna_height, "Z", name=self.name+"_antenna", layer="l1")
+    return [[],[tube, antenna]] 
+
+@register_method
+@move
+def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height):
+    cylinder = self.cylinder([0,0,0], radius , cylinder_height, "Z", name=name+"_inner_cylinder", layer="l1")
+    self.assign_perfect_E(cylinder)
+    antenna = self.cylinder([0,0,0], antenna_radius ,antenna_height, "Z", name=self.name+"_antenna", layer="l1")
+    self.make_material(antenna, "\"aluminum\"")
+    return [[],[cylinder, antenna]] 

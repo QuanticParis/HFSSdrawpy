@@ -6129,7 +6129,7 @@ class Cell(object):
         '''IN PLACE'''
 #        print("Cell's polygons", [self.polygons[0].polygons,self.polygons[1].polygons])
         ii=0
-        print("len", len(self.polygons))
+#        print("len", len(self.polygons))
         while ii<len(self.polygons):
 #            ii = 0
 #            while ii < len(element.polygons):
@@ -6140,7 +6140,7 @@ class Cell(object):
             if numpy.array_equal(self.polygons[ii].polygons[0], polygon):
                 self.polygons.pop(ii)
             else:
-                print(ii)
+#                print(ii)
                 ii += 1
 
     def remove_polygons(self, test):
