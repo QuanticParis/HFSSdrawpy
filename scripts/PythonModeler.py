@@ -12,7 +12,6 @@ from Vector import Vector
 import sys
 from functools import wraps
 eps = 1e-7
-from collections import OrderedDict
 
 
 #IMPORT GDS / HFSS Modelers
@@ -27,7 +26,6 @@ from hfss import extract_value_unit, \
 import Lib
 import KeyElement
 import CustomElement
-
 
 
 ureg = UnitRegistry()
@@ -284,6 +282,13 @@ class PythonMdlr():
 #        print("body-ZR")
 #        print(self, self.coor_sys)
         kwargs['coor_sys']=self.coor_sys
+        i = 0
+        while i < len(points2D[:-1]):
+            if np.array_equal(points2D[i], points2D[i+1]):
+                points2D.pop(i)
+            else:
+                i+=1
+            
         name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
         dim = closed + 1
         return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
@@ -326,21 +331,18 @@ class PythonMdlr():
         return ModelEntity(name, 3, entity1.coor_sys, entity1.model)
         
     def delete(self, entity):
-        if (entity.name in entity.__class__.instances_to_move):
-            entity.__class__.instances_to_move.pop(entity.name)
-        if (entity.name in entity.__class__.instances_moved):
-            entity.__class__.instances_moved.pop(entity.name)    
+        if (entity.name in entity.__class__.dict_instances):
+            entity.__class__.find_last_list(entity.__class__.instances_to_move).remove(entity)
+            a = entity.__class__.dict_instances.pop(entity.name, None)
+#            print("deleted", a)
         del entity
         
     def rename_entity(self, entity, name):
 
-        if entity.name in ModelEntity.instances_moved:
-            ModelEntity.instances_moved.pop(entity.name,None)
-            ModelEntity.instances_moved[name]=entity
-        elif entity.name in ModelEntity.instances_to_move:
-            ModelEntity.instances_to_move.pop(entity.name,None)
-            ModelEntity.instances_to_move[name]=entity
-        
+        if entity.name in ModelEntity.dict_instances:
+            ModelEntity.dict_instances.pop(entity.name,None)
+            ModelEntity.dict_instances[name]=entity
+
         self.interface.rename_entity(entity,name)
         entity.rename_entity(name)
 
@@ -391,18 +393,22 @@ class PythonMdlr():
             Intersection = ModelEntity(entities[0].name, 2, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
         elif dim_Intersection == 3:
             Intersection = ModelEntity(entities[0].name, 3, entities[0].coor_sys, entities[0].model, entities[0].boundaries)
-   
         #A factoriser
         if not(keep_originals):
             for entity in entities:
                 self.delete(entity)
-        
         return Intersection
     
     def subtract(self, blank_entity, tool_entities):
         self.interface.subtract(blank_entity, tool_entities)
         for i in tool_entities:
             self.delete(i)
+            
+    def xor_operation(self, blank_entity, tool_entities):
+        self.interface.xor_operation(blank_entity, tool_entities)
+        for i in tool_entities:
+            self.delete(i)
+
 
     def translate(self, entities, vector=[0,0,0]):
         self.interface.translate(entities, vector)
@@ -436,8 +442,8 @@ class PythonMdlr():
         vertices = self.inteface.get_vertex_ids(entity.name)
         self.interface._fillet(radius, vertices, entity.name)
         
-    def assign_perfect_E(self, entities):
-        self.interface.assign_perfect_E(entities)
+    def assign_perfect_E(self, entities, name='perfE'):
+        self.interface.assign_perfect_E(entities, name)
     
     def mirrorZ(self, obj):
         pass
@@ -456,9 +462,8 @@ class PythonMdlr():
         #Create clones
         pass
     
-    def assign_lumped_RLC(self, entity, ori, parameters):
-#        entity.boundaries.append('lumpedRLC')
-# TODO
+    def assign_lumped_RLC(self, entity, r,l,c,flowline):
+        self.interface._make_lumped_rlc(r, l, c, flowline, entity)
         pass
     
     def make_material(self, entity, material):
@@ -469,7 +474,7 @@ class PythonMdlr():
         for entity in entities:
             self.delete(entity)
     
-    def mesh_entity(self, entity, mesh_length):
+    def mesh_zone(self, entity, mesh_length):
         mesh_length = parse_entry(mesh_length)
 #        print("mesh_length",mesh_length)
         self.interface.assign_mesh_length(entity, mesh_length)
@@ -496,9 +501,9 @@ class PythonMdlr():
 #        plt.plot(pos,size)
 
 class Port():
-    instances_moved = OrderedDict()
-    instances_to_move = OrderedDict()
-    items_shall_be_moved = False
+    instances_to_move = []
+    dict_instances  = {}
+    
     def __init__(self, name, pos, ori, track, gap):
         new_name = self.check_name(name)
         self.name = new_name
@@ -506,29 +511,36 @@ class Port():
         self.ori = Vector(ori)
         self.track = parse_entry(track)
         self.gap = parse_entry(gap)
-        self.__class__.instances_to_move[new_name] = self
-#        print("ports = " ,self.instances_to_move)
+        Port.find_last_list(Port.instances_to_move).append(self)
+        self.dict_instances[name]=self
+#        print('ports_to_move', self.instances_to_move)
+        
 
+    @staticmethod
+    def find_last_list(list_entities=instances_to_move):
+#        print(list_entities)
+#        if isinstance(list_entities, Port) :
+#            return None
+        if isinstance(list_entities, list):
+            if len(list_entities)==0:
+                return list_entities
+            else:
+                if isinstance(list_entities[-1], list):
+                    return ModelEntity.find_last_list(list_entities[-1])
+                else:
+                    return list_entities
+        else:
+            return list_entities
         
     @staticmethod
-    def merge(n):
-        key_list = []
-        for idx, key in enumerate(Port.instances_moved):
-            if idx>=n:
-                key_list.append(key)
-        for key in key_list:
-            entity = Port.instances_moved.pop[key]
-            Port.instances_to_move[key]=entity
-
-    @staticmethod
     def reset():
-        Port.instances_moved = OrderedDict()
-        Port.instances_to_move = OrderedDict()
+        Port.instances_to_move = []
+        Port.dict_instances  = {}
         
     def check_name(self, name):
         i = 0
         new_name = name
-        while((new_name in self.instances_to_move.keys()) or (new_name in self.instances_moved.keys())):
+        while(new_name in self.dict_instances.keys()):
             i+=1
             new_name = name+'_'+str(i)
         return new_name
@@ -556,7 +568,7 @@ class Port():
 #        elif width=='dc_cutout':
 #            points = self.append_absolute_points([(0, -self.cutIn/2),(0, self.cutIn/2)])
             
-        return fig
+        return track
 
 class Network(PythonMdlr):
     variables= None
@@ -583,16 +595,14 @@ class Network(PythonMdlr):
 #            print('\n')
 #            print('Ports ', iOut in Port.instances_to_move)
 #            print('\n')
-            if iIn in Port.instances_to_move:
-                iInPort = Port.instances_to_move[iIn].__dict__
-            elif iIn in Port.instances_moved:
-                iInPort = Port.instances_moved[iIn].__dict__
+            if iIn in Port.dict_instances:
+                iInPort = Port.dict_instances[iIn].__dict__
+                #TODO delete the __dict__ and modify the calls of decorator
             else:
                 raise ValueError('inPort %s does not exist' % iIn)
-            if iOut in Port.instances_to_move:
-                iOutPort = Port.instances_to_move[iOut].__dict__
-            elif iOut in Port.instances_moved:
-                iOutPort = Port.instances_moved[iOut].__dict__
+                
+            if iOut in Port.dict_instances:
+                iOutPort = Port.dict_instances[iOut].__dict__
             else:
                 raise ValueError('outPort %s does not exist' % iOut)
             return func(*((self1, name, iInPort, iOutPort)+args[4:]))
@@ -608,8 +618,8 @@ class Network(PythonMdlr):
 #            print('\n')
 #            print('Ports ', Port.instances)
 #            print('\n')
-            if iIn in Port.instances:
-                iInPort = Port.instances[iIn].__dict__
+            if iIn in Port.dict_instances:
+                iInPort = Port.dict_instances[iIn].__dict__
             else:
                 raise ValueError('inPort %s does not exist' % iIn)
             return func(*((self1, name, iInPort)+args[3:]))
@@ -617,10 +627,11 @@ class Network(PythonMdlr):
     
     def translate(self, ports, vector):
         for port in ports:
+            print('pos', port.pos)
             port.pos = port.pos+Vector(vector)
-        
+            print('pos', port.pos)
+            
     def rotate(self, ports, angle):
-        
         if isinstance(angle, list):
             if len(angle)==2:
                 new_angle= np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
@@ -632,11 +643,14 @@ class Network(PythonMdlr):
         rad = new_angle/180*np.pi
         rotate_matrix = np.array([[np.cos(rad) ,np.sin(rad)],[np.sin(-rad) ,np.cos(rad)]])
         for port in ports:
+            print('ori',port.ori)
             port.ori = rotate_matrix.dot(port.ori)
-    
+            print('ori', port.ori)            
     def port(self, name, pos, ori, track, gap):
         return Port(name, pos, ori, track, gap)
+    
     @decorator
+    @KeyElement.move
     def _connect_JJ(self, name, iInPort, iOutPort, iTrackJ, iInduct='1nH', fillet=None):
         '''
         Draws a Joseph's Son Junction.
@@ -649,7 +663,7 @@ class Network(PythonMdlr):
         -------
         name:
         iIn: (tuple) input port
-        iOut: (tuple) output port - None, ignored and recalculated
+        iOut: (tuple) output port
         iSize: (float) length of junction
         iWidth: (float) width of junction
         iLength: (float) distance between iIn and iOut, including
@@ -679,6 +693,8 @@ class Network(PythonMdlr):
         iTrack = parse_entry(iInPort['track']) # assume both track are identical
         iTrackJ = parse_entry(iTrackJ)
         adaptDist = iTrack/2-iTrackJ/2
+        
+        print([iTrack, iTrackJ, adaptDist, iLength])
 
         if self.val(adaptDist)>self.val(iLength/2-iTrackJ/2):
             raise ValueError('Increase iTrackJ %s' % name)
@@ -691,16 +707,8 @@ class Network(PythonMdlr):
                       (-adaptDist, (iTrack-iTrackJ)/2),
                       (-(iLength/2-iTrackJ/2-adaptDist), 0)]
         points = self.append_points(raw_points)
-#        
-#        fig, ax = plt.subplots()
-#        patches = []
-#        patches.append(Polygon(points))
-#        p = PatchCollection(patches, alpha=0.4)
-#        ax.add_collection(p)
-#        print(raw_points)
-#        print(points)
+    
         right_pad = self.polyline_2D(points, name =name+"_pad1", layer="TRACK")
-
         points = self.append_points(self.refy_points(raw_points))
         left_pad = self.polyline_2D(points, name=name+"_pad2", layer="TRACK")
 
@@ -708,14 +716,14 @@ class Network(PythonMdlr):
         
         if not self.is_litho:
             mesh = self.rect_center_2D([0,0], [iLength, iTrack], name=name+'_mesh', layer='MESH')
-            self.mesh_entity(mesh, iTrackJ/2)
+            self.mesh_zone(mesh, iTrackJ/2)
     
             points = self.append_points([(iTrackJ/2,0),(-iTrackJ,0)])
-            self.polyline_2D(points, closed = False, name=name+'_line', layer="MESH")
+            flow_line = self.polyline_2D(points, closed = False, name=name+'_flowline', layer="MESH")
     
-            JJ = self.rect_center_2D([0,0], [iTrackJ, iTrackJ], name=name, layer="RLC")
+            JJ = self.rect_center_2D([0,0], [iTrackJ, iTrackJ], name=name+'lumped', layer="RLC")
             #TODO
-            #self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, capa_plasma))
+            #self.assign_lumped_RLC(JJ,0, iInduct, capa_plasma, flow_line)
 
         return pads
     
@@ -1445,7 +1453,7 @@ class Network(PythonMdlr):
                 self.draw_wirebond('wire', pos, ori, width)
     
     @decorator           
-    def draw_adaptor(self, name, iInPort, iOutPort, iSlope=0.33):
+    def draw_adaptor(self, name, iInPort, iOutPort):
         '''
         Draws an adaptor between two ports.
         Given input port iIn, and slope of line iSlope, calculates iOut, and draws adpator.
@@ -1471,6 +1479,7 @@ class Network(PythonMdlr):
 #        else:
 
         adaptDist = (iInPort['pos']-iOutPort['pos']).norm()
+        
         points = self.append_points([(0, iInPort['track']/2),
                                      (adaptDist, iOutPort['track']/2-iInPort['track']/2),
                                      (0, -iOutPort['track']),
@@ -1539,11 +1548,29 @@ class Body(PythonMdlr):
         self.network = network
 
     def set_current_coor(self, pos, ori):
-        self.current_pos = pos
-        self.current_ori = ori
+        self.current_pos = parse_entry(pos)
+        self.current_ori = parse_entry(ori)
         
     def port(self, name, pos, ori, track, gap):
+        pos, ori, track, gap = parse_entry((pos, ori, track, gap))
+        self.rect_center_2D(pos, [track, 2*track], name=name, layer='PORT')
         return self.network.port(name, pos, ori, track, gap)
+
+    @staticmethod
+    def find_last_list(list_entities):
+#        print(list_entities)
+#        if isinstance(list_entities, Port) :
+#            return None
+        if isinstance(list_entities, list):
+            if len(list_entities)==0:
+                return list_entities
+            else:
+                if isinstance(list_entities[-1], list):
+                    return Body.find_last_list(list_entities[-1])
+                else:
+                    return list_entities
+        else:
+            return list_entities
 
     @staticmethod    
     def number_ports():
@@ -1553,22 +1580,41 @@ class Body(PythonMdlr):
     def number_modelentities():
         return len(ModelEntity.instances_to_move)
 
-    @staticmethod    
-    def ports_to_move(n):
-        lastP = OrderedDict()
-        for idx, key in enumerate(Port.instances_to_move):
-            if n <= idx:
-                lastP[key] = Port.instances_to_move[key]
-        return lastP
+#    @staticmethod    
+#    def ports_to_move(n):
+#        lastP = OrderedDict()
+#        for idx, key in enumerate(Port.instances_to_move):
+#            if n <= idx:
+#                lastP[key] = Port.instances_to_move[key]
+#        return lastP
+#    
+#    @staticmethod    
+#    def modelentities_to_move(n):
+#        lastM = OrderedDict()
+#        for idx, key in enumerate(ModelEntity.instances_to_move):
+#            if n <= idx:
+#                lastM[key] = ModelEntity.instances_to_move[key]
+#        return lastM
+        
+    def modelentities_to_move(self):
+        inter1 = ModelEntity.instances_to_move
+        inter2= Body.find_last_list(inter1)
+
+        return inter2
     
-    @staticmethod    
-    def modelentities_to_move(n):
-        lastM = OrderedDict()
-        for idx, key in enumerate(ModelEntity.instances_to_move):
-            if n <= idx:
-                lastM[key] = ModelEntity.instances_to_move[key]
-        return lastM
+    def ports_to_move(self):
+        inter1 = Port.instances_to_move
+        inter2= Body.find_last_list(inter1)
+        return inter2
     
+    def append_lists(self):
+        self.modelentities_to_move().append([])
+        self.ports_to_move().append([])
+  
+    @staticmethod
+    def reset(self):
+        Port.instances_to_move = []
+        ModelEntity.instances_to_move = []
 #    @staticmethod
 #    def ports_to_move():
 #        return Port.instances_to_move

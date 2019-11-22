@@ -1157,10 +1157,10 @@ class HfssModeler(COMWrapper):
         for entity in entities:
             if entity!=None:
                 names.append(entity.name)
-        self._modeler.Unite(
+        a = self._modeler.Unite(
             self._selections_array(*names),
-            ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
-        )
+            ["NAME:UniteParameters", "KeepOriginals:=", keep_originals])
+#        print('name', a)
         new_name = names[0] if names!=None else None
         return new_name
 
@@ -1176,6 +1176,22 @@ class HfssModeler(COMWrapper):
         return names[0]
 
     def subtract(self, blank_entity, tool_entities, keep_originals=False):
+        tool_names = []
+        for entity in tool_entities:
+            if entity!=None:
+                tool_names.append(entity.name)
+                
+        selection_array= ["NAME:Selections",
+                          "Blank Parts:=", blank_entity.name,
+                          "Tool Parts:=", ",".join(tool_names)]
+        self._modeler.Subtract(
+            selection_array,
+            ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
+        )
+        return blank_entity.name
+    
+    def xor_operation(self, tool_entities, keep_originals=False):
+        #TODO Unite substract Intersect
         tool_names = []
         for entity in tool_entities:
             if entity!=None:
@@ -1214,7 +1230,7 @@ class HfssModeler(COMWrapper):
                 #TODO Deal with other cases
                 if entity!=None:
                     names.append(entity.name)
-        print("Object to rotate", names)
+#        print("Object to rotate", names)
 #        print("angle = " ,angle)
         if len(names)!=0:
 #            print(names)
@@ -1397,15 +1413,18 @@ class HfssModeler(COMWrapper):
                                         	"DuplicateAssignments:=", False], 
                                         	["CreateGroupsForNewObjects:=", False	])    
 
-    def _make_lumped_rlc(self, r, l, c, start, end, obj_arr, name="LumpLRC"):
+    def _make_lumped_rlc(self, r, l, c, flowline, entity, name="LumpLRC"):
+        coor = self._modeler.GetPropertyValue("Geometry3DCmdTab", "jojolumped:CreateRectangle:1", 'Position')
+        print(coor)
         name = increment_name(name, self._boundaries.GetBoundaries())
-        params = ["NAME:"+name]
-        params += obj_arr
-        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
-        params += ["UseResist:=", r != 0, "Resistance:=", r,
-                   "UseInduct:=", l != 0, "Inductance:=", l,
-                   "UseCap:=", c != 0, "Capacitance:=", c]
-        self._boundaries.AssignLumpedRLC(params)
+        
+#        params = ["NAME:"+name, "Objects:="]
+#        params.append([entity.name])
+#        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
+#        params += ["UseResist:=", r != 0, "Resistance:=", r,
+#                   "UseInduct:=", l != 0, "Inductance:=", l,
+#                   "UseCap:=", c != 0, "Capacitance:=", c]
+#        self._boundaries.AssignLumpedRLC(params)
 
     def _make_lumped_port(self, start, end, obj_arr, z0="50ohm", name="LumpPort"):
         name = increment_name(name, self._boundaries.GetBoundaries())
@@ -1511,10 +1530,11 @@ class HfssModeler(COMWrapper):
 
 
 class ModelEntity():
-    instances = {}
-    instances_moved = OrderedDict()
-    instances_to_move = OrderedDict()
+    instances_layered = {}
+    dict_instances = {}
+    instances_to_move = []
     def __init__(self, name, dimension, coor_sys, model = 'True', layer="layer0"):# model,
+#        new_name = self.check_name(name)
         self.name = name
         self.dimension = dimension
         self.coor_sys = coor_sys
@@ -1522,33 +1542,60 @@ class ModelEntity():
         self.model = model
 #        self.boundaries = boundaries
         self.layer = layer #in the chip
-        self.__class__.instances_to_move[name] = self
-        
+        ModelEntity.dict_instances[name] = self
+        ModelEntity.find_last_list(ModelEntity.instances_to_move).append(self)
         try:
-            self.__class__.instances[layer].append(self)
+            ModelEntity.instances_layered[layer].append(self)
         except Exception:
-            self.__class__.instances[layer]=self
+            ModelEntity.instances_layered[layer]=self
 
+
+    def check_name(self, name):
+        i = 0
+        new_name = name
+        while(new_name in self.dict_instances.keys()):
+            i+=1
+            new_name = name+'_'+str(i)
+        return new_name
+    
     @classmethod
     def printInstances(cls):
         for instance in cls.instances:
             print(instance)
             
     @staticmethod
-    def merge(n):
-        key_list = []
-        for idx, key in enumerate(ModelEntity.instances_moved):
-            if idx>=n:
-                key_list.append(key)
-        for key in key_list:
-            entity = ModelEntity.instances_moved.pop[key]
-            ModelEntity.instances_to_move[key]=entity
+    def find_last_list(list_entities=instances_to_move):
+#        print(list_entities)
+#        if isinstance(list_entities, Port) :
+#            return None
+        if isinstance(list_entities, list):
+            if len(list_entities)==0:
+                return list_entities
+            else:
+                if isinstance(list_entities[-1], list):
+                    return ModelEntity.find_last_list(list_entities[-1])
+                else:
+                    return list_entities
+        else:
+            return list_entities
+        
+                    
+#    @staticmethod
+#    def merge(n):
+#        key_list = []
+#        for idx, key in enumerate(ModelEntity.instances_to_move):
+#            if idx>=n:
+#                key_list.append(key)
+#        for key in key_list:
+#            entity = ModelEntity.instances_to_move.pop(key, None)
+#            ModelEntity.instances_moved[key]=entity
 
     @staticmethod
     def reset():
-        ModelEntity.instances_moved = OrderedDict()
-        ModelEntity.instances_to_move = OrderedDict()
-                   
+        ModelEntity.instances_layered = {}
+        ModelEntity.dict_instances = {}
+        ModelEntity.instances_to_move = []
+        
     def append_history(self, entity):
         self.history.append(entity)
         

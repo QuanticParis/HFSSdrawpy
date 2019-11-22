@@ -14,6 +14,7 @@ import Lib
 from functools import wraps
 from hfss import parse_entry
 from Vector import Vector
+import numpy as np
 eps = 1e-7
 
 # _DataStore
@@ -49,6 +50,8 @@ register_method = Lib.register_method(__methods__)
 #    @pcb_gap.setter
 #    def pcb_gap(self, new_pcb_gap):
 #        self._pcb_gap = parse_entry(new_pcb_gap)
+
+
 @register_method
 def move(func):
     @wraps(func)
@@ -56,9 +59,11 @@ def move(func):
     def moved(*args, **kwargs):
         '''No movement along z axis'''
         #1 We need to keep track of the entities created during the execution of a function
-        nb_ports = args[0].number_ports()
-        nb_modelentities = args[0].number_modelentities()
-        
+#        nb_ports = args[0].number_ports()
+#        nb_modelentities = args[0].number_modelentities()
+        list_entities_old =args[0].modelentities_to_move()
+        list_ports_old = args[0].ports_to_move()
+        args[0].append_lists()      
         #2 We store the current position on the chip where the piece is to be drawn. 
         #2 It is modified during the execution of innner functions, which forces us to store them BEFORE the execution
         pos = args[0].current_pos
@@ -66,23 +71,38 @@ def move(func):
         
         #3 We execute the actual function
         result = func(*args, **kwargs)
-        
+
         #4 To avoid moving two times the same object, we splitted ModelEntity.instances in 'to_move' and 'moved'
         #4 But it does NOT mean that every 'to_move' object should be moved. We only move entities that were created during the execution
-        entities = args[0].modelentities_to_move(nb_modelentities)
-        list_entities = entities.values()
-        ports = args[0].ports_to_move(nb_ports)
-        list_ports = ports.values()
-        
-        #5 We move the entities_to_move with the right operation 
-        args[0].rotate(list_entities, angle=angle)
-        args[0].translate(list_entities, vector=[pos[0], pos[1], 0])
-        args[0].network.rotate(list_ports, angle)
-        args[0].network.translate(list_ports, vector=[pos[0], pos[1], 0])
-       
+        list_entities_new = args[0].modelentities_to_move()
+        list_ports_new = args[0].ports_to_move()
+        print([i.name for i in list_entities_new])
+
+        #5 We move the entities_to_move with the right operation
+        if len(list_entities_new)>0:
+            #TODO Move this in rotate and translate
+            args[0].rotate(list_entities_new, angle=angle)
+            args[0].translate(list_entities_new, vector=[pos[0], pos[1], 0])
+            
+        if len(list_ports_new)>0:            
+            args[0].network.rotate(list_ports_new, angle)
+            args[0].network.translate(list_ports_new, vector=[pos[0], pos[1], 0])
+           
         #3 We empty a part of the 'to_move' dictionnaries in 'moved' dictionnaries
-        args[0].ports_were_moved(nb_ports)
-        args[0].modelentities_were_moved(nb_modelentities)
+        if isinstance(list_entities_old[-1], list):
+            a = list_entities_old.pop(-1)
+            for entity in a:
+                list_entities_old.append(entity)
+        else:
+            args[0].reset()
+            
+        if isinstance(list_ports_old[-1], list):
+            a = list_ports_old.pop(-1)
+            for entity in a:
+                list_ports_old.append(entity)
+        else:
+            args[0].reset()
+        
         return result
     return moved
 
@@ -212,6 +232,7 @@ def cutout(self, name, zone_size):
     #self.maskObjects.append(cutout_rect)
     return [[], [cutout_rect]]
 
+
 @register_method
 @move
 def draw_T(self, name, iTrack, iGap):
@@ -335,9 +356,13 @@ def cavity_3D(self, name, inner_radius, outer_radius, cylinder_height, antenna_r
 
 @register_method
 @move
-def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height):
+def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth):
+    radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth = parse_entry((radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth))
     cylinder = self.cylinder([0,0,0], radius , cylinder_height, "Z", name=name+"_inner_cylinder", layer="l1")
-    self.assign_perfect_E(cylinder)
-    antenna = self.cylinder([0,0,0], antenna_radius ,antenna_height, "Z", name=self.name+"_antenna", layer="l1")
+    self.assign_perfect_E(cylinder, name+'_PerfE')
+    antenna = self.cylinder([0,0,0], antenna_radius ,antenna_height, "Z", name=name+"_antenna", layer="l1")
     self.make_material(antenna, "\"aluminum\"")
+    cylinder_side = self.cylinder([0,radius-depth,antenna_height], insert_radius, radius/2, "Y", name=name+"_insert", layer="l1")
+    self.unite([cylinder, cylinder_side], name="union_cylinder")
+
     return [[],[cylinder, antenna]] 
