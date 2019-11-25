@@ -252,14 +252,13 @@ PM = PythonModeler.PythonMdlr('hfss')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 
-chip1, net1 = PM.body('chip1', "chip_1", [['0mm','0mm','0mm'], [0,-1,0], [0,0,-1]])
-chip1.set_current_coor(pos = ['0mm', '4mm','2mm'], ori=[0,1])
-L1 = chip1.draw_ZR_transmon('ZR_TRM', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
-#chip2, net2 = PM.body('chip2', 'Global')
-#chip2, network2 = PM.body('coord_chip2', "chip_2", [['10mm','0mm','0mm'], [1,0,0], [0,1,0]])
+chip1 = PM.body('chip1', "chip_1", [['0mm','4mm','2mm'], [0,0,-1], [0,1,0]])
 chip1.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
-#cavity = chip2.cavity_3D('cavity', '5mm', '6mm', '5mm', '0.5mm', '2.5mm')
-cavity = chip1.cavity_3D_simple('cavity', '3mm', '5mm', '0.5mm', '2.5mm')
+L1 = chip1.draw_ZR_transmon('ZR_TRM', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+chip2 = PM.body('chip2', 'Global')
+chip1.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
+cavity = chip2.cavity_3D_simple('cavity', '5mm', '6mm', '5mm', '0.5mm', '2.5mm')
+#cavity = chip1.cavity_3D_simple('cavity', '3mm', '5mm', '0.5mm', '2.5mm', '2mm', '1mm')
 
 PythonModeler.Port.reset()
 hfss.ModelEntity.reset()
@@ -280,64 +279,15 @@ PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 PM.set_variable('pad_spacing', '0.12mm')
 
-#2 draw a cylinder of vacuum with perfect_E boundaries in the center of the global coordinate system
-chip2, net2 = PM.body('chip2', 'Global')
+chip2 = PM.body('chip2', 'Global')
+
 chip2.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
-#cavity1 = chip2.cavity_3D_simple('cavity1', '3mm', '10mm', '0.5mm', '3mm')
-#chip2.set_current_coor(pos = ['1mm', '0mm','0mm'], ori=[0,1])
-#cavity2 = chip2.cavity_3D_simple('cavity2', '3mm', '10mm', '0.5mm', '3mm')
-#
-#a = chip2.rect_corner_2D([0,0],[0.5,0.5], name='rectangle1', layer ='layer1')
-#b = chip2.rect_corner_2D([0,0.25],[0.7,0.7], name='rectangle2', layer ='layer1')
-#chip2.unite([a,b])
-#print("objets finaux", hfss.ModelEntity.dict_instances)
-###
-###3 Setup another body for the transmon and draw the transmon
-#chip1, net1 = PM.body('chip1', "chip_1", [['0mm','3mm','2.5mm'], [0,0,-1], [0,-1,0]])
-chip2.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
-#right_quarter_up1 = chip1.draw_quarter_circle('right_quarter_up1', 'TRACK', 1)
-#print("objets finaux", hfss.ModelEntity.instances_to_move)
+
 L1 = chip2.draw_ZR_transmon('ZR_TRM', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
+
 chip2.set_current_coor(pos = ['0mm', '10mm','0mm'], ori=[0,1])
+
 L2 = chip2.draw_ZR_transmon('ZR_TRM2', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
-#SL_PTH = chip2.network._connect_JJ('jojo', 'ZR_TRMportOut1', 'ZR_TRM2portOut2', "2mm")
 print("objets finaux", [i.ori for i in PythonModeler.Port.dict_instances.values()])
-###chip1.set_current_coor(pos = ['0mm', '10mm','0mm'], ori=[0,1])
-###L2 = chip1.draw_ZR_transmon('ZR_TRM_2', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'42um','25um', '0.30mm', '30um', '0mm', '0.01mm' ,'25nH', pad_size_left=['0.5mm','0.5mm'], track_left = '10um', gap_left='50um', length_left='0.2mm', spacing_left='50um', short_left='0um' ,fillet=True)
-##
-##
+
 #%%
-
-import PythonModeler
-import traceback
-import hfss
-from Vector import Vector
-
-#4 Reset the dictionnaries (at the end or at the begining ?)
-PythonModeler.Port.reset()
-hfss.ModelEntity.reset()
-
-#1 Setup the Modeler
-PM = PythonModeler.PythonMdlr('hfss')
-PM.set_variable('track', '42um')
-PM.set_variable('bond', '100um')
-PM.set_variable('pad_spacing', '0.12mm')
-#
-#cylinder_height = '10mm'
-#cylinder_radius = '4mm'
-##2 draw a cylinder of vacuum with perfect_E boundaries in the center of the global coordinate system
-chip1, network = PM.body('chip2', 'Global')
-##chip2.cavity_3D_simple('cavity_3D', cylinder_radius, cylinder_height, '1mm', '3mm', '1mm', '0.2mm')
-##chip1, net1 = PM.body('chip1', 'chip_1', [['0mm',cylinder_radius,'3mm'], [0,1,0], [1,0,0]])
-#chip1.draw_IBM_transmon('ZR_TRM1', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'0.03mm', '42um','25um','25nH', fillet = '0.1mm')
-chip1.set_current_coor(pos = ['0mm', '10mm','0mm'], ori=[0,1])
-#chip1.draw_IBM_transmon('ZR_TRM2', ['1.47mm', '0.75mm'],'0.12mm',['0.5mm', '0.5mm'],'0.03mm', '42um','25um','25nH', fillet = '0.1mm')
-
-##a = chip.rect_center_2D([10,10], ['10mm' ,'5mm'], name='rect1' ,layer='l1')
-P1 = chip1.port('port1', Vector([0,0]), Vector([0,1]), '0.2mm', '0.1mm')
-P2 = chip1.port('port2', Vector(['10mm','10mm']), Vector([0,1]), '0.1mm','0.05mm')
-chip1.network.draw_adaptor('adapt', 'port1', 'port2')
-
-#SL_PTH = net._connect_JJ('jojo', 'port1', 'port2', "2mm")
-#chip.assign_lumped_RLC(a, 10, 10, 10, P1.pos, P2.pos)
-

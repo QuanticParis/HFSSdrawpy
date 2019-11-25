@@ -908,27 +908,6 @@ class HfssModeler(COMWrapper):
         self._boundaries = boundaries
         self._mesh = mesh
     
-    def resize(func):
-        @wraps(func)
-        def resized(*args, **kwargs):
-            '''3D or 2D points to 3D points'''
-#            print(args[1])
-            args[2].append(0)
-            if isinstance(args[1][0], tuple):
-                # Case of a polyline
-                for p in range(len(args[1])):
-                    args[1][p]=args[1][p]+(0,)
-            elif isinstance(args[1][0], list):
-                # Case of a polyline
-                for p in range(len(args[1])):
-                    args[1][p].append(0)
-            else:
-                # Case of a rectangle
-                args[1].append(0)
-
-
-            return func(*args, **kwargs)
-        return resized
     
 
     def set_units(self, units='m'):
@@ -971,6 +950,11 @@ class HfssModeler(COMWrapper):
     
     @assert_name
     def draw_box_corner(self, pos, size, **kwargs):
+        if len(pos)==2:
+            pos.append(0)
+        if len(size)==2:
+            size.append(0)
+            
         pos = parse_entry(pos)
         size = parse_entry(size)
         name = self._modeler.CreateBox(
@@ -1010,9 +994,18 @@ class HfssModeler(COMWrapper):
 #            print(msg)
 #        return Box(name, self, pos, size)
         
-    @resize
     @assert_name
-    def draw_polyline(self, points, size, closed=True, **kwargs):
+    def draw_polyline(self, points, closed=True, **kwargs):
+        print(points)
+        if len(points[0])==2:
+            for i in range(len(points)):
+                if isinstance(points[i], tuple):
+                    points[i]+=(0,)
+                elif isinstance(points[i], list):
+                    points[i].append(0)
+        print(points)
+
+        
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         points = parse_entry(points)
@@ -1040,15 +1033,18 @@ class HfssModeler(COMWrapper):
 
         return name
     
-    @resize
     @assert_name
     def draw_rect_corner(self, pos, size, **kwargs):
+        if len(pos)==2:
+            pos.append(0)
+        if len(size)==2:
+            size.append(0)
+            
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
-#        print(size)
         axis = "XYZ"[size.index(0)]
         w_idx, h_idx = {'X': (1, 2),
                         'Y': (2, 0),
@@ -1413,18 +1409,17 @@ class HfssModeler(COMWrapper):
                                         	"DuplicateAssignments:=", False], 
                                         	["CreateGroupsForNewObjects:=", False	])    
 
-    def _make_lumped_rlc(self, r, l, c, flowline, entity, name="LumpLRC"):
-        coor = self._modeler.GetPropertyValue("Geometry3DCmdTab", "jojolumped:CreateRectangle:1", 'Position')
-        print(coor)
+    def _make_lumped_rlc(self, entity, r, l, c, start, end, name="LumpLRC"):
+        coor = self._modeler.GetPropertyValue("Geometry3DCmdTab", "cavity_TRM_lumped:CreateRectangle:1", 'Position')
         name = increment_name(name, self._boundaries.GetBoundaries())
         
-#        params = ["NAME:"+name, "Objects:="]
-#        params.append([entity.name])
-#        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
-#        params += ["UseResist:=", r != 0, "Resistance:=", r,
-#                   "UseInduct:=", l != 0, "Inductance:=", l,
-#                   "UseCap:=", c != 0, "Capacitance:=", c]
-#        self._boundaries.AssignLumpedRLC(params)
+        params = ["NAME:"+name, "Objects:="]
+        params.append([entity.name])
+        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
+        params += ["UseResist:=", r != 0, "Resistance:=", r,
+                   "UseInduct:=", l != 0, "Inductance:=", l,
+                   "UseCap:=", c != 0, "Capacitance:=", c]
+        self._boundaries.AssignLumpedRLC(params)
 
     def _make_lumped_port(self, start, end, obj_arr, z0="50ohm", name="LumpPort"):
         name = increment_name(name, self._boundaries.GetBoundaries())

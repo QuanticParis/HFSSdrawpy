@@ -7,6 +7,7 @@ Created on Fri Nov 15 11:51:09 2019
 from functools import wraps
 
 def add_methods_from(*modules):
+    print("hihi")
     def decorator(Class):
         for module in modules:
             for method in getattr(module, "__methods__"):
