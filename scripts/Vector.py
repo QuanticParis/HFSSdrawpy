@@ -43,7 +43,7 @@ class Vector(list):
         if self.check(other):
             return Vector([self[0]*other[0], self[1]*other[1]])
         elif self.check_nb(other):
-            return Vector([self[0]*other, self[1]*other])
+            return Vector([other*self[0], other*self[1]])
         else:
             raise TypeError('Could not perform mul operation')
 

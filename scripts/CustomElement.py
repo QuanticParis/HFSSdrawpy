@@ -136,10 +136,13 @@ def draw_cavity_transmon(self,
 #        self.ports[name+'_in_jct'] = in_junction
 #        self.ports[name+'_out_jct'] = out_junction
 #        junction = self.connect_elt(name+'_junction', name+'_in_jct', name+'_out_jct')
-    flow_line = self.polyline_2D([[-pad_spacing/2+self.overdev, 0],[pad_spacing/2-self.overdev, 0]], closed = False, name=name+'_flowline', layer="MESH")
-    JJ = self.rect_center_2D([0,0], [pad_spacing, iTrackJ], name=name+'_lumped', layer="RLC")
+#    flow_line = self.polyline_2D([[-pad_spacing/2+self.overdev, 0],[pad_spacing/2-self.overdev, 0]], closed = False, name=name+'_flowline', layer="MESH")
+    JJ = self.rect_center_2D([0,0], [pad_spacing, '5um'], name=name+'_lumped', layer="RLC")
+    self.mesh_zone(JJ ,'0.01mm')
 #    self.assign_lumped_RLC(JJ,0, Jinduc, capa_plasma, flow_line)
     pads = self.unite([right_pad, left_pad], name=name+'_pads')
+#    self.make_material(pads, "\"aluminum\"")
+    self.assign_perfect_E(pads)
     
     if fillet is not None:
         self._fillet(fillet+self.overdev,[19], pads)
@@ -148,7 +151,7 @@ def draw_cavity_transmon(self,
         self._fillet(0.75*fillet-self.overdev,[6,5,2,1], pads)
         self._fillet(fillet+self.overdev,0, pads)
 
-    return JJ,0, Jinduc, capa_plasma, [-pad_spacing/2,0], [pad_spacing/2,0]
+    return [0,0], [pad_spacing, 10*iTrackJ], "x", 0, Jinduc, capa_plasma,
 
     
 
@@ -166,6 +169,7 @@ def draw_ZR_transmon(self,
                     spacing_right,
                     short_right,
                     Jwidth,
+                    Jlength,
                     Jinduc,
                     pad_size_left=None,
                     track_left=None,
@@ -186,6 +190,7 @@ def draw_ZR_transmon(self,
                           spacing_right,
                           short_right,
                           Jwidth,
+                          Jlength,
                           Jinduc,
                           pad_size_left,
                           track_left,
@@ -202,7 +207,8 @@ def draw_ZR_transmon(self,
      length_right,
      spacing_right,
      short_right,
-     Jwidth,
+     Jwidth, 
+     Jlength,
      Jinduc,
      pad_size_left,
      track_left,
@@ -241,7 +247,7 @@ def draw_ZR_transmon(self,
 #        self.ports[name+'_in_jct'] = in_junction
 #        self.ports[name+'_out_jct'] = out_junction
 #        junction = self.connect_elt(name+'_junction', name+'_in_jct', name+'_out_jct')
-    junction_pads = self._connect_JJ(name+'JJ', name+'_in_jct', name+'_out_jct', Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
+    junction_pads = self._connect_JJ(name+'JJ', name+'_in_jct', name+'_out_jct', Jwidth+2*self.overdev, iLengthJ=Jlength, iInduct=Jinduc, fillet=None)
     
     raw_points = [(pad_spacing/2-self.overdev, -pad_size_right[1]/2-self.overdev),
                   (pad_size_right[0]+2*self.overdev, 0),
@@ -384,8 +390,8 @@ def draw_ZR_transmon(self,
     if self.is_mask:
         self.maskObjects.append(mask)
     
-    portOut1 = self.port(name+'portOut1', [cutout_size[0]/2,0], [1,0], track_right+2*self.overdev, gap_right-2*self.overdev)
-    portOut2 = self.port(name+'portOut2', [-cutout_size[0]/2,0], [-1,0], track_left+2*self.overdev, gap_left-2*self.overdev)
+    portOut2 = self.port(name+'_portOut2', [cutout_size[0]/2,0], [1,0], track_right+2*self.overdev, gap_right-2*self.overdev)
+    portOut1 = self.port(name+'_portOut1', [-cutout_size[0]/2,0], [-1,0], track_left+2*self.overdev, gap_left-2*self.overdev)
     
     return [portOut1, portOut2, in_junction, out_junction]
     
@@ -422,6 +428,7 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
             offset = 0
         curr_height = -iTrack_capa/2
         pad_size = Vector([pad_length, pad_width])
+        
         for ii in range(int(n_pad/2)):
             drawn_pads.append(self.rect_corner_2D([-capa_length/2+offset, curr_height-self.overdev], pad_size+Vector([self.overdev, 2*self.overdev]), name=name+"_pad"+str(ii), layer = 'TRACK'))
             drawn_pads.append(self.rect_corner_2D([-capa_length/2+offset+pad_spacing-self.overdev, curr_height+pad_width+pad_spacing-self.overdev], pad_size+Vector([self.overdev, 2*self.overdev]), name = name+"_pad"+str(ii)+'b', layer = 'TRACK'))
@@ -436,30 +443,32 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
 #                    drawn_pads.append(self.draw_rect(name+'_connect_right', self.coor([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev]), self.coor_vec([-iTrack-2*self.overdev, curr_height+(iTrack_capa/2-2*pad_width-2*pad_spacing)+pad_width+2*self.overdev])))
             drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev], [-offset-2*self.overdev, curr_height+(iTrack_capa/2-2*pad_width-2*pad_spacing)+pad_width+2*self.overdev], name=name+'_connect_right', layer='TRACK'))
         else:
+            pass
 #                    drawn_pads.append(self.draw_rect(name+'_connect_right', self.coor([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev]), self.coor_vec([-iTrack-2*self.overdev, curr_height+iTrack_capa/2+pad_width+2*self.overdev])))
-            drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev], [-offset-2*self.overdev, curr_height+iTrack_capa/2+pad_width+2*self.overdev], name=name+'_connect_right', layer='TRACK' ))
+            #TODO
+            #drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev], [-iTrack-2*self.overdev, curr_height+iTrack_capa/2+pad_width+2*self.overdev], name=name+'_connect_right', layer='TRACK' ))
 #                    
 #                    drawn_pads.append(self.draw_rect(name+'_connect_right_b', self.coor([capa_length/2+self.overdev, -iTrack/2-self.overdev]), self.coor_vec([-iTrack-2*self.overdev, (iTrack/2+iTrack_capa/2)+2*self.overdev])))
 #                    drawn_pads.append(self.draw_rect(name+'_connect_left_b', self.coor([-capa_length/2-self.overdev, iTrack/2+self.overdev]), self.coor_vec([iTrack+2*self.overdev, -(iTrack/2+iTrack_capa/2)-2*self.overdev])))
-            drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack/2-self.overdev], [-offset-2*self.overdev, (iTrack/2+iTrack_capa/2)+2*self.overdev], name=name+'_connect_right_b', layer='TRACK'))
-            drawn_pads.append(self.rect_corner_2D([-capa_length/2-self.overdev, iTrack/2+self.overdev],[offset+2*self.overdev, -(iTrack/2+iTrack_capa/2)-2*self.overdev], name=name+'_connect_left_b', layer='TRACK'))
+            #drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack/2-self.overdev], [-iTrack-2*self.overdev, (iTrack/2+iTrack_capa/2)+2*self.overdev], name=name+'_connect_right_b', layer='TRACK'))
+            #drawn_pads.append(self.rect_corner_2D([-capa_length/2-self.overdev, iTrack/2+self.overdev],[iTrack+2*self.overdev, -(iTrack/2+iTrack_capa/2)-2*self.overdev], name=name+'_connect_left_b', layer='TRACK'))
 
     if tight:
-        portOut1 = self.port(name+'outport1',[0,capa_length/2], [1,0], iTrack_capa-2*pad_width-2*pad_spacing+2*self.overdev, iGap-(iTrack_capa-2*pad_width-2*pad_spacing-iTrack)/2-2*self.overdev)
+        portOut1 = self.port(name+'_outPort1',[capa_length/2,0], [1,0], iTrack_capa-2*pad_width-2*pad_spacing+2*self.overdev, iGap-(iTrack_capa-2*pad_width-2*pad_spacing-iTrack)/2-2*self.overdev)
     else:
-        portOut1 = self.port(name+'outport1',[0,capa_length/2], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
+        portOut1 = self.port(name+'_outPort1',[capa_length/2,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
 
 #            portOut2 = [self.pos-self.ori*capa_length/2, -self.ori, iTrack_capa+2*self.overdev, iGap-(iTrack_capa-iTrack)/2-2*self.overdev]
 #        else:
-    portOut2 = self.port(name+'outport2',[0,-capa_length/2], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
+    portOut2 = self.port(name+'_outPort2',[-capa_length/2, 0], [-1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
 
     if self.is_overdev:
         drawn_pads.append(self.rect_corner_2D([capa_length/2, -iTrack/2], [-self.overdev, iTrack], name=name+'_added_right', layer='TRACK'))
         drawn_pads.append(self.rect_corner_2D([-capa_length/2, -iTrack/2], [self.overdev, iTrack], name=name+'_added_left', layer='TRACK'))
 
-    pads = self.unite(drawn_pads, name=name+'_pads')
+#    pads = self.unite(drawn_pads, name=name+'_pads')
     
-    self.trackObjects.append(pads)
+#    self.trackObjects.append(pads)
     
     self.gapObjects.append(self.rect_center_2D([0,0], [capa_length, iTrack + 2*iGap+2*iGap_capa-2*self.overdev], name=name+"_gap", layer='GAP'))
     if self.is_mask:
@@ -485,8 +494,8 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
     teeth_size=parse_entry(teeth_size)
     gap_size=parse_entry(gap_size)
     teeth_size = Vector(teeth_size)
-    portOut1 = self.port(name+'outport1',[0,teeth_size[0]+iTrack+iGap], [0,1], iTrack+2*self.overdev, iGap-2*self.overdev)
-    portOut2 = self.port(name+'outport2',[0,-teeth_size[0]+iTrack+iGap], [0,-1], iTrack+2*self.overdev, iGap-2*self.overdev)
+    portOut1 = self.port(name+'_outPort1',[0,teeth_size[0]+iTrack+iGap], [0,1], iTrack+2*self.overdev, iGap-2*self.overdev)
+    portOut2 = self.port(name+'_outPort1',[0,-teeth_size[0]+iTrack+iGap], [0,-1], iTrack+2*self.overdev, iGap-2*self.overdev)
 
 
     N_teeth=2*N_period+1    
