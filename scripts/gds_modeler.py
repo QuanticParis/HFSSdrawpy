@@ -21,6 +21,7 @@ eps = 1e-7
 
 class GdsModeler():
     gds_object_instances = {}
+    gds_cells  = {'Global':[[0,0,0],[1,0,0],[0,1,0]]}
     dict_units = {'km':1.0e3,'m':1.0,'cm':1.0e-2,'mm':1.0e-3}
     coor_systems = {'Global':[[0,0,0],[1,0]]}
     coor_system = coor_systems['Global']
@@ -30,12 +31,16 @@ class GdsModeler():
         self.precision = precision
         self.create_coor_sys()
 
+
     def reset_cell(self):
         del self.cell
         
     def create_coor_sys(self, coor_name='Global', coor_sys=[[0,0,0], [1,0]]):
         print('initialisation cell')
         try:
+            self.cell = gdspy.current_library.cell_dict[coor_name]
+            self.coor = GdsModeler.gds_cells[coor_name]
+        except Exception:
             self.cell = gdspy.Cell(coor_name)
             self.coor_system = self.coor_systems[coor_name]
         except Exception:
