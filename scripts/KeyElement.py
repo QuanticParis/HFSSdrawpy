@@ -77,6 +77,7 @@ def move(func):
         previous_pos = args[0].current_pos
         previous_ori = args[0].current_ori
 #        print(previous_pos, previous_ori)
+        print(func.__name__)
         return _moved(func, previous_pos, previous_ori, *args, **kwargs)
     return moved
 

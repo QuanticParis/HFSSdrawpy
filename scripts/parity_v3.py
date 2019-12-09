@@ -24,7 +24,7 @@ reload(PythonModeler)
 
 PythonModeler.Port.reset()
 hfss.ModelEntity.reset()
-PM = PythonModeler.PythonMdlr('hfss')
+PM = PythonModeler.PythonMdlr('gds')
 
 chip1 = PM.body('chip1', 'Global')
 
@@ -213,6 +213,9 @@ if readout:
     chip1.draw_cable('readout', 'trm_portOut2','constrain_readout1_front', 'constrain_readout1_back','constrain_readout2_front', 'constrain_readout2_back', 'capa_readout_outPort1', is_bond=is_bond, fillet=PM.fillet)
     chip1.draw_cable('bef_capa', 'capa_readout_outPort2', chip1.name+'in_readoutiOut', is_bond=is_bond, fillet=PM.fillet)
 #
+
+#%%
+PM.interface.generate_gds("test_parity.gds")
 #### Test junctions
 #
 #if litho and 1:

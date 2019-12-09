@@ -1377,7 +1377,8 @@ class HfssModeler(COMWrapper):
                     names.append(entity.name)
         if len(names)!=0:
             self._modeler.Rotate(self._selections_array(*names), 
-                ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])        
+                ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
+            
     def rename_entity(self, entity, name):
         new_name = self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",

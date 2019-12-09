@@ -22,7 +22,7 @@ from hfss import extract_value_unit, \
                  ModelEntity, \
                  VariableString , \
                  var
-#import gds_modeler
+import gds_modeler
 #IMPORT KEY / CUSTOM Elements
 import Lib
 import KeyElement
@@ -220,6 +220,9 @@ class PythonMdlr():
     @set_active_coor_system
     def disk(self, pos, radius, axis, **kwargs):
         kwargs['coor_sys']=self.coor_sys
+        if self.mode=='gds':
+            pos = self.val(pos)
+            radius = self.val(radius)
         name = self.interface.draw_cylinder(pos, radius, axis, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
@@ -240,7 +243,10 @@ class PythonMdlr():
         if unit is not None:
             _val = str(_val)+' '+unit
         return _val
+    
     def _fillet(self, radius, vertex_index, entity):
+        if self.mode=='gds':
+            radius = self.val(radius)
         self.interface._fillet(radius, vertex_index, entity)
 
     def _fillets(self, radius, entity):
@@ -303,6 +309,12 @@ class PythonMdlr():
                 points.pop(i)
             else:
                 i+=1
+                
+        if self.mode=='gds':
+            print(points)
+            points = self.val(points)
+            print('after_eval')
+            print(points)
             
         name = self.interface.draw_polyline(points, closed=closed, **kwargs)
         dim = closed + 1
@@ -316,12 +328,24 @@ class PythonMdlr():
     @set_active_coor_system
     def rect_corner_2D(self, pos, size, **kwargs):
         kwargs['coor_sys']=self.coor_sys
+        if self.mode=='gds':
+            print(pos, size)
+            pos = self.val(pos)
+            size = self.val(size)
+            print('after_eval')
+            print(pos, size)
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
     @set_active_coor_system
     def rect_center_2D(self, pos, size, **kwargs):
         kwargs['coor_sys']=self.coor_sys
+        if self.mode=='gds':
+            print(pos, size)
+            pos = self.val(pos)
+            size = self.val(size)
+            print('after_eval')
+            print(pos, size)
         name = self.interface.draw_rect_center(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
@@ -370,9 +394,10 @@ class PythonMdlr():
             new_angle = angle
         else:
             raise Exception("angle should be either a float or a 2-dim array")
-            
+        
         self.interface.rotate(entities, new_angle)
-    
+
+            
     def separate_bodies(self,name):
         #This looks hard
         pass
@@ -417,6 +442,8 @@ class PythonMdlr():
         return entity_to_sweep
     
     def translate(self, entities, vector=[0,0,0]):
+        if self.mode == 'gds':
+            vector = self.val(vector)
         self.interface.translate(entities, vector)
         
     def unite(self, entities, name=None, keep_originals=False):
@@ -449,16 +476,16 @@ class PythonMdlr():
 
             else:
                 union = entities[0].copy(dim_Union)
-                self.rename_entity_1(union, name)
+#                self.rename_entity_1(union, name)
             
         return union  
 
     def val(self, name): # to use if you want to compare two litt expressions
                          # Compute the numerical value using for eval_var_str
-        if isinstance(name, list):
+        if isinstance(name, list) or isinstance(name, tuple):
             name_list = []
             for elt in name:
-                name_list.append(self.eval_var_str(elt))
+                name_list.append(self.val(elt))
             if isinstance(name, Vector):
                 return Vector(name_list)
             else:
@@ -723,7 +750,7 @@ class Body(PythonMdlr):
         pos, ori, track, gap = parse_entry((pos, ori, track, gap))
 #        self.rect_center_2D(pos, [track*ori[0]/2+track*ori[1], track*ori[0]+track/2*ori[1]], name=name+'track', layer='PORT')
 #        self.rect_center_2D(pos, [track*ori[0]/2+(2*gap+track)*ori[1], (2*gap+track)*ori[0]+track/2*ori[1]], name=name+'gap', layer='PORT')
-        self.rect_corner_2D(pos, [(ori[0]+0.5)*(1e-5), [(ori[1]+0.5)*(1e-5)]],  name=name+'ori', layer='PORT')
+        self.rect_corner_2D(pos, [(ori[0]+0.5)*(1e-5), (ori[1]+0.5)*(1e-5)],  name=name+'ori', layer='PORT')
 #        
         return self.network.port(name, pos, ori, track, gap)
     
