@@ -5,7 +5,7 @@ Created on Mon Nov  4 11:13:09 2019
 @author: antho
 """
 
-import gdspy
+#import gdspy
 from hfss import parse_entry, var
 import numpy as np
 eps = 1e-7
