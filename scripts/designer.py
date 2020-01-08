@@ -3550,7 +3550,7 @@ class KeyElt(Circuit):
         
         if premesh:
             if not self.is_litho:
-                self.draw_rect(self.name+'_mesh', self.coor([-ind_length/2,-iTrack/2-iGap+self.overdev]), self.coor_vec([ind_length,2*iGap+iTrack-2*self.overdev]))   
+                self.draw_rect(self.name+'_mesh', self.coor([-ind_length/2,-ind_track/2]), self.coor_vec([ind_length,ind_track]))   
                 self.modeler.assign_mesh_length(self.name+"_mesh",ind_track)
 
 
