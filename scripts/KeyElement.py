@@ -39,11 +39,11 @@ def _moved(func, previous_pos, previous_ori, *args, **kwargs):
     #5 We move the entities_to_move with the right operation
     if len(list_entities_new)>0:
         args[0].rotate(list_entities_new, angle=angle)
-        args[0].translate(list_entities_new, vector=[pos[0], pos[1], 0])
+        args[0].translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
         
     if len(list_ports_new)>0:            
         args[0].rotate_port(list_ports_new, angle)
-        args[0].translate_port(list_ports_new, vector=[pos[0], pos[1], 0])
+        args[0].translate_port(list_ports_new, vector=[pos[0], pos[1], pos[2]])
        
     #6 We empty a part of the 'to_move' dictionnaries 
     if isinstance(list_entities_old[-1], list):
@@ -370,6 +370,80 @@ def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenn
     cylinder_side = self.cylinder([0,radius-depth,antenna_height], insert_radius, radius, "Y", name=name+"_insert", layer="l1")
     self.unite([cylinder, cylinder_side], name="union_cylinder")
     return [[],[cylinder, antenna]] 
+
+@register_method
+@move
+def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param):
+    ''' 
+    cavity_param = [rext,hext, rint, hint]
+    ports_param = [[x, y, z, axis, param]...]
+    transmons_param = [[x,y,z, axis, param]...]
+    '''
+    cavity_param = parse_entry(cavity_param)
+    ports_param = parse_entry(ports_param)
+    transmons_param = parse_entry(transmons_param)
+
+    cavity = self.cylinder([0,0,0], cavity_param[0] , cavity_param[1], "Z", name=name+"_cavity", layer="3D")
+#    self.assign_perfect_E(cylinder, name+'_PerfE')
+    antenna = self.cylinder([0,0,0], cavity_param[2] ,cavity_param[3], "Z", name=name+"_antenna", layer="3D")
+#    self.make_material(antenna, "\"aluminum\"")
+    self.subtract(cavity, [antenna])
+#    self.assign_perfect_E(antenna, name+'antenna_PerfE')
+    cylinders = [cavity]
+    to_subtract = []
+    if ports_param!=None:
+        for ii,port_param in enumerate(ports_param):
+            print(port_param)
+            angle = port_param[3]
+            self.set_current_coor(pos=port_param[:3], ori=angle)
+            result = self.cable_3D(*port_param[4])
+            cylinders.append(result[0])
+            to_subtract.append(result[1])
+            
+    if transmons_param!=None:
+        for ii,transmon_param in enumerate(transmons_param):
+            angle = transmon_param[3]
+#            angle = {"+X":0, "+Y":90, "-Y":-90}[axis]
+            self.set_current_coor(pos=transmon_param[:3], ori=angle)
+            cylinders.append(self.draw_cylinder_transmon(*transmon_param[4]))
+
+            
+            
+    print(cylinders)
+    union = self.unite(cylinders, "main_obj")
+    if to_subtract !=None:
+        self.subtract(union, to_subtract)
+    return union
+
+@register_method
+@move
+def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis ):
+    r_gaine, r_ame, r_dielec, L_cable, L_connector, axis = parse_entry((r_gaine, r_ame, r_dielec, L_cable, L_connector, axis))
+    ame = self.cylinder([0,0,0], r_ame, L_cable, axis, layer="3D", name = name+'ame')
+    creux = self.cylinder([0,0,0], r_ame, L_cable, axis, layer="3D", name = name+'creux')
+    dielec = self.cylinder([0,0,0], r_dielec, L_cable, axis, layer="3D", name = name+'dielectric')
+    
+    self.subtract(dielec,[creux], keep_originals=True)
+    
+    creux1 = self.cylinder([0,0,0], r_dielec, L_cable, axis, layer="3D", name = name+'creux1')
+    gaine = self.cylinder([0,0,0], r_gaine, L_cable, axis, layer="3D", name = name+'gaine')
+    self.subtract(gaine, [creux, creux1], keep_originals=False)
+    self.make_material(dielec, "\"Teflon (tm)\"")
+#    cable = self.unite([ame, dielec, gaine], name='cable3D')
+    
+    creux2 = self.cylinder([0,0,L_cable], r_ame, L_connector, axis, layer="3D", name = name+'creux2')
+    ame_probe = self.cylinder([0,0,L_cable], r_ame, L_connector, axis, layer="3D", name = name+'ame_probe')
+    gaine_probe = self.cylinder([0,0,L_cable], r_gaine, L_connector, axis, layer="3D", name = name+'gaine_probe')
+    self.subtract(gaine_probe, [creux2], keep_originals=False)
+    self.delete(creux)
+    self.delete(creux1)
+    self.delete(creux2)
+    self.make_material(ame, "\"copper\"")
+    self.make_material(ame_probe, "\"copper\"")
+    self.make_material(gaine, "\"perfect conductor\"")
+    self.make_material(gaine_probe, "\"perfect conductor\"")
+
+    return gaine_probe, ame_probe
 
 @register_method
 @move

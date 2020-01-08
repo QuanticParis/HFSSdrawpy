@@ -1151,7 +1151,7 @@ class HfssModeler(COMWrapper):
 #                                		"CreateGroupsForNewObjects:=", False
 #                                	])
 
-    def assign_perfect_E(self, entities, name='PerfE'):
+    def assign_perfect_E(self, entities, name):
         if isinstance(entities, list):
             entity_names = [entity.name for entity in entities]
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", entity_names, "InfGroundPlane:=", False])

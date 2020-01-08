@@ -100,35 +100,76 @@ def draw_IBM_transmon(self,
         
     return pads, cutout, in_junction, out_junction
 
-        
 @register_method
 @move
-def draw_cavity_transmon(self,
+def draw_cylinder_transmon(self,
                    name, 
                    cutout_size,
                    pad_spacing,
                    pad_size,
                    Jwidth,
-                   track,
-                   gap,
+                   space,
+                   spacing2,
+                   tline_l,
+                   tline_w,
+                   thickness,
+                   Jinduc,
+                   fillet=None):
+    cutout_size, pad_spacing, pad_size, Jwidth, space, thickness = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, space, thickness))
+    insert_radius = 1.2/2*cutout_size[1]
+    length = cutout_size[0]
+    cylinder_side = self.cylinder([0,0,0], insert_radius, length, "X", name=name+"_cylinder", layer="l1")
+    
+    sapphire_chip = self.box_corner([0,-cutout_size[1]/2-self.overdev/2,0], [cutout_size[0],cutout_size[1]+self.overdev, thickness], "3D", name=name+"_sapphire_chip")
+    
+    self.set_current_coor([0,0,thickness], [1,0])
+    simple_transmon = self.draw_simple_transmon(name, 
+                                               cutout_size,
+                                               pad_spacing,
+                                               pad_size,
+                                               Jwidth,
+                                               space,
+                                               spacing2,
+                                               tline_l,
+                                               tline_w,
+                                               Jinduc,
+                                               fillet=None)
+    return cylinder_side
+
+@register_method
+@move
+def draw_simple_transmon(self,
+                   name, 
+                   cutout_size,
+                   pad_spacing,
+                   pad_size,
+                   Jwidth,
+                   space,
+                   spacing2,
+                   tline_l,
+                   tline_w,
                    Jinduc,
                    fillet=None):
 
-    cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
+    cutout_size, pad_spacing, pad_size, Jwidth, space = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, space))
     cutout_size = Vector(cutout_size)
     pad_size = Vector(pad_size)
     capa_plasma=0
     iTrackJ=Jinduc
-    
-    cutout = self.rect_center_2D([0,0], cutout_size-Vector([2*self.overdev, 2*self.overdev]), name=name+"_cutout", layer="GAP")
 
-    if self.is_mask:
-        mask = self.rect_center_2D([0,0], cutout_size+Vector([track,track]),name=name+"_mask",layer="MASK")
-        self.maskObjects.append(mask)
-
-    right_pad = self.rect_center_2D(Vector(pad_spacing+pad_size[0],0)/2, pad_size+Vector([2*self.overdev, 2*self.overdev]), name=name+"_pad1", layer="TRACK")
-    left_pad = self.rect_center_2D(-Vector(pad_spacing+pad_size[0],0)/2, pad_size+Vector([2*self.overdev, 2*self.overdev]), name=name+"_pad2", layer="TRACK")
     
+    cutout = self.rect_corner_2D([0,-cutout_size[1]/2+self.overdev], cutout_size-Vector([2*self.overdev, 2*self.overdev]), name=name+"_cutout", layer="GAP")
+    transmission_line = self.rect_center_2D(Vector(space+pad_size[0]+pad_spacing+spacing2+tline_l/2, 0), Vector([tline_l,tline_w]), name= name+"_transmission_line", layer="GAP")
+    self.assign_perfect_E(transmission_line)
+#    if self.is_mask:
+#        mask = self.rect_center_2D([0,0], cutout_size+Vector([track,track]),name=name+"_mask",layer="MASK")
+#        self.maskObjects.append(mask)
+    right_pad = self.rect_corner_2D(Vector(space, -pad_size[1]/2), pad_size+Vector([2*self.overdev, 2*self.overdev]), name=name+"_pad1", layer="TRACK")
+    left_pad  = self.rect_corner_2D(Vector(space+pad_size[0]+pad_spacing, -pad_size[1]/2), pad_size+Vector([2*self.overdev, 2*self.overdev]), name=name+"_pad2", layer="TRACK")
+    JJ = self.rect_center_2D(Vector(space+pad_size[0]+pad_spacing/2,0), [pad_spacing, '5um'], name=name+'_lumped', layer="RLC")
+    plot_JJ = self.box_center([space+pad_size[0]+pad_spacing/2,0,0], [2*pad_spacing, '10um', pad_spacing], name=name+'_lumped', layer="RLC", nonmodel = True)
+
+    self.mesh_zone(JJ ,'0.01mm')
 
 #    track_J=Jwidth*4.
 #    in_junction = self.port(name+'_in_jct', [-pad_spacing/2+self.overdev, 0], [1,0], track_J+2*self.overdev, 0)
@@ -137,8 +178,7 @@ def draw_cavity_transmon(self,
 #        self.ports[name+'_out_jct'] = out_junction
 #        junction = self.connect_elt(name+'_junction', name+'_in_jct', name+'_out_jct')
 #    flow_line = self.polyline_2D([[-pad_spacing/2+self.overdev, 0],[pad_spacing/2-self.overdev, 0]], closed = False, name=name+'_flowline', layer="MESH")
-    JJ = self.rect_center_2D([0,0], [pad_spacing, '5um'], name=name+'_lumped', layer="RLC")
-    self.mesh_zone(JJ ,'0.01mm')
+
 #    self.assign_lumped_RLC(JJ,0, Jinduc, capa_plasma, flow_line)
     pads = self.unite([right_pad, left_pad], name=name+'_pads')
 #    self.make_material(pads, "\"aluminum\"")

@@ -15,16 +15,16 @@ eps = 1e-7
 
 
 #IMPORT GDS / HFSS Modelers
-from hfss import extract_value_unit, \
+from .hfss import extract_value_unit, \
                  extract_value_dim, \
                  parse_entry, \
                  get_active_project, \
                  ModelEntity, \
                  VariableString , \
                  var
-import gds_modeler
-#IMPORT KEY / CUSTOM Elements
-import Lib
+#import gds_modeler
+##IMPORT KEY / CUSTOM Elements
+from .Lib import *
 import KeyElement
 import CustomElement
 
@@ -117,8 +117,11 @@ class PythonMdlr():
         return points
 
     def assign_perfect_E(self, entities, name='perfE'):
-        self.interface.assign_perfect_E(entities, name)
-    
+        if isinstance(entities, list):
+            self.interface.assign_perfect_E(entities, entities[0].name+name)
+        else:
+            self.interface.assign_perfect_E(entities, entities.name+name)
+
     def body(self, body_name, coor_name='Global', coor_sys=None):
         if coor_name != 'Global':
             if not(coor_sys is None):
@@ -129,7 +132,7 @@ class PythonMdlr():
         return B
     
     @set_active_coor_system
-    def box_corner(self, pos, size, layer, **kwargs):
+    def box_corner(self, pos, size, layer="3D", **kwargs):
         name = self.interface.draw_box_corner(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
     
@@ -383,6 +386,7 @@ class PythonMdlr():
         return Vector(x, y).rot(self.ori)
     
     def rotate(self, entities, angle=0):
+        print(angle)
         if isinstance(angle, list) or isinstance(angle, np.ndarray):
             if len(angle)==2:
                 new_angle= np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
@@ -679,7 +683,7 @@ class Network(PythonMdlr):
 
 
     
-@Lib.add_methods_from(KeyElement, CustomElement)
+@add_methods_from(KeyElement, CustomElement)
 class Body(PythonMdlr):
 
     def __init__(self, interface, coor_sys, name, network, mode, variables):

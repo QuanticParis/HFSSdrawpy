@@ -4,7 +4,7 @@ Created on Thu Nov 14 13:46:42 2019
 
 @author: Zaki
 """
-from hfss import parse_entry, VariableString
+from scripts.hfss import parse_entry, VariableString
 class Vector(list):
 
     def __init__(self, vec, vec_y=None):

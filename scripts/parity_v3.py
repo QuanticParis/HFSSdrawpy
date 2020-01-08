@@ -15,17 +15,11 @@ Changes from v2 to v3:
  - interdigitated capacitances removed
 '''  
   
-from importlib import reload
-import PythonModeler
-from Vector import Vector
-import hfss
-from hfss import parse_entry
-reload(PythonModeler)
 
-PythonModeler.Port.reset()
-hfss.ModelEntity.reset()
-PM = PythonModeler.PythonMdlr('gds')
-
+import scripts
+PM = scripts.PythonMdlr('hfss')
+from scripts.hfss import parse_entry as parse_entry
+from scripts.Vector import Vector as Vector
 chip1 = PM.body('chip1', 'Global')
 
 # use litho for optical
@@ -35,7 +29,7 @@ chip1 = PM.body('chip1', 'Global')
 
 litho = True
 mask = False
-ebeam = False
+ebeam = True
 
 if litho:
     is_bond = False
