@@ -296,7 +296,7 @@ PM.set_variable('rPP', '0mm')
 PM.set_variable('hPP', '0mm')
 PM.set_variable('hLTP', '0mm')
 PM.set_variable('rdiElecP', '0mm')
-PM.set_variable('rgaineP', '0mm')
+PM.set_variable('rgaineP', '1mm')
 PM.set_variable('rameP', '0mm')
 
 
