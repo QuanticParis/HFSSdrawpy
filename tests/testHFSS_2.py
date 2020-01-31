@@ -51,14 +51,9 @@ P3 = chip1.port('port3', Vector(['10mm','0mm']), Vector([1,0]), '0.2mm', '0.1mm'
 chip1.cable_starter('CBSTRT', 'port3')
 #%% capa_interdigitated
 
-import PythonModeler
-import traceback
-import hfss
-from Vector import Vector
+import scripts
+PM = scripts.PythonMdlr('gds')
 
-PythonModeler.Port.reset()
-hfss.ModelEntity.reset()
-PM = PythonModeler.PythonMdlr('hfss')
 PM.set_variable('track', '42um')
 PM.set_variable('bond', '100um')
 PM.set_variable('pad_spacing', '0.12mm')
@@ -67,7 +62,8 @@ chip1 = PM.body('chip2', 'Global')
 P1 = chip1.port('port1', Vector(['10mm','0mm']), Vector([1,0]), '0.2mm', '0.1mm')
 chip1.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
 #chip1.draw_capa_inline('CAPA_IN_LINE', '20mm', '10mm', '5mm', '1mm', n_pad=5, iTrack_capa='5mm', iGap_capa=None, premesh=True, tight=False)
-chip1.draw_capa_interdigitated('CAPA_INTERDIGITATED', '20mm', '10mm', ['2mm','2mm'], ['20mm','20mm'], 10, '0.1mm')
+chip1.rect_corner_2D([0,0,0], [1,1,1], name='aa', layer='1')
+#chip1.draw_capa_interdigitated('CAPA_INTERDIGITATED', '20mm', '10mm', ['2mm','2mm'], ['20mm','20mm'], 10, '0.1mm')
 
 #%% 3D cavity + transmon
 
@@ -245,7 +241,7 @@ chip1.insert_transmon("insert", [PM.cutout_x, PM.cutout_y, '0.2mm'],'0.1mm',['0.
 
 #%%
 import scripts
-PM = scripts.PythonMdlr('hfss')
+PM = scripts.PythonMdlr('gds')
 PM.set_variable('rext', '6.5mm')
 PM.set_variable('hint', '6mm')
 PM.set_variable('rint', '2mm')

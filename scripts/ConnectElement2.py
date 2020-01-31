@@ -14,6 +14,13 @@ from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
 import numpy as np
 
+layer_TRACK = 1
+layer_GAP = 0
+layer_RLC = 2
+layer_MESH = 3
+layer_MASK = 4
+layer_Default = 10
+
 def way(vec):
     if vec[1] != 0:
         if abs(vec[0]/vec[1])<1e-2:
@@ -133,8 +140,7 @@ class ConnectElt2(Body):
                                    (iWidth, 0)])
 
     
-        trackIn = self.polyline_2D(points1, name=name+'_track1', layer='TRACK')
-        self.chip.trackObjects.append(trackIn)
+        trackIn = self.polyline_2D(points1, name=name+'_track1', layer=layer_TRACK)
 
         points2 = self.append_points([(iInPort['gap']+iWidth+iSize, 0),
                                      (0, -iLength/2),
@@ -145,8 +151,7 @@ class ConnectElt2(Body):
                                      (-iOutPort['gap'], 0),
                                      (0, iLength/2-iOutPort['track']/2),
                                      (-iWidth, 0)])
-        trackOut = self.polyline_2D(points2, name=name+'_track2', layer='TRACK')
-        self.chip.trackObjects.append(trackOut)
+        trackOut = self.polyline_2D(points2, name=name+'_track2', layer=layer_TRACK)
 
         points3 = self.append_points([(0, 0),
                                      (0, iLength/2+iInPort['gap']),
@@ -159,7 +164,7 @@ class ConnectElt2(Body):
                                      (-(iInPort['gap']+iWidth+iSize/2),0)
                                      ])
         print(points3)
-        gap1 = self.polyline_2D(points3, name=name+'_gap1', layer='GAP')
+        gap1 = self.polyline_2D(points3, name=name+'_gap1', layer=layer_GAP)
         self.chip.gapObjects.append(gap1)
 #    
 #    
@@ -760,8 +765,6 @@ class ConnectElt2(Body):
             self.draw_bond((self.inTrack+self.inGap*2)*1.5)
         
         if track_adaptor is not None:
-            self.trackObjects.pop()
-            self.gapObjects.pop()
             tracks = [*tracks, track_adaptor]
             gaps = [*gaps, gap_adaptor]
             if self.is_mask:
@@ -774,24 +777,13 @@ class ConnectElt2(Body):
 #                names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
             track = self.unite(tracks, names[0])
             gap = self.unite(gaps, names[1])
-            if layer is None:
-                self.trackObjects.append(track)
-                self.gapObjects.append(gap)
-            else:
-                self.layers[layer]['trackObjects'].append(track)
-                self.layers[layer]['gapObjects'].append(gap)
+
             if self.is_mask:
                 mask = self.unite(masks, names[2])
                 self.maskObjects.append(mask)
         else:
             track = tracks[0]
             gap = gaps[0]
-            if layer is None:
-                self.trackObjects.append(track)
-                self.gapObjects.append(gap)
-            else:
-                self.layers[layer]['trackObjects'].append(track)
-                self.layers[layer]['gapObjects'].append(gap)
             if self.is_mask:
                 self.maskObjects.append(*masks)
         

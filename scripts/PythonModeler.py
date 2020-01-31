@@ -12,7 +12,12 @@ from Vector import Vector
 import sys
 from functools import wraps
 eps = 1e-7
-
+layer_TRACK = 1
+layer_GAP = 0
+layer_RLC = 2
+layer_MESH = 3
+layer_MASK = 4
+layer_Default = 10
 
 #IMPORT GDS / HFSS Modelers
 from .hfss import extract_value_unit, \
@@ -22,7 +27,7 @@ from .hfss import extract_value_unit, \
                  ModelEntity, \
                  VariableString , \
                  var
-#import gds_modeler
+import gds_modeler
 ##IMPORT KEY / CUSTOM Elements
 from .Lib import *
 import KeyElement
@@ -132,7 +137,7 @@ class PythonMdlr():
         return B
     
     @set_active_coor_system
-    def box_corner(self, pos, size, layer="3D", **kwargs):
+    def box_corner(self, pos, size, layer=layer_Default, **kwargs):
         name = self.interface.draw_box_corner(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
     
@@ -212,6 +217,7 @@ class PythonMdlr():
 
     def delete(self, entity):
         if (entity.name in entity.__class__.dict_instances):
+            print(entity.__class__.dict_instances)
             entity.__class__.find_last_list(entity.__class__.instances_to_move).remove(entity)
             a = entity.__class__.dict_instances.pop(entity.name, None)
         del entity
@@ -250,8 +256,10 @@ class PythonMdlr():
     def _fillet(self, radius, vertex_index, entity):
         if self.mode=='gds':
             radius = self.val(radius)
-        self.interface._fillet(radius, vertex_index, entity)
-
+        try:
+            self.interface._fillet(radius, vertex_index, entity)
+        except Exception:
+            print("Fillet operation resulted in an error")
     def _fillets(self, radius, entity):
         vertices = self.interface.get_vertex_ids(entity)
         self.interface._fillets(radius, vertices, entity)
@@ -314,10 +322,8 @@ class PythonMdlr():
                 i+=1
                 
         if self.mode=='gds':
-            print(points)
             points = self.val(points)
-            print('after_eval')
-            print(points)
+
             
         name = self.interface.draw_polyline(points, closed=closed, **kwargs)
         dim = closed + 1
@@ -332,11 +338,8 @@ class PythonMdlr():
     def rect_corner_2D(self, pos, size, **kwargs):
         kwargs['coor_sys']=self.coor_sys
         if self.mode=='gds':
-            print(pos, size)
             pos = self.val(pos)
             size = self.val(size)
-            print('after_eval')
-            print(pos, size)
         name = self.interface.draw_rect_corner(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
@@ -344,11 +347,8 @@ class PythonMdlr():
     def rect_center_2D(self, pos, size, **kwargs):
         kwargs['coor_sys']=self.coor_sys
         if self.mode=='gds':
-            print(pos, size)
             pos = self.val(pos)
             size = self.val(size)
-            print('after_eval')
-            print(pos, size)
         name = self.interface.draw_rect_center(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
@@ -386,13 +386,11 @@ class PythonMdlr():
         return Vector(x, y).rot(self.ori)
     
     def rotate(self, entities, angle=0):
-        print(angle)
         if isinstance(angle, list) or isinstance(angle, np.ndarray):
             if len(angle)==2:
                 new_angle= np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
                 new_angle= new_angle/np.pi*180
             else:
-                print("angle exit", angle)
                 raise Exception("angle should be either a float or a 2-dim array")
         elif isinstance(angle, float) or isinstance(angle, int):
             new_angle = angle
@@ -435,8 +433,9 @@ class PythonMdlr():
             
     def subtract(self, blank_entity, tool_entities, keep_originals= False):
         self.interface.subtract(blank_entity, tool_entities, keep_originals)
-        for i in tool_entities:
-            self.delete(i)
+        if not(keep_originals):
+            for tool_entity in tool_entities:
+                self.delete(tool_entity)
             
     def _sweep_along_path(self, entity_to_sweep, path_entity):
         new_name = self.interface._sweep_along_path(entity_to_sweep, path_entity)
@@ -615,7 +614,7 @@ class Network(PythonMdlr):
                                    (iWidth, 0)])
 
     
-        trackIn = self.polyline_2D(points1, name=name+'_track1', layer='TRACK')
+        trackIn = self.polyline_2D(points1, name=name+'_track1', layer=layer_TRACK)
 #        self.chip.trackObjects.append(trackIn)
 
         points2 = self.append_points([(iInPort.gap+iWidth+iSize, 0),
@@ -627,7 +626,7 @@ class Network(PythonMdlr):
                                      (-iOutPort.gap, 0),
                                      (0, iLength/2-iOutPort.track/2),
                                      (-iWidth, 0)])
-        trackOut = self.polyline_2D(points2, name=name+'_track2', layer='TRACK')
+        trackOut = self.polyline_2D(points2, name=name+'_track2', layer=layer_TRACK)
 #        self.chip.trackObjects.append(trackOut)
 
         points3 = self.append_points([(0, 0),
@@ -641,7 +640,7 @@ class Network(PythonMdlr):
                                      (-(iInPort.gap+iWidth+iSize/2),0)
                                      ])
 #        print(points3)
-        gap1 = self.polyline_2D(points3, name=name+'_gap1', layer='GAP')
+        gap1 = self.polyline_2D(points3, name=name+'_gap1', layer=layer_GAP)
 #        self.chip.gapObjects.append(gap1)
 #    
 #    
@@ -726,7 +725,6 @@ class Body(PythonMdlr):
                     compteur+=1
                 else:
                     new_args.append(argument)
-            print(func.__name__)
 
 #            print("compteur",compteur)    
             if compteur==0:
@@ -754,7 +752,7 @@ class Body(PythonMdlr):
         pos, ori, track, gap = parse_entry((pos, ori, track, gap))
 #        self.rect_center_2D(pos, [track*ori[0]/2+track*ori[1], track*ori[0]+track/2*ori[1]], name=name+'track', layer='PORT')
 #        self.rect_center_2D(pos, [track*ori[0]/2+(2*gap+track)*ori[1], (2*gap+track)*ori[0]+track/2*ori[1]], name=name+'gap', layer='PORT')
-        self.rect_corner_2D(pos, [(ori[0]+0.5)*(1e-5), (ori[1]+0.5)*(1e-5)],  name=name+'ori', layer='PORT')
+        self.rect_corner_2D(pos, [(ori[0]+0.5)*(1e-5), (ori[1]+0.5)*(1e-5)],  name=name+'ori', layer=layer_Default)
 #        
         return self.network.port(name, pos, ori, track, gap)
     
@@ -856,13 +854,13 @@ class Body(PythonMdlr):
                                      (adaptDist, track/2-iInPort.track/2),
                                      (0, -track),
                                      (-adaptDist, track/2-iInPort.track/2)])
-        track_points = self.polyline_2D(points, name=name+"_track", layer = 'TRACK')
+        track_points = self.polyline_2D(points, name=name+"_track", layer = layer_TRACK)
 #        self.trackObjects.append(track)
         points = self.append_points([(0, iInPort.gap+iInPort.track/2),
                                      (adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2),
                                      (0, -2*gap-track),
                                      (-adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2)])
-        gap_points = self.polyline_2D(points, name=name+"_GAP", layer = 'GAP')
+        gap_points = self.polyline_2D(points, name=name+"_GAP", layer = layer_GAP)
 #        self.gapObjects.append(gap)
         
         mask = None
@@ -871,7 +869,7 @@ class Body(PythonMdlr):
                              (adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2),
                              (0, -2*self.gap_mask-2*gap-track),
                              (-adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2)])
-            mask = self.polyline_2D(points, name=name+"_MASK", layer = 'MASK')
+            mask = self.polyline_2D(points, name=name+"_MASK", layer = layer_MASK)
 #            self.maskObjects.append(mask)
         #TODO create port out
         return iInPort.name+'_bis', adaptDist, track_points, gap_points, mask
@@ -932,7 +930,7 @@ class Body(PythonMdlr):
                       (-adaptDist1, (iTrack1-iTrackJ)/2),
                       (-(iLength/2-iLengthJ/2-adaptDist1), 0)]
         points = self.append_points(raw_points)
-        right_pad = self.polyline_2D(points, name =name+"_pad1", layer="TRACK")
+        right_pad = self.polyline_2D(points, name =name+"_pad1", layer=layer_TRACK)
         
         raw_points = [(iLengthJ/2, iTrackJ/2),
                       ((iLength/2-iLengthJ/2-adaptDist2), 0),
@@ -941,27 +939,27 @@ class Body(PythonMdlr):
                       (-adaptDist2, (iTrack2-iTrackJ)/2),
                       (-(iLength/2-iLengthJ/2-adaptDist2), 0)]
         points = self.append_points(self.refy_points(raw_points))
-        left_pad = self.polyline_2D(points, name=name+"_pad2", layer="TRACK")
+        left_pad = self.polyline_2D(points, name=name+"_pad2", layer=layer_TRACK)
 
         pads = self.unite([right_pad, left_pad], name=name+'_pads')
         
         if not self.is_litho:
             if self.val(iTrack1) > self.val(iTrack2):
-                mesh = self.rect_center_2D([0,0], [iLength, iTrack1], name=name+'_mesh', layer='MESH')
+                mesh = self.rect_center_2D([0,0], [iLength, iTrack1], name=name+'_mesh', layer=layer_MESH)
             else:
-                mesh = self.rect_center_2D([0,0], [iLength, iTrack2], name=name+'_mesh', layer='MESH')
+                mesh = self.rect_center_2D([0,0], [iLength, iTrack2], name=name+'_mesh', layer=layer_MESH)
             self.mesh_zone(mesh, iTrackJ/2)
     
             points = self.append_points([(iTrackJ/2,0),(-iTrackJ,0)])
-            flow_line = self.polyline_2D(points, closed = False, name=name+'_flowline', layer="MESH")
-            JJ = self.rect_center_2D([0,0], [iLengthJ, iTrackJ], name=name+'_lumped', layer="RLC")
+            flow_line = self.polyline_2D(points, closed = False, name=name+'_flowline', layer=layer_MESH)
+            JJ = self.rect_center_2D([0,0], [iLengthJ, iTrackJ], name=name+'_lumped', layer=layer_RLC)
             #TODO
             #self.assign_lumped_RLC(JJ,0, iInduct, capa_plasma, flow_line)
 
         return pads
     
     @move_port
-    def draw_cable(self, name, *ports, fillet="0.3mm", is_bond=False, is_meander=False, to_meanders = [1,0,1,0,1,0,1,0,1,0], meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False, layer=None):
+    def draw_cable(self, name, *ports, fillet="0.3mm", is_bond=False, is_meander=False, to_meanders = [1,0,1,0,1,0,1,0,1,0], meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False, layer=layer_Default):
             '''
             Draws a CPW transmission line between iIn and iOut
     
@@ -1042,26 +1040,25 @@ class Body(PythonMdlr):
 #                self.__init__(self.name, *port_names[2*ii:2*ii+2]) CONNECT ELEMENT USELESS
                 
                 points = self.find_path('points', ports[2*ii].name, ports[2*ii+1].name, fillet, is_meander, to_meander, m_length, meander_offset)
-                connection_track = self.polyline_2D(points, name=name+'path_track'+to_add, closed=False ,layer = "CABLE")
+                connection_track = self.polyline_2D(points, name=name+'path_track'+to_add, closed=False ,layer = layer_Default)
     #            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
                 cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
 #                self._fillets(fillet-eps, connection_track)
         
-                connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = "CABLE")
+                connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = layer_Default)
 #                self._fillets(fillet-eps, connection_gap)
 #                self.set_current_coor([0,0], [0, -1])
                 track_starter = self.cable_starter(name, ports[2*ii].name, width='track')
                 gap_starter = self.cable_starter(name, ports[2*ii].name, width='gap')
                 
                 if self.is_mask:
-                    connection_mask = self.polyline_2D(points, name=name+'_mask'+to_add, closed=False ,layer = "CABLE")
+                    connection_mask = self.polyline_2D(points, name=name+'_mask'+to_add, closed=False ,layer = layer_MASK)
                     self.set_current_coor([0,0], [0, -1])
                     mask_starter = self.cable_starter(name, ports[2*ii].name)
                     mask = self._sweep_along_path(mask_starter, connection_mask)
 #                    masks.append(connection_mask.sweep_along_path(mask_starter))
         
                 track = self._sweep_along_path(track_starter, connection_track)
-                print("*", track.name)
                 tracks.append(track)
                 gap = self._sweep_along_path(gap_starter, connection_gap)
                 gaps.append(gap)
@@ -1158,7 +1155,6 @@ class Body(PythonMdlr):
                 return 100
 
         def check(points):
-            print("points", points)
             length = 0
             prev_point = Vector(points[0])
             _points = Vector([points[0]])
@@ -1530,7 +1526,7 @@ class Body(PythonMdlr):
         for ii, point in enumerate(to_bond_points[::2]):
             points = [to_bond_points[2*ii], to_bond_points[2*ii+1]]
 #            print("points", points)
-            self.polyline_2D(points , closed=False, name='bef_test'+str(ii), layer="WIRE")
+            self.polyline_2D(points , closed=False, name='bef_test'+str(ii), layer=layer_Default)
             self.to_bond.append(points)
         return final_choice     
         
@@ -1587,8 +1583,8 @@ class Body(PythonMdlr):
         if litho=='elec':
             overlap = 5e-6
         snails = []
-        snails.append(self.rect_corner_2D([-tot_width/2, -width_track/2], [-(spacing-tot_width)/2-overlap,width_track], name=self.name+'_pad_left', layer='TRACK'))
-        snails.append(self.rect_corner_2D([tot_width/2, -width_track/2], [(spacing-tot_width)/2+overlap,width_track], name=self.name+'_pad_right', layer='TRACK'))
+        snails.append(self.rect_corner_2D([-tot_width/2, -width_track/2], [-(spacing-tot_width)/2-overlap,width_track], name=self.name+'_pad_left', layer=layer_TRACK))
+        snails.append(self.rect_corner_2D([tot_width/2, -width_track/2], [(spacing-tot_width)/2+overlap,width_track], name=self.name+'_pad_right', layer=layer_TRACK))
         if N%2==1:
             x_pos=-(N//2)*width_snail
         else:
@@ -1596,23 +1592,23 @@ class Body(PythonMdlr):
     
         for jj in range(int(N)):
             snail=[]
-            snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, -0.1e-6+(-squid_size[1]/2-width_bot+0.1e-6)-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [-3*width_track/2, squid_size[1]+width_top+width_bot+2*0.1e-6], name=self.name+'_left', layer='TRACK'))
-            snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, -squid_size[1]/2-((-squid_size[1]/2)+width_track/2)-offset], [3*width_track/2, squid_size[1]+width_top+width_bot+0.1e-6], name=self.name+'_right', layer='TRACK'))
+            snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, -0.1e-6+(-squid_size[1]/2-width_bot+0.1e-6)-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [-3*width_track/2, squid_size[1]+width_top+width_bot+2*0.1e-6], name=self.name+'_left', layer=layer_TRACK))
+            snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, -squid_size[1]/2-((-squid_size[1]/2)+width_track/2)-offset], [3*width_track/2, squid_size[1]+width_top+width_bot+0.1e-6], name=self.name+'_right', layer=layer_TRACK))
             for width, n, way in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
                 if n==1:
-                    snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot-0.1e-6)+width_track/2)-offset], [(squid_size[0]-width_bridge)/2, way*width-2*0.1e-6], name=name+'_islandtop_left', layer='TRACK'))
-                    snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [-(squid_size[0]-width_bridge)/2, way*width], name=name+'_islandtop_right', layer='TRACK'))
+                    snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot-0.1e-6)+width_track/2)-offset], [(squid_size[0]-width_bridge)/2, way*width-2*0.1e-6], name=name+'_islandtop_left', layer=layer_TRACK))
+                    snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [-(squid_size[0]-width_bridge)/2, way*width], name=name+'_islandtop_right', layer=layer_TRACK))
                 if n==3: #TODO
-                    snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [(squid_size[0]-2*width_bridge-spacing_bridge)/2, way*width+2*0.1e-6], name=name+'_islandtop_left', layer='TRACK'))
-                    snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [-(squid_size[0]-2*width_bridge-spacing_bridge)/2, way*width+2*0.1e-6], name=name+'_islandtop_right', layer='TRACK'))
-                    snail.append(self.rect_corner_2D([x_pos-spacing_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [spacing_bridge, way*width], name=name+'_island_middle_', layer='TRACK') )
+                    snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [(squid_size[0]-2*width_bridge-spacing_bridge)/2, way*width+2*0.1e-6], name=name+'_islandtop_left', layer=layer_TRACK))
+                    snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [-(squid_size[0]-2*width_bridge-spacing_bridge)/2, way*width+2*0.1e-6], name=name+'_islandtop_right', layer=layer_TRACK))
+                    snail.append(self.rect_corner_2D([x_pos-spacing_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [spacing_bridge, way*width], name=name+'_island_middle_', layer=layer_TRACK) )
                 if n==4:
-                    snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way*width+2*0.1e-6], name=name+'_islandtop_left', layer='TRACK'))
-                    snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [-(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way*width], name=name+'_islandtop_right', layer='TRACK'))
-                    snail.append(self.rect_corner_2D([x_pos-spacing_bridge-width_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [spacing_bridge, way*width], name=name+'_island_middle_left', layer='TRACK') )
-                    snail.append(self.rect_corner_2D([x_pos+spacing_bridge+width_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [-spacing_bridge, way*width+2*0.1e-6], name=name+'_island_middle_right', layer='TRACK') )
-            snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2-3*width_track/2, -width_track/2], [-1.5*width_track, width_track], name=name+'_connect_left', layer='TRACK')) #ZL
-            snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2+3*width_track/2, -width_track/2], [1.5*width_track, width_track], name=name+'_connect_right', layer='TRACK'))
+                    snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way*width+2*0.1e-6], name=name+'_islandtop_left', layer=layer_TRACK))
+                    snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [-(squid_size[0]-3*width_bridge-2*spacing_bridge)/2, way*width], name=name+'_islandtop_right', layer=layer_TRACK))
+                    snail.append(self.rect_corner_2D([x_pos-spacing_bridge-width_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot)+width_track/2)-offset], [spacing_bridge, way*width], name=name+'_island_middle_left', layer=layer_TRACK) )
+                    snail.append(self.rect_corner_2D([x_pos+spacing_bridge+width_bridge/2, way*squid_size[1]/2-((-squid_size[1]/2-width_bot+0.1e-6)+width_track/2)-offset], [-spacing_bridge, way*width+2*0.1e-6], name=name+'_island_middle_right', layer=layer_TRACK) )
+            snail.append(self.rect_corner_2D([x_pos-squid_size[0]/2-3*width_track/2, -width_track/2], [-1.5*width_track, width_track], name=name+'_connect_left', layer=layer_TRACK)) #ZL
+            snail.append(self.rect_corner_2D([x_pos+squid_size[0]/2+3*width_track/2, -width_track/2], [1.5*width_track, width_track], name=name+'_connect_right', layer=layer_TRACK))
             
             self.unite(snail, name=self.name+'_snail_'+str(jj))
             x_pos = x_pos+width_snail
@@ -1630,24 +1626,24 @@ class Body(PythonMdlr):
         if width_jct is not None:
             margin = 1e-6
         
-        self.rect_corner_2D([-tot_width/2-limit_dose,-width/2-assymetry], [-(spacing-tot_width)/2-overlap+limit_dose, width+2*assymetry], name=name+'_left', layer='TRACK')
+        self.rect_corner_2D([-tot_width/2-limit_dose,-width/2-assymetry], [-(spacing-tot_width)/2-overlap+limit_dose, width+2*assymetry], name=name+'_left', layer=layer_TRACK)
         if thin and width_jct is not None:
-            self.rect_corner_2D([-tot_width/2-margin,-width/2-assymetry], [-limit_dose+margin, width+2*assymetry], name=name+'_left2', layer='TRACK')
-            self.rect_corner_2D([-tot_width/2,-width_jct/2],[-margin, width_jct], name=name+'_left3', layer='TRACK')
+            self.rect_corner_2D([-tot_width/2-margin,-width/2-assymetry], [-limit_dose+margin, width+2*assymetry], name=name+'_left2', layer=layer_TRACK)
+            self.rect_corner_2D([-tot_width/2,-width_jct/2],[-margin, width_jct], name=name+'_left3', layer=layer_TRACK)
         else:
-            self.rect_corner_2D([-tot_width/2,-width/2-assymetry], [-limit_dose, width+2*assymetry], name=name+'_left2', layer='TRACK')
+            self.rect_corner_2D([-tot_width/2,-width/2-assymetry], [-limit_dose, width+2*assymetry], name=name+'_left2', layer=layer_TRACK)
         #print(n)
         if n%2==0:
             _width_right = width+2*assymetry
         else:
             _width_right = width
         if width_jct is not None:
-            self.rect_corner_2D([tot_width/2+margin,-_width_right/2], [limit_dose-margin, _width_right], name=name+'right2', layer='TRACK')
-            self.rect_corner_2D([tot_width/2,-width_jct/2], [margin, width_jct], name=name+'_right3', layer='TRACK')
+            self.rect_corner_2D([tot_width/2+margin,-_width_right/2], [limit_dose-margin, _width_right], name=name+'right2', layer=layer_TRACK)
+            self.rect_corner_2D([tot_width/2,-width_jct/2], [margin, width_jct], name=name+'_right3', layer=layer_TRACK)
         else:
-            self.rect_corner_2D([tot_width/2,-_width_right/2], [limit_dose, _width_right], name=name+'_right2', layer='TRACK')
+            self.rect_corner_2D([tot_width/2,-_width_right/2], [limit_dose, _width_right], name=name+'_right2', layer=layer_TRACK)
 
-        self.rect_corner_2D([tot_width/2+limit_dose,-_width_right/2], [(spacing-tot_width)/2+overlap-limit_dose, _width_right], name=name+'_right', layer='TRACK')
+        self.rect_corner_2D([tot_width/2+limit_dose,-_width_right/2], [(spacing-tot_width)/2+overlap-limit_dose, _width_right], name=name+'_right', layer=layer_TRACK)
 
         x_pos = -(tot_width)/2+width_bridge
         
@@ -1656,7 +1652,7 @@ class Body(PythonMdlr):
                 _width_loc = width+2*assymetry
             else:
                 _width_loc = width
-            self.rect_corner_2D([x_pos,-_width_loc/2], [spacing_bridge, _width_loc], name=name+'_middle'+str(ii), layer='TRACK')
+            self.rect_corner_2D([x_pos,-_width_loc/2], [spacing_bridge, _width_loc], name=name+'_middle'+str(ii), layer=layer_TRACK)
             x_pos = x_pos+spacing_bridge+width_bridge
      
     @move_port
@@ -1667,19 +1663,18 @@ class Body(PythonMdlr):
         
         tot_width = n*width_bridge+(n-1)*spacing_bridge
         
-        self.rect_corner_2D([-tot_width/2,-width/2], [-(spacing-tot_width)/2, width], name=name+'_left', layer='TRACK')
-        self.rect_corner_2D([tot_width/2,-width/2], [(spacing-tot_width)/2, width], name=name+'_right', layer='TRACK')
+        self.rect_corner_2D([-tot_width/2,-width/2], [-(spacing-tot_width)/2, width], name=name+'_left', layer=layer_TRACK)
+        self.rect_corner_2D([tot_width/2,-width/2], [(spacing-tot_width)/2, width], name=name+'_right', layer=layer_TRACK)
 
         x_pos = -(tot_width)/2+width_bridge
         
         for ii in range(n-1):
-            self.rect_corner_2D([x_pos,-width/2], [spacing_bridge, width], name=name+'_middle'+str(ii), layer='TRACK')
+            self.rect_corner_2D([x_pos,-width/2], [spacing_bridge, width], name=name+'_middle'+str(ii), layer=layer_TRACK)
             x_pos = x_pos+spacing_bridge+width_bridge
             
             
     @move_port
     def cable_starter(self, name, iInPort, width = 'track', index=None, border=parse_entry('15um')): # width can also be 'gap'
-        print(width)
         if width=='track' or width=='Track':
             points = [(0,iInPort.track/2), (0,-iInPort.track/2)]
         elif width=='gap' or width=='Gap':
@@ -1687,9 +1682,9 @@ class Body(PythonMdlr):
         elif width=='mask' or width=='Mask':
             points = [(0,iInPort.gap+iInPort.track/2+self.gap_mask),(0,-iInPort.gap-iInPort.track/2-self.gap_mask)]
         if index == None:
-            track = self.polyline_2D(points, closed=False, name=name+'_starter_'+width, layer=width.upper())
+            track = self.polyline_2D(points, closed=False, name=name+'_starter_'+width, layer=layer_TRACK)
         else:
-            track = self.polyline_2D(points, closed=False, name=name+'_starter_'+width, layer=width.upper())
+            track = self.polyline_2D(points, closed=False, name=name+'_starter_'+width, layer=layer_TRACK)
 
          #TODO Find unknown variables   
     #        elif width=='dc_track':

@@ -30,6 +30,8 @@ BASIS_ORDER = {"Zero Order": 0,
                "Second Order": 2,
                "Mixed Order": -1}
 
+layer_Default = 10
+
 def simplify_arith_expr(expr):
     try:
         out = repr(sympy_parser.parse_expr(str(expr)))
@@ -1475,22 +1477,24 @@ class ModelEntity():
     instances_layered = {}
     dict_instances = {}
     instances_to_move = []
-    def __init__(self, name, dimension, coor_sys, model = 'True', layer="layer0"):# model,
-#        new_name = self.check_name(name)
+    def __init__(self, name, dimension, coor_sys, model = 'True', layer=layer_Default):# model,
         self.name = name
         self.dimension = dimension
         self.coor_sys = coor_sys
         self.history = []    
         self.model = model
-#        self.boundaries = boundaries
-        self.layer = layer #in the chip
+        self.layer = layer
+
         ModelEntity.dict_instances[name] = self
         ModelEntity.find_last_list(ModelEntity.instances_to_move).append(self)
-        try:
+        if layer in self.instances_layered.keys():
             ModelEntity.instances_layered[layer].append(self)
-        except Exception:
-            ModelEntity.instances_layered[layer]=self
-            
+        else:
+            ModelEntity.instances_layered[layer]=[self]
+     
+    def __str__(self):
+        return self.name
+     
     def check_name(self, name):
         i = 0
         new_name = name

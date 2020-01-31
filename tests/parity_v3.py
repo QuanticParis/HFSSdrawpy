@@ -15,16 +15,10 @@ Changes from v2 to v3:
  - interdigitated capacitances removed
 '''  
   
-from importlib import reload
-import PythonModeler
-from Vector import Vector
-import hfss
-from hfss import parse_entry
-reload(PythonModeler)
+#import scripts
+import gdspy
 
-PythonModeler.Port.reset()
-hfss.ModelEntity.reset()
-PM = PythonModeler.PythonMdlr('gds')
+PM = PythonMdlr('gds')
 
 chip1 = PM.body('chip1', 'Global')
 
@@ -50,7 +44,7 @@ else:
     is_bond = True
 
 qubit = True
-memory = True
+memory = False
 readout = True
 drive_mem = False
 parity = True
@@ -119,7 +113,7 @@ if qubit:
                             track_right, PM.gap, '0.30mm', '30um', '0mm', PM.trm_junction_width, '50um', PM.Lj,
                             pad_size_left=['0.5mm', '0.5mm'], track_left=track_left,
                             gap_left=PM.gap_mem, length_left='0.2mm', spacing_left='-30um', 
-                            short_left='0um', fillet=True)
+                            short_left='0um', fillet=None)
 
     if litho:
         chip1.set_current_coor([PM.x_T, PM.y_T], [-1,0])
@@ -215,7 +209,7 @@ if readout:
 #
 
 #%%
-PM.interface.generate_gds("test_parity.gds")
+gdspy.LayoutViewer(library=gdspy.current_library, pattern={'default': 8},background='#FFFFFF')
 #### Test junctions
 #
 #if litho and 1:
