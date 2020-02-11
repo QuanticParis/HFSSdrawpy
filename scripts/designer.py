@@ -4318,7 +4318,47 @@ class KeyElt(Circuit):
 
         portOut = [self.coor([xlength/2+4*gaps[ii], 0]), self.ori, cutout_list, rel_pos, track_list, mult]
         self.ports_dc[self.name] = portOut
-      
+        
+    def draw_ATS_open_lumped(self,iTrack_wire,iGap, buffer_ind_length,ind_T_length,ind_to_ground_length,L_eq_buffer,premesh=True):
+        '''
+            1
+            |
+        3---|---Ground
+            |
+            2
+        '''
+        iTrack_wire,buffer_ind_length,ind_T_length,ind_to_ground_length,L_eq_buffer = parse_entry((iTrack_wire,buffer_ind_length,ind_T_length,ind_to_ground_length,L_eq_buffer))
+        iGap=(ind_T_length-iTrack_wire)/2
+        rect_buffer=self.draw_rect(self.name+'_buffer',self.coor([iTrack_wire/2+buffer_ind_length,-iTrack_wire/2]),self.coor_vec([-buffer_ind_length,iTrack_wire]))
+        rect_ind_T=self.draw_rect(self.name+'_T',self.coor([iTrack_wire/2,-ind_T_length/2]),self.coor_vec([-iTrack_wire,ind_T_length]))
+        rect_ind_to_ground=self.draw_rect(self.name+'_to_ground', self.coor([-iTrack_wire/2,-iTrack_wire/2]),self.coor_vec([-ind_to_ground_length,iTrack_wire]))
+       
+        self.assign_lumped_RLC(rect_buffer, self.ori, (0, L_eq_buffer, 0))
+        
+        portOut1=[self.coor([0,ind_T_length/2]),self.coor_vec([0,1]),iTrack_wire,ind_to_ground_length] #RL modified ind_to_ground_length/4
+        portOut2=[self.coor([0,-ind_T_length/2]),self.coor_vec([0,-1]),iTrack_wire,ind_to_ground_length] #RL modified ind_to_ground_length/4
+        portOut3=[self.coor([iTrack_wire/2+buffer_ind_length,0]),self.coor_vec([1,0]), iTrack_wire,iGap]   
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+        self.ports[self.name+'_3'] = portOut3
+        
+        rect_gap=self.draw_rect(self.name+'_gap',self.coor([iTrack_wire/2+buffer_ind_length,-iTrack_wire/2-iGap]),self.coor_vec([-buffer_ind_length-iTrack_wire-ind_to_ground_length,iGap*2+iTrack_wire]))
+        
+        if premesh:
+            if not self.is_litho:
+                self.draw_rect(self.name+'_mesh', self.coor([iTrack_wire/2+buffer_ind_length,-iTrack_wire/2-iGap]), self.coor_vec([-buffer_ind_length-iTrack_wire-ind_to_ground_length,iGap*2+iTrack_wire]))   
+                self.modeler.assign_mesh_length(self.name+"_mesh",iTrack_wire/4)
+                
+#        self.trackObjects.append(rect_buffer)
+        self.trackObjects.append(rect_ind_T)
+        self.trackObjects.append(rect_ind_to_ground)
+        
+        self.gapObjects.append(rect_gap)
+        
+        if self.is_mask:
+            pass
+            #do something
+
     def draw_alignment_marks(self, layer_name, isLayer63=True):
         
         w_thin, l_thin, w_large, l_large, square = '0.1um', '4um', '1um', '3um', '12um'
@@ -5156,8 +5196,8 @@ class ConnectElt(KeyElt, Circuit):
             names = [self.name+'_track', self.name+'_gap', self.name+'_mask']
 #            if track_adaptor is not None:
 #                names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
-            track = self.unite(tracks, names[0])
-            gap = self.unite(gaps, names[1])
+            track = self.unite(tracks)#, names[0])
+            gap = self.unite(gaps)#, names[1])
             if layer is None:
                 self.trackObjects.append(track)
                 self.gapObjects.append(gap)
@@ -5165,7 +5205,7 @@ class ConnectElt(KeyElt, Circuit):
                 self.layers[layer]['trackObjects'].append(track)
                 self.layers[layer]['gapObjects'].append(gap)
             if self.is_mask:
-                mask = self.unite(masks, names[2])
+                mask = self.unite(masks)#, names[2])
                 self.maskObjects.append(mask)
         else:
             track = tracks[0]
@@ -5181,7 +5221,10 @@ class ConnectElt(KeyElt, Circuit):
         
         if is_mesh is True:
             if not self.is_litho:
-                self.modeler.assign_mesh_length(track,2*self.inTrack)
+                if self.val(self.inTrack)<self.val(self.inGap):
+                    self.modeler.assign_mesh_length(track, self.inTrack)
+                else:
+                    self.modeler.assign_mesh_length(track, self.inGap)
                 
         for length in cable_length:
             print('{0}_length = {1:.3f} mm'.format(self.name, length*1000))
