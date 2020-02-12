@@ -3597,7 +3597,60 @@ class KeyElt(Circuit):
         self.ports[self.name+'_top'] = portOut_top
         self.ports[self.name+'_bottom'] = portOut_bottom
  
+    def draw_T_end_cable(self, iTrack, iGap, iT):
         
+        iTrack, iGap, iT = parse_entry((iTrack, iGap, iT))
+
+        cutout_pos  = [0, -iT/2 - iGap + self.overdev]
+        cutout_size = [iTrack + 2*iGap - self.overdev, 
+                       iT + 2*iGap - 2*self.overdev]
+        cutout = self.draw_rect(self.name+'_cutout', self.coor(cutout_pos), 
+                                self.coor_vec(cutout_size))
+        
+        small_track_pos  = [0, -iTrack/2 - self.overdev]
+        small_track_size = [iGap - self.overdev, iTrack + 2*self.overdev]
+        small_track = self.draw_rect(self.name+'_small_track', self.coor(small_track_pos),
+                                     self.coor_vec(small_track_size))
+
+        big_track_pos  = [iGap - self.overdev, -iT/2 - self.overdev]
+        big_track_size = [iTrack + 2*self.overdev, iT + 2*self.overdev]
+        big_track = self.draw_rect(self.name+'_big_track', self.coor(big_track_pos),
+                                   self.coor_vec(big_track_size))
+        
+        if self.is_overdev:
+            gnd_pos  = [0, -iT/2 - iGap + self.overdev]
+            gnd_size = [self.overdev, (iT - iTrack) / 2]
+            gnd_1 = self.draw_rect(self.name+'_gnd1', self.coor(gnd_pos),
+                                   self.coor_vec(gnd_size))
+            
+            gnd_pos[1] = iTrack/2 + iGap - self.overdev
+            gnd_2 = self.draw_rect(self.name+'_gnd2', self.coor(gnd_pos),
+                                   self.coor_vec(gnd_size))
+            
+            self.trackObjects.append(gnd_1)
+            self.trackObjects.append(gnd_2)
+            
+        self.trackObjects.append(small_track)
+        self.trackObjects.append(big_track)
+        
+        self.gapObjects.append(cutout)
+        
+        if not self.is_litho:
+            self.modeler.assign_mesh_length(cutout, iGap)
+
+        if self.is_mask:
+            cutout_pos[0]  -= self.gap_mask
+            cutout_pos[1]  -= self.gap_mask
+            cutout_size[0] += 2 * self.gap_mask
+            cutout_size[1] += 2 * self.gap_mask
+            mask = self.draw_rect(self.name+'_mask', self.coor(cutout_pos), 
+                                  self.coor_vec(cutout_size))
+            self.maskObjects.append(mask)
+
+        port = [self.coor([0, 0]), -self.ori, 
+                iTrack + 2*self.overdev, iGap - 2*self.overdev]
+        self.ports[self.name] = port  
+    
     def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
         iTrack, iGap = parse_entry((iTrack, iGap))
         if typeEnd=='open' or typeEnd=='Open':
