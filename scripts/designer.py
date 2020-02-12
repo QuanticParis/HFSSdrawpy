@@ -4875,7 +4875,6 @@ class ConnectElt(KeyElt, Circuit):
             
         if not isinstance(to_meanders[0], list):
             to_meanders = [to_meanders for ii in range(len(constrains)+1)]
-#        print(to_meanders)
             
         
         cable_length = []
@@ -4919,6 +4918,9 @@ class ConnectElt(KeyElt, Circuit):
             
         if is_bond:
             self.draw_bond((self.inTrack+self.inGap*2)*1.5)
+            
+        ### TEMPORARY, UNSATISFYING SOLUTION TO PREVENT CRASH ###
+        track_adaptor = None
         
         if track_adaptor is not None:
             self.trackObjects.pop()
