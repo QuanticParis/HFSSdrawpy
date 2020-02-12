@@ -447,7 +447,7 @@ class Circuit(object):
         if not bruteforce:
             new_Obj = self.modeler.copy(iObject)
             if name is not None:
-                name = self.rename(new_Obj, name)
+                new_Obj = self.rename(new_Obj, name)
     #            self.__dict__[name] = name
         else:
             vertices = self.get_vertex_ids(iObject)
