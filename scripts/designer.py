@@ -2200,6 +2200,86 @@ class KeyElt(Circuit):
         self.ports[self.name+'_2'] = portOut2
 #    
 
+    def draw_shunt_inductance(self, iTrack, iGap, ind_length, ind_width, 
+                              ind_gap, n_meanders=0, premesh=True):
+        
+        parsed = parse_entry((iTrack, iGap, ind_length, ind_width, 
+                              ind_gap, n_meanders))
+        (iTrack, iGap, ind_length, ind_width, ind_gap, n_meanders) = parsed
+
+        cutout = self.draw_rect_center(self.name + "_cutout", self.coor([0,0]), 
+                                       self.coor_vec([ind_length, iTrack + 
+                                                      2*iGap - 2*self.overdev]))
+        if self.is_mask:        
+            mask = self.draw_rect_center(self.name + "_mask", self.coor([0,0]), 
+                                         self.coor_vec([ind_length, iTrack + 2*iGap
+                                                        + 2 * self.gap_mask]))
+    
+        track = self.draw_rect(self.name + '_track', 
+                               self.coor([-ind_length/2, -iTrack/2 - self.overdev]),
+                               self.coor_vec([ind_length, iTrack + 2*self.overdev]))
+        
+        ind_pads = []
+        extra_gap = iGap - n_meanders * ind_width - (n_meanders - 1) * ind_gap
+        for i in range(round(n_meanders)):
+            pos = [- ind_length / 2 - self.overdev, iTrack / 2 
+                   + i * (ind_width + ind_gap) + extra_gap / 2 - self.overdev]
+            size = [ind_length + 2 * self.overdev, ind_width + 2 * self.overdev]
+            if i == 0:
+                size[0] -= 0.5 * (ind_length - ind_width)
+            if i == n_meanders - 1:
+                size[0] -= 0.5 * (ind_length - ind_width)
+                pos[0]  += 0.5 * (ind_length - ind_width) * (n_meanders % 2)
+            ind_pads.append(self.draw_rect(self.name + '_pad_up_hor_' + str(i),
+                                           self.coor(pos), self.coor_vec(size)))
+            if i != (round(n_meanders) - 1):
+                pos[0] += (i % 2) * (ind_length - ind_width)
+                pos[1] += ind_width + 2 * self.overdev
+                size = [ind_width + 2 * self.overdev, ind_gap - 2 * self.overdev]
+                ind_pads.append(self.draw_rect(self.name + '_pad_up_ver_' + str(i),
+                                               self.coor(pos), self.coor_vec(size)))
+        
+        pos = [-0.5 * ind_width - self.overdev, 
+               iTrack/2 + iGap - extra_gap/2 + self.overdev]
+        size = [ind_width + 2 * self.overdev, extra_gap / 2 - 2 * self.overdev]
+        ind_pads.append(self.draw_rect(self.name + '_pad_up_ver_gnd',
+                                       self.coor(pos), self.coor_vec(size)))
+        
+        pos = [-0.5 * ind_width - self.overdev, iTrack/2 + self.overdev]
+        size = [ind_width + 2 * self.overdev, extra_gap / 2 - 2 * self.overdev]
+        ind_pads.append(self.draw_rect(self.name + '_pad_up_ver_track',
+                                       self.coor(pos), self.coor_vec(size)))
+
+        up_pads = self.unite(ind_pads, name=self.name+'_pads_up')
+        
+        dn_pads = self.copy(up_pads, name=self.name+'_pads_dn')
+        print(dn_pads)
+        ### DON'T KNOW WHY BUT TRANSLATE RETURNS None ###
+        self.translate(dn_pads, self.coor_vec([0, -iTrack - iGap]))
+        print(dn_pads)
+        
+        self.trackObjects.append(track)
+        self.trackObjects.append(up_pads)
+        self.trackObjects.append(dn_pads)
+        self.gapObjects.append(cutout)
+        if self.is_mask:
+            self.maskObjects.append(mask)   
+
+        if premesh:
+            if not self.is_litho:
+                self.draw_rect_center(self.name + "_mesh", self.coor([0,0]), 
+                                      self.coor_vec([ind_length, iTrack + 
+                                                      2*iGap]))
+                self.modeler.assign_mesh_length(self.name+"_mesh", 
+                                                min(ind_gap, ind_width))
+
+        portOut1 = [self.pos + self.ori*ind_length / 2, self.ori, 
+                    iTrack + 2 * self.overdev, iGap - 2 * self.overdev]
+        portOut2 = [self.pos - self.ori*ind_length / 2, -self.ori, 
+                    iTrack + 2 * self.overdev, iGap - 2 * self.overdev]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
     def draw_squid(self, iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid=None, iTrackJ=None, Lj_down='1nH', Lj_up=None,  typePump='down', doublePump=False, iSlope=1, iSlopePump=0.5, fillet=None): #for now assume left and right tracks are the same width
         '''
         Draws a Joseph's Son Junction.
