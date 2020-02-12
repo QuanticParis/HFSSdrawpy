@@ -3324,8 +3324,7 @@ class KeyElt(Circuit):
             portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump, iGapPump]
             self.ports[self.name+'_pump'] = portOutpump1
             
-            
-    def draw_T(self, iTrack, iGap, iTrack3=None, iGap3=None, is_fillet=False, layer=None):
+    def draw_T(self, iTrack, iGap, is_fillet=False):
         
         iTrack, iGap, iTrack3, iGap3 = parse_entry((iTrack, iGap, iTrack3, iGap3))
         if [iTrack3, iGap3] == [None, None]:
@@ -3368,6 +3367,24 @@ class KeyElt(Circuit):
                                               (-iTrack3/2, iTrack/2+2*antenna)]) 
             mask = self.draw(self.name+'_mask', points)
             self.maskObjects.append(mask)
+            
+        points = self.append_points([(-(iGap+iTrack/2),-iTrack/2-self.overdev),
+                                     (0, iTrack+2*self.overdev),
+                                     ((iGap+iTrack/2)*2, 0),
+                                     (0, -iTrack-2*self.overdev),
+                                     (-iGap+self.overdev, 0),
+                                     (0, -iGap+self.overdev), 
+                                     (-iTrack-2*self.overdev, 0),
+                                     (0, iGap-self.overdev)])
+        track = self.draw(self.name+'_track', points)
+
+        if is_fillet:
+	        if self.val(iGap)<self.val(iTrack):
+	            fillet=iGap
+	        else:
+	            fillet=iTrack
+	        track.fillet(fillet-eps,[4,7])
+        
         
         
         portOut1 = [self.coor([-iTrack/2, 0]), self.coor_vec([-1,0]), iTrack, iGap]
