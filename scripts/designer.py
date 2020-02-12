@@ -2468,7 +2468,7 @@ class KeyElt(Circuit):
             portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump, iGapPump]
             self.ports[self.name+'_pump'] = portOutpump1
             
-    def draw_T(self, iTrack, iGap):
+    def draw_T(self, iTrack, iGap, is_fillet=False):
         
         if not self.is_overdev or self.val(self.overdev<0):
             cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,self.overdev/2]), self.coor_vec([2*iGap+iTrack, 2*iGap+iTrack-self.overdev]))
@@ -2498,11 +2498,13 @@ class KeyElt(Circuit):
                                      (-iTrack-2*self.overdev, 0),
                                      (0, iGap-self.overdev)])
         track = self.draw(self.name+'_track', points)
-        if self.val(iGap)<self.val(iTrack):
-            fillet=iGap
-        else:
-            fillet=iTrack
-        track.fillet(fillet-eps,[4,7])
+
+        if is_fillet:
+	        if self.val(iGap)<self.val(iTrack):
+	            fillet=iGap
+	        else:
+	            fillet=iTrack
+	        track.fillet(fillet-eps,[4,7])
         
         self.trackObjects.append(track)
         
