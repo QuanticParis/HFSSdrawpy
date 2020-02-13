@@ -2206,7 +2206,18 @@ class KeyElt(Circuit):
         parsed = parse_entry((iTrack, iGap, ind_length, ind_width, 
                               ind_gap, n_meanders))
         (iTrack, iGap, ind_length, ind_width, ind_gap, n_meanders) = parsed
-
+        '''
+                    ____________   ____________  Ground
+                                | |_______
+              ind_width | |     |_______  |      
+                         _______________| |      Inductance in
+                    __  |  _______________|      both CPW gaps
+            ind_gap __  | |_______               (2 meanders here)
+                        |_______  |     
+                    ____________| |____________
+                                                 CPW track
+                        |   ind_length    |
+        '''
         cutout = self.draw_rect_center(self.name + "_cutout", self.coor([0,0]), 
                                        self.coor_vec([ind_length, iTrack + 
                                                       2*iGap - 2*self.overdev]))
