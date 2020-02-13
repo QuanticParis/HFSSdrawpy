@@ -954,7 +954,8 @@ class KeyElt(Circuit):
                                      (0, -iTrack-2*self.overdev),
                                      (-adaptDist, iTrack/2-self.pcb_track/2),
                                      (-iBondLength-self.overdev, 0)])
-        self.trackObjects.append(self.draw(self.name+"_track", points))
+        track = self.draw(self.name+"_track", points)
+        self.trackObjects.append(track)
 
         points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev),
                              (self.pcb_gap/2+iBondLength-self.overdev, 0),
@@ -981,7 +982,8 @@ class KeyElt(Circuit):
                                          (-self.pcb_gap/2+2*self.overdev, 0)])
             ohm = self.draw(self.name+"_ohm", points)
             self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
-            self.modeler.assign_mesh_length(ohm, self.pcb_track/10)
+            self.modeler.assign_mesh_length(ohm,   self.pcb_track/10)
+            self.modeler.assign_mesh_length(track, self.pcb_track/10)
 #            self.trackObjects.append(ohm)
             points = self.append_points([(self.pcb_gap/2+self.overdev,0),(self.pcb_gap/2-2*self.overdev,0)])
             self.draw(self.name+'_line', points, closed=False)
@@ -2264,25 +2266,20 @@ class KeyElt(Circuit):
         up_pads = self.unite(ind_pads, name=self.name+'_pads_up')
         
         dn_pads = self.copy(up_pads, name=self.name+'_pads_dn')
-        print(dn_pads)
+
         ### DON'T KNOW WHY BUT TRANSLATE RETURNS None ###
         self.translate(dn_pads, self.coor_vec([0, -iTrack - iGap]))
-        print(dn_pads)
         
-        self.trackObjects.append(track)
-        self.trackObjects.append(up_pads)
-        self.trackObjects.append(dn_pads)
+        to_unite = [up_pads, dn_pads, track]
+        pads_track = self.unite(to_unite, name=self.name+'_pads_track')
+        
+        self.trackObjects.append(pads_track)
         self.gapObjects.append(cutout)
         if self.is_mask:
             self.maskObjects.append(mask)   
 
-        if premesh:
-            if not self.is_litho:
-                self.draw_rect_center(self.name + "_mesh", self.coor([0,0]), 
-                                      self.coor_vec([ind_length, iTrack + 
-                                                      2*iGap]))
-                self.modeler.assign_mesh_length(self.name+"_mesh", 
-                                                min(ind_gap, ind_width))
+        if premesh and not self.is_litho:
+                self.modeler.assign_mesh_length(pads_track, ind_width)
 
         portOut1 = [self.pos + self.ori*ind_length / 2, self.ori, 
                     iTrack + 2 * self.overdev, iGap - 2 * self.overdev]
@@ -3640,6 +3637,9 @@ class KeyElt(Circuit):
         big_track = self.draw_rect(self.name+'_big_track', self.coor(big_track_pos),
                                    self.coor_vec(big_track_size))
         
+        to_unite = [small_track, big_track]
+        track = self.unite(to_unite, name=self.name+'_track')
+        
         if self.is_overdev:
             gnd_pos  = [0, -iT/2 - iGap + self.overdev]
             gnd_size = [self.overdev, (iT - iTrack) / 2]
@@ -3652,14 +3652,13 @@ class KeyElt(Circuit):
             
             self.trackObjects.append(gnd_1)
             self.trackObjects.append(gnd_2)
-            
-        self.trackObjects.append(small_track)
-        self.trackObjects.append(big_track)
+
+        self.trackObjects.append(track)
         
         self.gapObjects.append(cutout)
         
         if not self.is_litho:
-            self.modeler.assign_mesh_length(cutout, iGap)
+            self.modeler.assign_mesh_length(track, iTrack)
 
         if self.is_mask:
             cutout_pos[0]  -= self.gap_mask
@@ -5186,6 +5185,10 @@ class ConnectElt(KeyElt, Circuit):
                              (-adaptDist, (self.outGap-self.inGap)+(self.outTrack-self.inTrack)/2)])
             mask = self.draw(self.name+"_mask", points)
             self.maskObjects.append(mask)
+            
+        if not self.is_litho:
+            self.modeler.assign_mesh_length(track, 
+                                    1 / (1/self.inTrack + 1/self.outTrack))
 
         return self.iIn+'_bis', adaptDist, track, gap, mask
     
