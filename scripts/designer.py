@@ -4483,6 +4483,18 @@ class KeyElt(Circuit):
         self.ports[self.name+'_bottom'] = portOut_bottom
  
     def draw_T_end_cable(self, iTrack, iGap, iT):
+        '''
+                   iGap iTrack
+                    |  |  |
+                     ________
+                    |   __   |  _
+                _   |  |  |  |
+           iGap _   ___|  |  |
+        iTtrack _   ___   |  |  iT
+                       |  |  |
+                    |  |__|  |  _
+                    |________|
+        '''
         
         iTrack, iGap, iT = parse_entry((iTrack, iGap, iT))
 
