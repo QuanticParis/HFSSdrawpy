@@ -29,7 +29,7 @@ chip1 = PM.body('chip1', 'Global')
 
 litho = True
 mask = False
-ebeam = False
+ebeam = True
 
 if litho:
     is_bond = False
@@ -44,9 +44,9 @@ else:
     is_bond = True
 
 qubit = True
-memory = False
+memory = True
 readout = True
-drive_mem = False
+drive_mem = True
 parity = True
 flux_lines = True
 
@@ -193,9 +193,9 @@ if drive_mem:
     chip1.set_current_coor([con5, PM.y_I - 0.5*PM.cutout_depth - 0.5*PM.len_capa_drive], [0,1])
     chip1.draw_capa_inline('capa_drive', PM.track, PM.gap, PM.len_capa_drive, 0.5*(PM.track - 3*PM.track_mem), n_pad=3)
     
-    chip1.draw_cable('drive_mem', 'in_mem', 'capa_drive_2', is_bond=is_bond)
+    chip1.draw_cable('chip1in_flux_topiOut', 'chip1in_memiOut', 'capa_drive_outPort2', is_bond=is_bond,  fillet = PM.fillet)
 
-if readout:
+if not(readout):
     PM.set_variable('gap_capa_readout', '8um')
     chip1.set_current_coor(['0.9mm', con1], [1,0])
     chip1.draw_capa_inline('capa_readout', PM.track, PM.gap, '100um', PM.gap_capa_readout, n_pad=2)

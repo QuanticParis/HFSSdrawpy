@@ -20,7 +20,7 @@ layer_MASK = 4
 layer_Default = 10
 
 #IMPORT GDS / HFSS Modelers
-from .hfss import extract_value_unit, \
+from hfss import extract_value_unit, \
                  extract_value_dim, \
                  parse_entry, \
                  get_active_project, \
@@ -29,7 +29,7 @@ from .hfss import extract_value_unit, \
                  var
 import gds_modeler
 ##IMPORT KEY / CUSTOM Elements
-from .Lib import *
+from Lib import *
 import KeyElement
 import CustomElement
 
@@ -217,7 +217,6 @@ class PythonMdlr():
 
     def delete(self, entity):
         if (entity.name in entity.__class__.dict_instances):
-            print(entity.__class__.dict_instances)
             entity.__class__.find_last_list(entity.__class__.instances_to_move).remove(entity)
             a = entity.__class__.dict_instances.pop(entity.name, None)
         del entity
@@ -432,17 +431,18 @@ class PythonMdlr():
             self.variables[name]=value
             
     def subtract(self, blank_entity, tool_entities, keep_originals= False):
-        self.interface.subtract(blank_entity, tool_entities, keep_originals)
+        name = self.interface.subtract(blank_entity, tool_entities, keep_originals)
         if not(keep_originals):
             for tool_entity in tool_entities:
                 self.delete(tool_entity)
+#        return ModelEntity(name, 2, self.coor_sys, layer=blank_entity.layer)
             
-    def _sweep_along_path(self, entity_to_sweep, path_entity):
-        new_name = self.interface._sweep_along_path(entity_to_sweep, path_entity)
+    def _sweep_along_path(self, entity_to_sweep, path_entity, name=None):
+        new_name = self.interface._sweep_along_path(entity_to_sweep, path_entity, name)
 #        self.delete(path_entity)
-        entity_to_sweep.modify_dimension(entity_to_sweep.dimension+1)
-        entity_to_sweep.rename_entity(new_name)
-        return entity_to_sweep
+        entity_to_sweep.modify_dimension(2)
+        path_entity.rename_entity(new_name)
+        return path_entity
     
     def translate(self, entities, vector=[0,0,0]):
         if self.mode == 'gds':
@@ -452,24 +452,17 @@ class PythonMdlr():
     def unite(self, entities, name=None, keep_originals=False):
         loc_entities = []     
         dim_Union = 0
-
+        union=None
         for entity in entities:
-            if entity!=None:
-                if isinstance(entity, list):
-                    union = self.unite(entity, keep_originals= keep_originals)
-                elif (isinstance(entity, ModelEntity) and entity!=None):
-                    union = entity
-                else:
-                    union= None
-            else:
-                union = None
+            if entity!=None and isinstance(entity, ModelEntity):
+                union = entity
+
             if union!=None:    
                     loc_entities.append(union)
                     if union.dimension>dim_Union:
                         dim_Union = union.dimension
                     if not(keep_originals):
                         self.delete(union)
-                
 
         if len(loc_entities)>1:
             new_name = self.interface.unite(loc_entities)
@@ -479,7 +472,7 @@ class PythonMdlr():
 
             else:
                 union = entities[0].copy(dim_Union)
-#                self.rename_entity_1(union, name)
+                self.rename_entity_1(union, name)
             
         return union  
 
@@ -720,6 +713,7 @@ class Body(PythonMdlr):
             new_args = [args[0], args[1]]
             compteur = 0
             for i, argument in enumerate(args[2:]):
+                print("port", argument)
                 if isinstance(argument, str) and (argument in Port.dict_instances):
                     new_args.append(Port.dict_instances[argument])
                     compteur+=1
@@ -940,7 +934,7 @@ class Body(PythonMdlr):
                       (-(iLength/2-iLengthJ/2-adaptDist2), 0)]
         points = self.append_points(self.refy_points(raw_points))
         left_pad = self.polyline_2D(points, name=name+"_pad2", layer=layer_TRACK)
-
+        
         pads = self.unite([right_pad, left_pad], name=name+'_pads')
         
         if not self.is_litho:
@@ -1040,7 +1034,7 @@ class Body(PythonMdlr):
 #                self.__init__(self.name, *port_names[2*ii:2*ii+2]) CONNECT ELEMENT USELESS
                 
                 points = self.find_path('points', ports[2*ii].name, ports[2*ii+1].name, fillet, is_meander, to_meander, m_length, meander_offset)
-                connection_track = self.polyline_2D(points, name=name+'path_track'+to_add, closed=False ,layer = layer_Default)
+                connection_track = self.polyline_2D(points, name=name+'path_track'+to_add, closed=False ,layer = layer_TRACK)
     #            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
                 cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
 #                self._fillets(fillet-eps, connection_track)
@@ -1048,8 +1042,8 @@ class Body(PythonMdlr):
                 connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = layer_Default)
 #                self._fillets(fillet-eps, connection_gap)
 #                self.set_current_coor([0,0], [0, -1])
-                track_starter = self.cable_starter(name, ports[2*ii].name, width='track')
-                gap_starter = self.cable_starter(name, ports[2*ii].name, width='gap')
+                track_starter = self.polyline_2D([[-ports[2*ii].track,0],[ports[2*ii].track,0]], name = name+'start_gap', layer = 0)
+                gap_starter = self.polyline_2D([[-ports[2*ii].gap,0],[ports[2*ii].gap,0]], name = name+'start_track', layer = 1)
                 
                 if self.is_mask:
                     connection_mask = self.polyline_2D(points, name=name+'_mask'+to_add, closed=False ,layer = layer_MASK)

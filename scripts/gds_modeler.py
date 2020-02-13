@@ -57,7 +57,8 @@ class GdsModeler():
         self.gds_object_instances[name] = new_polygon
     
     def generate_gds(self,name_file):
-        gdspy.write_gds(name_file)
+        writer = gdspy.GdsWriter(name_file)
+        writer.write_cell(self.cell)
 
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
@@ -94,15 +95,18 @@ class GdsModeler():
         pass     
     
     def draw_polyline(self, points, size=[eps, eps], closed=True, **kwargs):
+        #TODO sace of open path
         #size is the thickness of the polyline for gds, must be a 2D-list with idential elements
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
-#        if (closed==True):
-        if 1:
+        
+        if closed:
             poly1 = gdspy.Polygon(points, layer)
-#        else:
-#            poly1 = gdspy.PolyPath(points, size[0], layer=layer)
+        else:
+            poly1 = gdspy.FlexPath(points, 1e-9, layer = layer)
+
+
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
         return name
@@ -176,59 +180,46 @@ class GdsModeler():
             return np.amin(np.array(list_norm))
         
     def gds_boolean(self, operand1, operand2, operation, precision=0.001, max_points=199, layer=0, datatype=0):
-        
-        ratio1 = self.polygonset_norm(operand1)
-        ratio2 = self.polygonset_norm(operand1)
-        ratio = np.amin([ratio1, ratio2])
-        print(operand1.polygons)
-        print(operand2.polygons)
-
-        operand1 = operand1.scale(ratio**(-1), ratio**(-1))
-        ratio2 = np.linalg.norm(operand2.polygons)**2
-        operand2 = operand2.scale(ratio**(-1), ratio**(-1))
         print("boolean operation")
+
+        ratio = 10**9
+        print(operand1)
+        print(operand2)
+        operand1 = operand1.scale(ratio, ratio)
+        operand2 = operand2.scale(ratio, ratio)
         result = gdspy.boolean(operand1, operand2, operation, precision, max_points, layer, datatype)
-        print(result.polygons)
-        result = result.scale(ratio, ratio)
-        print(result.polygons)
+        result = result.scale(ratio**(-1), ratio**(-1))
+        print(result)
+        print("end operation")
 
         return result
         
-    def unite(self, entities, name=None, keep_originals=True):
-        #TODO Use of PolygonSet
-        if not(isinstance(entities, list)):
-            raise Exception('Union takes a list of entities as an argument')
-        if len(entities)==0:
-            raise Exception('Union takes a non-empty list of entities as an argument')
+    def unite(self, entities, name=None, keep_originals=False):
+#        #TODO Use of PolygonSet
 
         blank_entity = entities.pop(0)
         blank_polygon = self.gds_object_instances[blank_entity.name]
-        self.cell.remove_polygon_modified(blank_polygon)
-        if name==None:
-            final_name = blank_entity.name
-        else:
-            final_name = name
-        
+        self.cell.polygons.remove(blank_polygon)
         tool_polygons = []
         for tool_entity in entities:
             tool_polygon = self.gds_object_instances[tool_entity.name]
-            tool_polygons.append(tool_polygon)
-            if not(keep_originals):
-                self.cell.remove_polygon_modified(tool_polygon)
-                self.gds_object_instances.pop(tool_entity.name, None)
-#        
-#        #2 Then, we perform fast boolean
-        sub = blank_polygon
-        for tool_polygon in tool_polygons:
-            sub = self.gds_boolean(sub, tool_polygon, 'or')
-            print(sub)
-        
-        #3 At last we update the cell and the gds_object_instance
-        self.gds_object_instances[final_name] = sub
-        self.cell.add(sub)
-        
 
-        return final_name
+            self.cell.polygons.remove(tool_polygon)
+            if isinstance(tool_polygon, gdspy.PolygonSet):
+                for polygon in tool_polygon.polygons:
+                    tool_polygons.append(polygon)
+            else:
+                tool_polygons.append(tool_polygon)
+        
+        tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
+        sub = self.gds_boolean(blank_polygon, tool_polygon_set, 'or')
+        if name==None:
+            self.gds_object_instances[blank_entity.name] = sub
+        else:
+            self.gds_object_instances[name] = sub
+            
+        self.cell.add(sub)
+        return name
 
     def intersect(self, entities, name=None, keep_originals=False):
         if not(isinstance(entities, list)):
@@ -259,19 +250,22 @@ class GdsModeler():
         
         return final_name
 
-    def subtract(self, blank_entity, tool_entities, keep_originals=True):
-        final_name = blank_entity.name
+    def subtract(self, blank_entity, tool_entities, keep_originals=True, name=None):
+        if name!=None:
+            final_name = name
+        else:
+            final_name = blank_entity.name
 
         #1 We clear the cell of all elements and create lists to store the polygons
         blank_polygon = self.gds_object_instances.pop(blank_entity.name, None)
-        self.cell.remove_polygon_modified(blank_polygon)
+        self.cell.polygons.remove(blank_polygon)
         
         tool_polygons = []
         for tool_entity in tool_entities:
             tool_polygon = self.gds_object_instances[tool_entity.name]
             tool_polygons.append(tool_polygon)
             if not(keep_originals):
-                self.cell.remove_polygon_modified(tool_polygon)
+                self.cell.polygons.remove(tool_polygon)
                 self.gds_object_instances.pop(tool_entity.name, None)
 #        
 #        #2 Then, we perform fast boolean
@@ -284,6 +278,7 @@ class GdsModeler():
                 sub = blank_polygon
         
         #3 At last we update the cell and the gds_object_instance
+        print("final name", final_name)
         self.gds_object_instances[final_name] = sub
         self.cell.add(sub)
         
@@ -329,19 +324,23 @@ class GdsModeler():
         polygon.fillet(new_radius)
         
 
-    def _sweep_along_path(self, to_sweep, path_obj):
-        print("*"*20)
-        print(to_sweep.name)
-        print(path_obj.name)
-        print(self.gds_object_instances[to_sweep.name])
-        print(self.gds_object_instances[path_obj.name])
-        print(self.gds_object_instances[to_sweep.name].polygons[0])
-        length_to_sweep = (Vector(self.gds_object_instances[to_sweep.name].polygons[0][0])-Vector(self.gds_object_instances[to_sweep.name].polygons[0][1])).norm()
-        print(self.gds_object_instances[path_obj.name].polygons[0])
-        flexpath = gdspy.FlexPath(self.gds_object_instances[path_obj.name].polygons[0], length_to_sweep)
+    def _sweep_along_path(self, to_sweep, path_obj, name=None):
+        try:
+            length_to_sweep = (Vector(self.gds_object_instances[to_sweep.name].polygons[0][0])-Vector(self.gds_object_instances[to_sweep.name].polygons[0][1])).norm()
+        except Exception:
+            length_to_sweep = (Vector(self.gds_object_instances[to_sweep.name].points[0])-Vector(self.gds_object_instances[to_sweep.name].points[1])).norm()
+        try:
+            flexpath = gdspy.FlexPath(self.gds_object_instances[path_obj.name].polygons[0], length_to_sweep, layer = to_sweep.layer)
+        except Exception:
+            flexpath = gdspy.FlexPath(self.gds_object_instances[path_obj.name].points, length_to_sweep, layer = to_sweep.layer)
+
+        
         self.cell.add(flexpath)
-        return to_sweep.name
-    
+        
+        if name==None:
+            return to_sweep.name
+        else:
+            return name
     
     def sweep_along_vector(self, names, vector):
         self._modeler.SweepAlongVector(self._selections_array(*names), 

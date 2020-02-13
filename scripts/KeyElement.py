@@ -85,7 +85,6 @@ def move(func):
         previous_pos = args[0].current_pos
         previous_ori = args[0].current_ori
 #        print(previous_pos, previous_ori)
-        print(func.__name__)
         return _moved(func, previous_pos, previous_ori, *args, **kwargs)
     return moved
 
@@ -213,12 +212,11 @@ def draw_quarter_circle(self, name, layer, fillet):
     
     temp = self.rect_corner_2D([0,0], [2*fillet,2*fillet], name=name ,layer=layer)
     temp_fillet = self.rect_corner_2D([0,0], [2*fillet,2*fillet], name=name+'_fillet', layer=layer)
+    
     self._fillet(fillet-eps, [0], temp_fillet)
 
     self.subtract(temp, [temp_fillet])
-    
-
-    return [[],[temp_fillet]]
+    return temp
 
 @register_method
 @move        
@@ -404,7 +402,6 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
     to_subtract = []
     if ports_param!=None:
         for ii,port_param in enumerate(ports_param):
-            print(port_param)
             angle = port_param[3]
             self.set_current_coor(pos=port_param[:3], ori=angle)
             result = self.cable_3D(*port_param[4])
@@ -604,7 +601,7 @@ def draw_selfparity(self,
      
     cutout_size = Vector(cutout_size)
     
-    cutout = self.rect_center_2D([0,0], cutout_size, name=name+'_cutout', layer=layer_GAP)
+    cutout = self.rect_center_2D([0,0], cutout_size, name=name+'_cutout', layer=14)
     if not self.is_litho:
         mesh = self.rect_center_2D([0,0], cutout_size, name=name+"_mesh", layer=layer_MESH)
         self.mesh_zone(mesh, '4um')
@@ -621,7 +618,7 @@ def draw_selfparity(self,
                              (-2*buffer-2*self.overdev, 0),
                              (0, track_left+2*self.overdev),
                              (buffer-track/2, 0)]
-    left_track = self.polyline_2D(self.append_points(left_track_raw_points), name=name+"_track1", layer=layer_TRACK)
+    left_track = self.polyline_2D(self.append_points(left_track_raw_points), name=name+"_track1", layer=13)
     
     right_track_raw_points = [(-cutout_size[0]/2+buffer-track/2-self.overdev, ind_gap/2-self.overdev),
                               (track+2*self.overdev, 0),
@@ -631,7 +628,7 @@ def draw_selfparity(self,
                               (-2*buffer-2*self.overdev, 0),
                               (0, -track_right-2*self.overdev),
                               (buffer-track/2, 0)]
-    right_track = self.polyline_2D(self.append_points(right_track_raw_points), name=name+"_track2", layer=layer_TRACK)
+    right_track = self.polyline_2D(self.append_points(right_track_raw_points), name=name+"_track2", layer=13)
     
     left_elbow_raw_points = [(-cutout_size[0]/2+2*buffer+cap_depth+self.overdev, -ind_gap/2-buffer+track/2+self.overdev),
                              (buffer-track/2, 0),
@@ -639,7 +636,7 @@ def draw_selfparity(self,
                              (track+2*self.overdev, 0),
                              (0, -buffer-track/2-(ind_gap-jn_gap)/2-2*self.overdev),
                              (-buffer-track/2-2*self.overdev, 0)]
-    left_elbow = self.polyline_2D(self.append_points(left_elbow_raw_points), name=name+"_elbow1", layer=layer_TRACK)
+    left_elbow = self.polyline_2D(self.append_points(left_elbow_raw_points), name=name+"_elbow1", layer=13)
     
     right_elbow_raw_points = [(-cutout_size[0]/2+2*buffer+cap_depth+self.overdev, ind_gap/2+buffer-track/2-self.overdev),
                              (buffer-track/2, 0),
@@ -647,11 +644,10 @@ def draw_selfparity(self,
                              (track+2*self.overdev, 0),
                              (0, buffer+track/2+(ind_gap-jn_gap)/2+2*self.overdev),
                              (-buffer-track/2-2*self.overdev, 0)]
-    right_elbow = self.polyline_2D(self.append_points(right_elbow_raw_points), name=name+"_elbow2", layer=layer_TRACK)
+    right_elbow = self.polyline_2D(self.append_points(right_elbow_raw_points), name=name+"_elbow2", layer=13)
     
     to_unite = [right_track, left_track, right_elbow, left_elbow]
     pads = self.unite(to_unite, name=name+'_pads')
-    self.trackObjects.append(pads)
     
     portOut1 = self.port(name+'_portOut1', [-cutout_size[0]/2, ind_gap/2+buffer+track/2-track_right/2], [-1,0], track_right+2*self.overdev, gap_right-2*self.overdev)
 #        self.ports[name+'_1'] = portOut1
@@ -666,8 +662,8 @@ def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
     pad_size = Vector(pad_size)
     
     # connection pads
-    self.rect_corner_2D([-pad_size[0]/2, pad_spacing/2], [pad_size[0],pad_size[1]], name=name+'_left', layer=layer_TRACK)
-    self.rect_corner_2D([-pad_size[0]/2, -pad_spacing/2], [pad_size[0],-pad_size[1]], name=name+'_right', layer=layer_TRACK)
+    self.rect_corner_2D([-pad_size[0]/2, pad_spacing/2], [pad_size[0],pad_size[1]], name=name+'_left', layer=12)
+    self.rect_corner_2D([-pad_size[0]/2, -pad_spacing/2], [pad_size[0],-pad_size[1]], name=name+'_right', layer=12)
     
     r1 = Vector([1,0]).rot(Vector([0,-1]))
     
@@ -703,11 +699,11 @@ def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
         self.rect_corner_2D([-0.5*width[0], way*0.5*loop_size[1]], [width[0], way*0.5*(pad_spacing-loop_size[1])], name=name+'_56'+str(way+1), layer=layer_TRACK)
         
         # horizontal crossbars
-        self.rect_corner_2D([-0.5*(width[0]+0.2*loop_size[0]), way*0.5*(loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec5'+str(way+1), layer=layer_TRACK)
-        self.rect_corner_2D([-0.5*(width[0]+1.0*loop_size[0]), way*0.5*(loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec6'+str(way+1), layer=layer_TRACK)
-        self.rect_corner_2D([-0.5*(width[0]-0.6*loop_size[0]), way*0.5*(loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec7'+str(way+1), layer=layer_TRACK)
-        self.rect_corner_2D([-0.5*(width[0]+0.6*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec8'+str(way+1), layer=layer_TRACK)
-        self.rect_corner_2D([-0.5*(width[0]-0.2*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec9'+str(way+1), layer=layer_TRACK)
+        self.rect_corner_2D([-0.5*(width[0]+0.2*loop_size[0]), way*0.5*(loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec5'+str(way+1), layer=11)
+        self.rect_corner_2D([-0.5*(width[0]+1.0*loop_size[0]), way*0.5*(loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec6'+str(way+1), layer=11)
+        self.rect_corner_2D([-0.5*(width[0]-0.6*loop_size[0]), way*0.5*(loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec7'+str(way+1), layer=11)
+        self.rect_corner_2D([-0.5*(width[0]+0.6*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec8'+str(way+1), layer=11)
+        self.rect_corner_2D([-0.5*(width[0]-0.2*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec9'+str(way+1), layer=11)
 
 @register_method
 @move         
@@ -780,9 +776,9 @@ def draw_fluxline(self, name, iTrack, iGap, length, track_flux, slope=0.5, sym='
     gapext_starter = self.polyline_2D(points_starter, closed=False, name=name+'_gapext1', layer=layer_GAP)
     
     
-    track = self._sweep_along_path(track_starter, track)
-    gapext = self._sweep_along_path(gapext_starter, gapext)
-    
+#    track = self._sweep_along_path(track_starter, track)
+#    gapext = self._sweep_along_path(gapext_starter, gapext)
+#    
 #    gap = self.unite([gap, gapext], name=gap.name+"2")
     
     if self.is_mask:

@@ -279,7 +279,7 @@ def draw_ZR_transmon(self,
     pad_size_left = Vector(pad_size_left)
     pad_size_right = Vector(pad_size_right)
 
-    cutout = self.rect_center_2D([0,0], cutout_size-Vector([self.overdev*2, self.overdev*2]),name =name+"_cutout", layer=layer_GAP)
+    cutout = self.rect_center_2D([0,0], cutout_size-Vector([self.overdev*2, self.overdev*2]),name =name+"_cutout", layer=layer_Default)
     if not self.is_litho:
         mesh = self.rect_center_2D([0,0], cutout_size, name=name+"_mesh", layer=layer_MESH)
     if self.is_mask:
@@ -413,7 +413,7 @@ def draw_ZR_transmon(self,
     if not self.is_litho:
         self.mesh_zone(mesh, 4*Jwidth)
     
-    to_unite = [right_pad, left_pad, right_track, left_track, junction_pads]
+    to_unite = [left_pad, right_pad, right_track, left_track, junction_pads]
     if short_right!=0:
         to_unite.append(right_short)
     if short_left!=0:
@@ -427,9 +427,9 @@ def draw_ZR_transmon(self,
         added_track_right = self.rect_center_2D([cutout_size[0]/2, -(track_right)/2-self.overdev], [-self.overdev, (track_right)+2*self.overdev], name=name+'_added_track_right', layer=layer_TRACK)
         to_unite = to_unite+[added_track_left, added_track_right]
         
-        cutout = self.unite([cutout, added_gap_left, added_gap_right], 'nom3')
+#        cutout = self.unite([cutout, added_gap_left, added_gap_right], 'nom3')
         
-#    pads = self.unite(to_unite, name=name+'_pads')
+    pads = self.unite(to_unite, name=name+'_pads')
     
         
     portOut2 = self.port(name+'_portOut2', [cutout_size[0]/2,0], [1,0], track_right+2*self.overdev, gap_right-2*self.overdev)

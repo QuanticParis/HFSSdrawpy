@@ -33,11 +33,18 @@ chip2= PM.body('chip2', 'Global')
 chip2.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[0,1])
 
 #chip2.rect_corner_2D([0,0,1],[1,1,1], name="ee", layer='Z')
+right_quarter_up2 = chip2.polyline_2D([[1,1],[0.5,0.5],[1,0.5]], name="rect", layer=1)
+#right_quarter_up1 = chip2.rect_center_2D([2,2,2],[0.5,0.5], name="rect2", layer=1)
 right_quarter_up1 = chip2.draw_quarter_circle('right_quarter_up1', 4, 1)
+
+tes = chip2.polyline_2D([[-0.01,0],[0.01,0]], name="toflex", layer=1)
+tes2 = chip2._sweep_along_path(tes, right_quarter_up2)
+
+chip2.unite([right_quarter_up1, right_quarter_up2], name='new_name')
 #print("objets finaux", hfss.ModelEntity.instances_to_move)
-print("eee", chip2.interface.gds_cells)
+print("final", chip2.interface.cell.polygons)
 chip2.generate_gds("quarter_circle.gds")
-#gdspy.LayoutViewer(library=gdspy.current_library, pattern={'default': 8},background='#FFFFFF')
+gdspy.LayoutViewer(library=gdspy.current_library, pattern={'default': 8},background='#FFFFFF')
 
 
 #%%
