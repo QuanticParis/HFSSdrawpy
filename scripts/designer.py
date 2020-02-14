@@ -4488,6 +4488,87 @@ class KeyElt(Circuit):
         portOut_bottom = [self.coor([adapt_length, -iTrack/2-iGap-iTrack/2]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name+'_top'] = portOut_top
         self.ports[self.name+'_bottom'] = portOut_bottom
+        
+    def draw_Xmon_end_cable(self, iTrack, iGap, iWidth, iLength):
+        '''
+                   iGap iTrack
+                    |  |  |
+                     ________________
+                    |   __________   |  _
+                    |  |   _______|  |  
+                _   |  |  |   _______|
+           iGap _   ___|  |  |
+        iTtrack _   ___   |  |          iWidth
+                       |  |  |_______
+                    |  |  |_______   |
+                    |  |__________|  |  _
+                    |________________|
+                    
+                       | iLength  |
+        '''
+        
+        parsed = parse_entry((iTrack, iGap, iWidth, iLength))
+        iTrack, iGap, iWidth, iLength = parsed
+        
+        cutout_pts = [(0, -iWidth/2 - iGap + self.overdev),
+                      (iLength + 2*iGap - self.overdev, 0),
+                      (0, iTrack + 2*iGap - 2*self.overdev),
+                      (iTrack - iLength, 0),
+                      (0, iWidth - 2*iTrack - 2*iGap + 2*self.overdev),
+                      (iLength - iTrack, 0),
+                      (0, iTrack + 2*iGap - 2*self.overdev),
+                      (-iLength - 2*iGap + self.overdev, 0)]
+
+        track_pts  = [(0, -iTrack/2 - self.overdev),
+                      (iGap - self.overdev, 0),
+                      (0, (iTrack - iWidth)/2),
+                      (iLength + 2*self.overdev, 0),
+                      (0, iTrack + 2*self.overdev),
+                      (iTrack - iLength, 0),
+                      (0, iWidth - 2*iTrack - 2*self.overdev),
+                      (iLength - iTrack, 0),
+                      (0, iTrack + 2*self.overdev),
+                      (-iLength - 2*self.overdev, 0),
+                      (0, (iTrack - iWidth)/2),
+                      (-iGap + self.overdev, 0)]
+        
+        cutout_pts = self.append_points(cutout_pts)
+        track_pts  = self.append_points(track_pts)
+        
+        cutout = self.draw(self.name + '_cutout', cutout_pts)
+        track  = self.draw(self.name + '_track',  track_pts)
+        
+        if self.is_overdev:
+            gnd_pos  = [0, -iWidth/2 - iGap + self.overdev]
+            gnd_size = [self.overdev, (iWidth - iTrack) / 2]
+            gnd_1 = self.draw_rect(self.name+'_gnd1', self.coor(gnd_pos),
+                                   self.coor_vec(gnd_size))
+            
+            gnd_pos[1] = iTrack/2 + iGap - self.overdev
+            gnd_2 = self.draw_rect(self.name+'_gnd2', self.coor(gnd_pos),
+                                   self.coor_vec(gnd_size))
+            
+            self.trackObjects.append(gnd_1)
+            self.trackObjects.append(gnd_2)
+
+        self.trackObjects.append(track)
+        
+        self.gapObjects.append(cutout)
+        
+        if not self.is_litho:
+            self.modeler.assign_mesh_length(track, iTrack)
+
+        if self.is_mask:
+            mask_pos  = [-self.gap_mask, -iWidth/2 - iGap - self.gap_mask]
+            mask_size = [iLength + 2*iGap + 2*self.gap_mask, 
+                         iWidth  + 2*iGap + 2*self.gap_mask]
+            mask = self.draw_rect(self.name+'_mask', self.coor(mask_pos), 
+                                  self.coor_vec(mask_size))
+            self.maskObjects.append(mask)
+
+        port = [self.coor([0, 0]), -self.ori, 
+                iTrack + 2*self.overdev, iGap - 2*self.overdev]
+        self.ports[self.name] = port
  
     def draw_T_end_cable(self, iTrack, iGap, iT):
         '''
