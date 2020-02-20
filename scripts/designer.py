@@ -5489,7 +5489,7 @@ class ConnectElt(KeyElt, Circuit):
         self.layers[layer_name]['gapObjects'].append(cutout)    
             
     
-    def _connect_JJ(self, iTrackJ, iInduct='1nH', fillet=None):
+    def _connect_JJ(self, iTrackJ, iInduct='1nH', fillet=None, ratio=1.0):
         '''
         Draws a Josephson Junction.
 
@@ -5526,24 +5526,23 @@ class ConnectElt(KeyElt, Circuit):
         else:
             capa_plasma = 0
         
-        
         # No parsing needed, should not be called from outside
         self.pos = (self.pos+self.posOut)/2
         iTrack = self.inTrack # assume both track are identical
         
-        adaptDist = iTrack/2-iTrackJ/2
+        adaptDist = (iTrack - iTrackJ) / 2
+        
+        iLengthJ = iTrackJ * ratio
 
-        if self.val(adaptDist)>self.val(iLength/2-iTrackJ/2):
+        if self.val(adaptDist) > self.val((iLength - iLengthJ) / 2):
             raise ValueError('Increase iTrackJ %s' % self.name)
 
-
-        raw_points = [(iTrackJ/2, iTrackJ/2),
-                      ((iLength/2-iTrackJ/2-adaptDist), 0),
-                      (adaptDist, (iTrack-iTrackJ)/2),
+        raw_points = [(iLengthJ/2, iTrackJ/2),
+                      ((iLength - iLengthJ) / 2 - adaptDist, 0),
+                      (adaptDist, (iTrack - iTrackJ) / 2),
                       (0, -iTrack),
-                      (-adaptDist, (iTrack-iTrackJ)/2),
-                      (-(iLength/2-iTrackJ/2-adaptDist), 0)]
-        print(raw_points)
+                      (-adaptDist, (iTrack - iTrackJ) / 2),
+                      (-(iLength - iLengthJ) / 2 + adaptDist, 0)]
         
         points = self.append_points(raw_points)
         right_pad = self.draw(self.name+"_pad1", points)
@@ -5554,14 +5553,15 @@ class ConnectElt(KeyElt, Circuit):
         pads = self.unite([right_pad, left_pad], name=self.name+'_pads')
         
         if not self.is_litho:
-            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([iLength, iTrack]))
-            self.modeler.assign_mesh_length(mesh, iTrackJ/2)
-    
-            points = self.append_points([(iTrackJ/2,0),(-iTrackJ,0)])
-            self.draw(self.name+'_line', points, closed=False)
-    
-            JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([iTrackJ, iTrackJ]))
+            JJ = self.draw_rect_center(self.name, self.coor([0,0]), 
+                                       self.coor_vec([iLengthJ, iTrackJ]))
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, capa_plasma))
+            
+            self.modeler.assign_mesh_length(JJ,   iTrackJ/10)
+            self.modeler.assign_mesh_length(pads, iTrackJ)
+    
+            points = self.append_points([(iLengthJ/2,0), (-iLengthJ,0)])
+            self.draw(self.name+'_line', points, closed=False)
 
         return pads
     
