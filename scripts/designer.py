@@ -4697,7 +4697,62 @@ class KeyElt(Circuit):
         else:
             raise ValueError("typeEnd should be 'open' or 'short', given %s" % typeEnd)
         self.ports[self.name] = portOut
+        
+    def draw_resistive_load(self, iTrack, iGap, ratio=2.0):
+        '''
+         iGap/ratio iGap
+                |  |   |
+                 ______  _
+                |2R|   |   iGap
+                |__|   | _
+                   |   |   iTrack
+                 __|   | _
+                |2R|   |
+                |__|___|
+          
+        '''
+        if self.is_litho or self.is_mask:
+            raise ValueError("Don't call this element to generate a lithography file ! \
+                             It's purpose is to model an out port. \
+                             Call draw_connector() instead.")
+        
+        iTrack, iGap, ratio = parse_entry((iTrack, iGap, ratio))
+        
+        cutout_pos  = [0, -iTrack/2 - iGap + self.overdev]
+        cutout_size = [iGap * (1 + 1/ratio) - self.overdev, 
+                       iTrack + 2*iGap - 2*self.overdev]
+        cutout = self.draw_rect(self.name+'_cutout', self.coor(cutout_pos), 
+                                self.coor_vec(cutout_size))
 
+        self.gapObjects.append(cutout)
+        
+        port = [self.coor([0, 0]), -self.ori, 
+                iTrack + 2*self.overdev, iGap - 2*self.overdev]
+        
+        self.ports[self.name] = port
+
+        track_pos  = [0, -iTrack/2 - self.overdev]
+        track_size = [iGap/ratio + self.overdev, iTrack + 2*self.overdev]
+        track = self.draw_rect(self.name+'_track', self.coor(track_pos), 
+                               self.coor_vec(track_size))
+        
+        self.trackObjects.append(track)
+        
+        resistance_pos  = [0, iTrack/2 + self.overdev]
+        resistance_size = [iGap/ratio + self.overdev, iGap - 2*self.overdev]
+        resistance_up = self.draw_rect(self.name+'_Rup', self.coor(resistance_pos), 
+                                       self.coor_vec(resistance_size))
+        
+        resistance_pos[1]  = -iTrack/2 -iGap + self.overdev
+        resistance_dn = self.draw_rect(self.name+'_Rdn', self.coor(resistance_pos), 
+                                       self.coor_vec(resistance_size))
+        
+        self.assign_lumped_RLC(resistance_up,  self.ori.orth(), ('100ohm',0,0))
+        self.assign_lumped_RLC(resistance_dn, -self.ori.orth(), ('100ohm',0,0))
+        
+        self.modeler.assign_mesh_length(resistance_up, iGap/ratio/10)
+        self.modeler.assign_mesh_length(resistance_dn, iGap/ratio/10)
+        self.modeler.assign_mesh_length(track, iGap/ratio)
 
     def draw_alignement_mark(self, iSize, iXdist, iYdist, layer=None):
         iXdist, iYdist, iSize=parse_entry((iXdist, iYdist, iSize))
