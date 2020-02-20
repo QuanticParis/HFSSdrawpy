@@ -4750,6 +4750,16 @@ class KeyElt(Circuit):
         self.assign_lumped_RLC(resistance_up,  self.ori.orth(), ('100ohm',0,0))
         self.assign_lumped_RLC(resistance_dn, -self.ori.orth(), ('100ohm',0,0))
         
+        pts = [(iGap/ratio/2, iTrack/2 + iGap - self.overdev),
+               (0, -iGap + 2*self.overdev)]
+        pts = self.append_points(pts)
+        self.draw(self.name+'_up_line', pts, closed=False)
+        
+        pts = [(iGap/ratio/2, -iTrack/2 - iGap + self.overdev),
+               (0, iGap - 2*self.overdev)]
+        pts = self.append_points(pts)
+        self.draw(self.name+'_dn_line', pts, closed=False)
+        
         self.modeler.assign_mesh_length(resistance_up, iGap/ratio/10)
         self.modeler.assign_mesh_length(resistance_dn, iGap/ratio/10)
         self.modeler.assign_mesh_length(track, iGap/ratio)
