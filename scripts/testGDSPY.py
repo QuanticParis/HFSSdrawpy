@@ -13,4 +13,4 @@ cell.add(rect)
 # Save all created cells in file 'first.gds'.
 gdspy.write_gds('first.gds')
 # Optionally, display all cells using the internal viewer.
-#gdspy.LayoutViewer(gdspy.current_library)
+gdspy.LayoutViewer(gdspy.current_library)

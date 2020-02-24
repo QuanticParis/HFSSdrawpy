@@ -438,7 +438,7 @@ class PythonMdlr():
 #        return ModelEntity(name, 2, self.coor_sys, layer=blank_entity.layer)
             
     def _sweep_along_path(self, entity_to_sweep, path_entity, name=None):
-        new_name = self.interface._sweep_along_path(entity_to_sweep, path_entity, name)
+        new_name = self.interface._sweep_along_path(entity_to_sweep, path_entity)
 #        self.delete(path_entity)
         entity_to_sweep.modify_dimension(2)
         path_entity.rename_entity(new_name)
@@ -977,7 +977,7 @@ class Body(PythonMdlr):
             
             '''
             #TODO change the format of the arguments
-            fillet, meander_length, meander_offset=parse_entry((fillet, meander_length, meander_offset))
+            meander_length, meander_offset=parse_entry((meander_length, meander_offset))
 
             self.to_bond=[]
             adaptor_length=0
