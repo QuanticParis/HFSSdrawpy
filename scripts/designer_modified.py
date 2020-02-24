@@ -664,6 +664,8 @@ class Circuit(object):
         return rect
 
     def draw_rect(self, name, pos, iSize, z=0):
+        pos = parse_entry(pos)
+        iSize = parse_entry(iSize)
         pos = [pos[0], pos[1], z]
         size = [iSize[0], iSize[1], 0]
         rect = self.modeler.draw_rect_corner(pos, size, name=name)
@@ -3753,30 +3755,57 @@ class KeyElt(Circuit):
         for move, direction_exp, direction_name in zip(moves, directions_exp, directions_name):
             self.draw_alignement_mark_r(size, disp*direction_exp+move, suff=direction_name)      
         
-    def draw_dose_test_Nb(self, pad_size, pad_spacing, array, correction='0um', alum=False):
+    def draw_dose_test_Nb(self, pad_size, pad_spacing, array, correction='0um', alum=False, rot=False):
         pad_size, pad_spacing = parse_entry((pad_size, pad_spacing))
         pad_size = Vector(pad_size)
         pads = []
         
-        pos_x = pad_spacing+0.5*correction
-        pos_y = pad_spacing
+        width = 2*array[0]*pad_size[0] + 3*array[0]*pad_spacing - correction
+        height = array[1]*pad_size[1] + (1 + array[1])*pad_spacing
+        
+        if not rot:
+            tot_x = width
+            tot_y = height  
+        else:
+            tot_x = height
+            tot_y = width
+            
+        pos_x = pad_spacing - 0.5*width
+        pos_y = pad_spacing - 0.5*height
+        
         for jj in range(array[1]):
             for ii in range(array[0]):
-                pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_x, pos_y]), self.coor_vec(pad_size)))
-                pos_x += pad_size[0]+pad_spacing-correction
-                pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_x, pos_y]), self.coor_vec(pad_size)))
-                pos_x += pad_size[0]+2*pad_spacing+correction
+                if not rot:
+                    pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_x, pos_y]), self.coor_vec(pad_size)))
+                else:
+                    pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_y, pos_x]), self.coor_vec(pad_size)))
+                pos_x += pad_size[0] + pad_spacing - correction
+                if not rot:
+                    pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_x, pos_y]), self.coor_vec(pad_size)))
+                else:
+                    pads.append(self.draw_rect(self.name+'_%d_%d'%(ii, jj), self.coor([pos_y, pos_x]), self.coor_vec(pad_size)))
+                pos_x += pad_size[0] + 2*pad_spacing + correction
             pos_y += pad_size[1]+pad_spacing
-            pos_x = pad_spacing+0.5*correction
+            if jj < array[1]-1:
+                if not rot:
+                    pos_x = pad_spacing - 0.5*tot_x
+                else:
+                    pos_x = pad_spacing - 0.5*tot_y
+            else:
+                if not rot:
+                    pos_x -= pad_spacing - 0.5*tot_x
+                else:
+                    pos_x -= pad_spacing - 0.5*tot_y
         
         if not alum:
-            cutout = self.draw_rect(self.name+'_cutout', self.coor([0.5*correction, 0]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*3*array[0]-correction, pad_size[1]*array[1]+pad_spacing*(array[1]+1)]))
+            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0, 0]), self.coor_vec([tot_x, tot_y]))
             cutout = self.subtract(cutout, pads)
             self.gapObjects.append(cutout)
         if self.is_mask:
-            mask = self.draw_rect(self.name+'_cutout', self.coor([0.5*correction-self.gap_mask, -self.gap_mask]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*3*array[0]-correction+2*self.gap_mask,pad_size[1]*array[1]+pad_spacing*(array[1]+1)+2*self.gap_mask]))
+            mask = self.draw_rect_center(self.name+'_cutout', self.coor([0, 0]), self.coor_vec([tot_x + 2*self.gap_mask, tot_y + 2*self.gap_mask]))
             self.maskObjects.append(mask)
         
+        return [pos_x, pos_y]
 
     def draw_dose_test_Nb_junctions(self, pad_size, pad_spacing, array, widths, width_bridge, spacing_bridges, n_bridge, small_pad_size):
         pad_size, pad_spacing, widths, width_bridge, spacing_bridges, small_pad_size = parse_entry((pad_size, pad_spacing, widths, width_bridge, spacing_bridges, small_pad_size))
@@ -3853,7 +3882,7 @@ class KeyElt(Circuit):
         snail_array = self.connect_elt(self.name+'_junction', in_array, out_array)
         snail_track = snail_array._connect_snails_Zaki([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
-    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, iInduct='0nH', n_bridge=1, spacing_bridge=0, alternate_width=True, version=0):
+    def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, iInduct='0nH', n_bridge=1, spacing_bridge=0, alternate_width=True, version=0, override=False, dose=False, rot=False, rotspace=None):
         pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
         pad_size = Vector(pad_size)
         if self.val(width) < 1.5e-6 and n_bridge==1:
@@ -3863,8 +3892,16 @@ class KeyElt(Circuit):
             width_jct=None
         
         pads = []
-        pads.append(self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2+pad_size[0], -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]])))
-        pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]])))
+        if not rot:
+            pads.append(self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2+pad_size[0], -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]])))
+        else:
+            fac = 0.5*9/4
+            pads.append(self.draw_rect(self.name+'_left', self.coor([pad_spacing/2-pad_size[0], fac*pad_spacing]), self.coor_vec([pad_size[0],pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([pad_size[0],-pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_leftie', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([pad_spacing - 2*pad_size[0] + width, width])))
+            pads.append(self.draw_rect(self.name+'_lefty', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([width,pad_size[1] - fac*pad_spacing - pad_size[1] - 0.5*width])))
+            pads.append(self.draw_rect(self.name+'_righty', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([width,-pad_size[1] + fac*pad_spacing + pad_size[1] + 0.5*width])))
         
         portOut1 = [self.coor([pad_spacing/2-pad_size[0], 0]), -self.ori, width, 0]
         portOut2 = [self.coor([-pad_spacing/2+pad_size[0], 0]), self.ori, width, 0]
@@ -3874,17 +3911,63 @@ class KeyElt(Circuit):
         jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
         if alternate_width:
             if version==0:
-                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct)
+                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, override=override, dose=dose)
             elif version==1:
-                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, thin=True)
+                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, thin=True, override=override, dose=dose)
         else:
             if version==0:
-                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct)
+                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, override=override, dose=dose)
             elif version==1:
-                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True)
+                jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True, override=override, dose=dose)
         
         if version==2:
-            jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, cross=True)
+            jcts._connect_jct(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, cross=True, override=override, dose=dose)
+        
+        return pads
+    
+    
+    ## To correct function to draw junction and take out the rectangle
+    #Same as draw_dose_test_junction : only difference calls _connect_jct_corrected instead of _connect_jct
+    def draw_dose_test_junction_corrected(self, pad_size, pad_spacing, width, width_bridge, iInduct='0nH', n_bridge=1, spacing_bridge=0, alternate_width=True, version=0, override=False, dose=False, rot=False, rotspace=None):
+        pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
+        pad_size = Vector(pad_size)
+        if self.val(width) < 1.5e-6 and n_bridge==1:
+            width_jct = width
+            width = 1.5e-6
+        else: 
+            width_jct=None
+        
+        pads = []
+        if not rot:
+            pads.append(self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2+pad_size[0], -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]])))
+        else:
+            fac = 0.5*9/4
+            pads.append(self.draw_rect(self.name+'_left', self.coor([pad_spacing/2-pad_size[0], fac*pad_spacing]), self.coor_vec([pad_size[0],pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([pad_size[0],-pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_leftie', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([pad_spacing - 2*pad_size[0] + width, width])))
+            pads.append(self.draw_rect(self.name+'_lefty', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([width,pad_size[1] - fac*pad_spacing - pad_size[1] - 0.5*width])))
+            pads.append(self.draw_rect(self.name+'_righty', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([width,-pad_size[1] + fac*pad_spacing + pad_size[1] + 0.5*width])))
+        
+        portOut1 = [self.coor([pad_spacing/2-pad_size[0], 0]), -self.ori, width, 0]
+        portOut2 = [self.coor([-pad_spacing/2+pad_size[0], 0]), self.ori, width, 0]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+        jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
+        if alternate_width:
+            if version==0:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, override=override, dose=dose)
+            elif version==1:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, thin=True, override=override, dose=dose)
+        else:
+            if version==0:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, override=override, dose=dose)
+            elif version==1:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True, override=override, dose=dose)
+        
+        if version==2:
+            jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, cross=True, override=override, dose=dose)
         
         return pads
     
@@ -4037,65 +4120,71 @@ class KeyElt(Circuit):
                     self.draw_rect(self.name+'6', self.coor([x, -way*0.2*(loop_size[1])+way*width]), self.coor_vec([-x3-0.5*width, -way*width]))
     
     def draw_cos2phi(self, pad_size, pad_spacing, width, width_bridge,
-                            loop_size, num_junctions, iInduct='0nH', spacing_bridge=0, version=0):
+                            loop_size, num_junctions, iInduct='0nH', spacing_bridge=0, version=0, way=1):
         pad_size, pad_spacing, width, spacing_bridge, width_bridge, loop_size = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge, loop_size))
         pad_size = Vector(pad_size)
         
         cos2phiObjects = []
         
         # connection pads
-        cos2phiObjects.append(self.draw_rect(self.name+'_left', self.coor([pad_size[1]/2, pad_spacing/2]), self.coor_vec([-pad_size[0],pad_size[1]])))
-        cos2phiObjects.append(self.draw_rect(self.name+'_right', self.coor([pad_size[1]/2, -pad_spacing/2]), self.coor_vec([-pad_size[0],-pad_size[1]])))
+        cos2phiObjects.append(self.draw_rect(self.name+'_left', self.coor([way*width[0]/2, pad_spacing/2+width[0]]), self.coor_vec([-pad_size[0], -pad_size[1]])))
+        cos2phiObjects.append(self.draw_rect(self.name+'_right', self.coor([way*width[0]/2, -pad_spacing/2-width[0]]), self.coor_vec([-pad_size[0], pad_size[1]])))
         
         r1 = self.ori.rot(Vector([0,-1]))
         
+        override = not self.is_litho
+        
         for way in [-1, +1]:
             # small junctions
-            self.ports[self.name+'_1'] = [self.coor([way*0.5*loop_size[0], 6*width[1]]), r1, width[0], 0]
-            self.ports[self.name+'_2'] = [self.coor([way*0.5*loop_size[0], -6*width[1]]), -r1, width[0], 0]
+            self.ports[self.name+'_1'] = [self.coor([way*0.5*loop_size[0], 10*width[1]]), r1, width[0], 0]
+            self.ports[self.name+'_2'] = [self.coor([way*0.5*loop_size[0], -10*width[1]]), -r1, width[0], 0]
             jn = self.connect_elt(self.name+'_jn', self.name+'_1', self.name+'_2')
             if version==0:
                 jn._connect_array(width_bridge, spacing_bridge)
             elif self.is_litho:
-                jn._connect_jct(width_bridge, spacing_bridge=spacing_bridge, assymetry=0, overlap=0, width_jct=width[1], cross=True)
+                jn._connect_jct(width_bridge, spacing_bridge=spacing_bridge, assymetry=0, overlap=0, width_jct=width[1], cross=True, way=way)
             
             # long arrays
             self.ports[self.name+'_3'] = [self.coor([way*0.5*loop_size[0], 0.5*loop_size[1]]), r1, width[0], 0]
             self.ports[self.name+'_4'] = [self.coor([way*0.5*loop_size[0], -0.5*loop_size[1]]), -r1, width[0], 0]
             array1 = self.connect_elt(self.name+'_array1', self.name+'_3', self.name+'_1')
             array2 = self.connect_elt(self.name+'_array2', self.name+'_4', self.name+'_2')
-            cos2phiObjects.extend(array1._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[0]/2))
-            cos2phiObjects.extend(array2._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[0]/2))
+            cos2phiObjects.extend(array1._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[0]/2, override=override))
+            cos2phiObjects.extend(array2._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[0]/2, override=override))
             
-            # first short arrays
-            self.ports[self.name+'_1'] = [self.coor([0.6*way*0.5*loop_size[0], 0.5*loop_size[1]]), r1, width[0], 0]
-            self.ports[self.name+'_2'] = [self.coor([0.6*way*0.5*loop_size[0], -0.5*loop_size[1]]), -r1, width[0], 0]
-            self.ports[self.name+'_3'] = [self.coor([0.6*way*0.5*loop_size[0], 3/8*0.5*loop_size[1]]), r1, width[0], 0]
-            self.ports[self.name+'_4'] = [self.coor([0.6*way*0.5*loop_size[0], -3/8*0.5*loop_size[1]]), -r1, width[0], 0]
-            array1 = self.connect_elt(self.name+'_array1', self.name+'_1', self.name+'_3')
-            array2 = self.connect_elt(self.name+'_array2', self.name+'_2', self.name+'_4')
-            cos2phiObjects.extend(array1._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2))
-            cos2phiObjects.extend(array2._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2))
+            if num_junctions[1] > 0:
+                # first short arrays
+                self.ports[self.name+'_1'] = [self.coor([0.6*way*0.5*loop_size[0], 0.5*loop_size[1]]), r1, width[0], 0]
+                self.ports[self.name+'_2'] = [self.coor([0.6*way*0.5*loop_size[0], -0.5*loop_size[1]]), -r1, width[0], 0]
+                self.ports[self.name+'_3'] = [self.coor([0.6*way*0.5*loop_size[0], 3/8*0.5*loop_size[1]]), r1, width[0], 0]
+                self.ports[self.name+'_4'] = [self.coor([0.6*way*0.5*loop_size[0], -3/8*0.5*loop_size[1]]), -r1, width[0], 0]
+                array1 = self.connect_elt(self.name+'_array1', self.name+'_1', self.name+'_3')
+                array2 = self.connect_elt(self.name+'_array2', self.name+'_2', self.name+'_4')
+                cos2phiObjects.extend(array1._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2, override=override))
+                cos2phiObjects.extend(array2._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2, override=override))
+                
+                # second short arrays
+                self.ports[self.name+'_1'] = [self.coor([0.2*way*0.5*loop_size[0], 0.5*loop_size[1]]), r1, width[0], 0]
+                self.ports[self.name+'_2'] = [self.coor([0.2*way*0.5*loop_size[0], -0.5*loop_size[1]]), -r1, width[0], 0]
+                self.ports[self.name+'_3'] = [self.coor([0.2*way*0.5*loop_size[0], 3/8*0.5*loop_size[1]]), r1, width[0], 0]
+                self.ports[self.name+'_4'] = [self.coor([0.2*way*0.5*loop_size[0], -3/8*0.5*loop_size[1]]), -r1, width[0], 0]
+                array1 = self.connect_elt(self.name+'_array1', self.name+'_1', self.name+'_3')
+                array2 = self.connect_elt(self.name+'_array2', self.name+'_2', self.name+'_4')
+                cos2phiObjects.extend(array1._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2, override=override))
+                cos2phiObjects.extend(array2._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2, override=override))
             
-            # second short arrays
-            self.ports[self.name+'_1'] = [self.coor([0.2*way*0.5*loop_size[0], 0.5*loop_size[1]]), r1, width[0], 0]
-            self.ports[self.name+'_2'] = [self.coor([0.2*way*0.5*loop_size[0], -0.5*loop_size[1]]), -r1, width[0], 0]
-            self.ports[self.name+'_3'] = [self.coor([0.2*way*0.5*loop_size[0], 3/8*0.5*loop_size[1]]), r1, width[0], 0]
-            self.ports[self.name+'_4'] = [self.coor([0.2*way*0.5*loop_size[0], -3/8*0.5*loop_size[1]]), -r1, width[0], 0]
-            array1 = self.connect_elt(self.name+'_array1', self.name+'_1', self.name+'_3')
-            array2 = self.connect_elt(self.name+'_array2', self.name+'_2', self.name+'_4')
-            cos2phiObjects.extend(array1._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2))
-            cos2phiObjects.extend(array2._connect_array(width_bridge, spacing_bridge, iInduct=iInduct, n=num_junctions[1]/2))
+                # vertical rectangles
+                cos2phiObjects.append(self.draw_rect(self.name+'_56', self.coor([-0.5*width[0], way*0.5*loop_size[1]]), self.coor_vec([width[0], way*0.5*(pad_spacing-loop_size[1])])))
             
-            # vertical rectangles
-            cos2phiObjects.append(self.draw_rect(self.name+'_56', self.coor([-0.5*width[0], way*0.5*loop_size[1]]), self.coor_vec([width[0], way*0.5*(pad_spacing-loop_size[1])])))
+                # horizontal crossbars
+                cos2phiObjects.append(self.draw_rect(self.name+'5', self.coor([-0.5*(width[0]+0.2*loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
+                cos2phiObjects.append(self.draw_rect(self.name+'6', self.coor([-0.5*(width[0]+1.0*loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
+                cos2phiObjects.append(self.draw_rect(self.name+'7', self.coor([-0.5*(width[0]-0.6*loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
+                cos2phiObjects.append(self.draw_rect(self.name+'8', self.coor([-0.5*(width[0]+0.6*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
+                cos2phiObjects.append(self.draw_rect(self.name+'9', self.coor([-0.5*(width[0]-0.2*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
             
-            # horizontal crossbars
-            cos2phiObjects.append(self.draw_rect(self.name+'5', self.coor([-0.5*(width[0]+0.2*loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
-            cos2phiObjects.append(self.draw_rect(self.name+'6', self.coor([-0.5*(width[0]+1.0*loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
-            cos2phiObjects.append(self.draw_rect(self.name+'7', self.coor([-0.5*(width[0]-0.6*loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
-            cos2phiObjects.append(self.draw_rect(self.name+'8', self.coor([-0.5*(width[0]+0.6*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
-            cos2phiObjects.append(self.draw_rect(self.name+'9', self.coor([-0.5*(width[0]-0.2*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])]), self.coor_vec([0.2*loop_size[0]+width[0], way*width[0]])))
+            else:
+                cos2phiObjects.append(self.draw_rect(self.name+'5', self.coor([-0.5*(width[0]+loop_size[0]), way*0.5*(loop_size[1]-width[0])]), self.coor_vec([loop_size[0]+width[0], way*width[0]])))
             
         cos2phiObject = self.unite(cos2phiObjects)
         self.assign_perfE(cos2phiObject)
@@ -4622,7 +4711,7 @@ class KeyElt(Circuit):
 #        self.ports_dc[self.name+'_2'] = portOut2
         
         
-    def draw_dc_pad(self, layer_name, iTrack, iGap, xlength='250um', ylength='250um', layer_type='multiple'):
+    def draw_dc_pad(self, layer_name, iTrack, iGap, xlength='250um', ylength='250um', layer_type='unique'):
         
         iTrack, iGap, xlength, ylength = parse_entry((iTrack, iGap, xlength, ylength))
         
@@ -4989,7 +5078,7 @@ class ConnectElt(KeyElt, Circuit):
             middle_point = (point1 + point2)/2
 
             choice_in = next_point(point1, middle_point, iIn_ori) #bon sens
-            choice_out = next_point(point2, middle_point, iOut_ori) #à inverser
+            choice_out = next_point(point2, middle_point, iOut_ori) #Ã  inverser
             for c_in in choice_in:
                 for c_out in choice_out:
                     points_choices.append([pointA, *c_in, *c_out[:-1][::-1], pointB])
@@ -6288,7 +6377,7 @@ class ConnectElt(KeyElt, Circuit):
             x_pos = x_pos+width_snail
         self.unite(squids, name=self.name+'_squids')
 
-    def _connect_jct(self, width_bridge, iInduct='0nH', n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=None, width_jct=None, thin=False, cross=False): #opt assymetry=0.25e-6
+    def _connect_jct(self, width_bridge, iInduct='0nH', n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=None, width_jct=None, thin=False, cross=False, override=False, dose=False, way=1): #opt assymetry=0.25e-6
         limit_dose = 1e-6
         width = self.inTrack # assume both are equal
         spacing = (self.posOut-self.pos).norm()
@@ -6296,7 +6385,7 @@ class ConnectElt(KeyElt, Circuit):
         n = int(n)
         
         if width_jct is not None:
-            margin = 1e-6
+            margin = 2e-6
         if overlap is None:
             overlap = 0.0
         
@@ -6305,11 +6394,11 @@ class ConnectElt(KeyElt, Circuit):
         else:
             tot_width = n*width_bridge+(n-1)*spacing_bridge
             
-        if self.is_litho:
+        if (self.is_litho and not override) or dose:
             if cross:    
                 self.draw_rect(self.name+'_left', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap, width+2*assymetry]))
-                self.draw_rect(self.name+'_detour', self.coor([-tot_width/2,-0.5*margin-width_jct-width/2-assymetry]), self.coor_vec([-width,0.5*margin+width_jct]))
-                self.draw_rect(self.name+'_detour1', self.coor([-tot_width/2,-0.5*margin-width_jct-width/2-assymetry]), self.coor_vec([margin,width_jct]))
+                self.draw_rect(self.name+'_detour', self.coor([-tot_width/2,-way*(margin-width_bridge+0.5*width_jct+width/2)-assymetry]), self.coor_vec([-width,way*(margin-width_bridge+0.5*width_jct)]))
+                self.draw_rect(self.name+'_detour1', self.coor([-tot_width/2,-way*(margin-width_bridge+0.5*width_jct+width/2)-assymetry]), self.coor_vec([margin,way*width_jct]))
             else:
                 self.draw_rect(self.name+'_left', self.coor([-tot_width/2-limit_dose,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap+limit_dose, width+2*assymetry]))
             if thin and width_jct is not None:
@@ -6330,7 +6419,7 @@ class ConnectElt(KeyElt, Circuit):
             
             if cross:
                 self.draw_rect(self.name+'_right', self.coor([tot_width/2-0.5*margin,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap+0.5*margin, _width_right]))
-                self.draw_rect(self.name+'_detour2', self.coor([tot_width/2-0.5*margin-width_jct,_width_right/2]), self.coor_vec([width_jct,-margin-width]))
+                self.draw_rect(self.name+'_detour2', self.coor([tot_width/2-0.5*margin-width_jct,way*(_width_right/2)]), self.coor_vec([width_jct,-way*(margin+width)]))
             else:
                 self.draw_rect(self.name+'_right', self.coor([tot_width/2+limit_dose,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap-limit_dose, _width_right]))
     
@@ -6344,13 +6433,96 @@ class ConnectElt(KeyElt, Circuit):
                 self.draw_rect(self.name+'_middle', self.coor([x_pos,-_width_loc/2]), self.coor_vec([spacing_bridge, _width_loc]))
                 x_pos = x_pos+spacing_bridge+width_bridge
             
-        else:
+        elif not override:
             mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([spacing, width]))
-            self.modeler.assign_mesh_length(mesh, 2*width)
+            self.modeler.assign_mesh_length(mesh, 0.5*width)
     
-            #points = self.append_points([(width/2,0),(-width,0)])
-            #self.draw(self.name+'_line', points, closed=False)
-    
+            JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([spacing, width]))
+            self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
+            
+            
+    def _connect_jct_corrected(self, width_bridge, iInduct='0nH', n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=None, width_jct=None, thin=False, cross=False, override=False, dose=False, way=1): #opt assymetry=0.25e-6
+        '''  
+        This function is very similar to _connect_jct
+        It is called in draw_dose_test_jct
+        In case of single junction not crossed, it does not draw rectangle
+        
+        Before in _connect_jct
+        --------------
+                |-----|-------
+                |-----|-------
+        -------------
+        
+        After in _connect_jct_corrected
+        --------------
+                |-------
+                |-------
+        -------------
+        
+        The rectangle of the finger of the junction does not go on the big rectangle
+        The rectangle at the end of the big rectangle has been deleted
+        Each aera for the junction is just exposed once.
+        '''
+        
+        limit_dose = 1e-6
+        width = self.inTrack # assume both are equal
+        spacing = (self.posOut-self.pos).norm()
+        self.pos = (self.pos+self.posOut)/2
+        n = int(n)
+        
+        if width_jct is not None:
+            margin = 2e-6
+        if overlap is None:
+            overlap = 0.0
+        
+        if cross and n==1:
+            tot_width = 1.5*margin + width_bridge + width_jct
+        else:
+            tot_width = n*width_bridge+(n-1)*spacing_bridge
+            
+        if (self.is_litho and not override) or dose:
+            if cross:    
+                self.draw_rect(self.name+'_left', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap, width+2*assymetry]))
+                self.draw_rect(self.name+'_detour', self.coor([-tot_width/2,-way*(margin-width_bridge+0.5*width_jct+width/2)-assymetry]), self.coor_vec([-width,way*(margin-width_bridge+0.5*width_jct)]))
+                self.draw_rect(self.name+'_detour1', self.coor([-tot_width/2,-way*(margin-width_bridge+0.5*width_jct+width/2)-assymetry]), self.coor_vec([margin,way*width_jct]))
+            else:
+                self.draw_rect(self.name+'_left', self.coor([-tot_width/2-limit_dose,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap+limit_dose, width+2*assymetry]))
+            if thin and width_jct is not None:
+        #                self.draw_rect(self.name+'_left2', self.coor([-tot_width/2-margin,-width/2-assymetry]), self.coor_vec([-limit_dose+margin, width+2*assymetry]))
+                self.draw_rect(self.name+'_left3', self.coor([-tot_width/2,-width_jct/2]), self.coor_vec([-margin+limit_dose, width_jct]))
+            elif not cross:
+                self.draw_rect(self.name+'_left2', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-limit_dose, width+2*assymetry]))
+        
+            if n%2==0:
+                _width_right = width+2*assymetry
+            else:
+                _width_right = width
+            if width_jct is not None and not cross:
+        #                self.draw_rect(self.name+'_right2', self.coor([tot_width/2+margin,-_width_right/2]), self.coor_vec([limit_dose-margin, _width_right]))
+                self.draw_rect(self.name+'_right3', self.coor([tot_width/2,-width_jct/2]), self.coor_vec([margin-limit_dose, width_jct]))
+            elif not cross:
+                self.draw_rect(self.name+'_right2', self.coor([tot_width/2,-_width_right/2]), self.coor_vec([limit_dose, _width_right]))
+            
+            if cross:
+                self.draw_rect(self.name+'_right', self.coor([tot_width/2-0.5*margin,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap+0.5*margin, _width_right]))
+                self.draw_rect(self.name+'_detour2', self.coor([tot_width/2-0.5*margin-width_jct,way*(_width_right/2)]), self.coor_vec([width_jct,-way*(margin+width)]))
+            else:
+                self.draw_rect(self.name+'_right', self.coor([tot_width/2+limit_dose,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap-limit_dose, _width_right]))
+        
+            x_pos = -(tot_width)/2+width_bridge
+            
+            for ii in range(n-1):
+                if ii%2==1:
+                    _width_loc = width+2*assymetry
+                else:
+                    _width_loc = width
+                self.draw_rect(self.name+'_middle', self.coor([x_pos,-_width_loc/2]), self.coor_vec([spacing_bridge, _width_loc]))
+                x_pos = x_pos+spacing_bridge+width_bridge
+            
+        elif not override:
+            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([spacing, width]))
+            self.modeler.assign_mesh_length(mesh, 0.5*width)
+        
             JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([spacing, width]))
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
 
@@ -6396,7 +6568,7 @@ class ConnectElt(KeyElt, Circuit):
             self.draw_rect(self.name, self.coor([(spacing)/2+overlap-limit_dose, -width/2]), self.coor_vec([-(spacing)-overlap+limit_dose, width+2*assymetry]))
         
         
-    def _connect_array(self, width_bridge, spacing_bridge, iInduct='0nH', n=1):
+    def _connect_array(self, width_bridge, spacing_bridge, iInduct='0nH', n=1, override=False):
         width = self.inTrack # assume both are equal
         spacing = (self.posOut-self.pos).norm()
         self.pos = (self.pos+self.posOut)/2
@@ -6410,13 +6582,13 @@ class ConnectElt(KeyElt, Circuit):
 
         x_pos = -(tot_width)/2+width_bridge
         
-        if self.is_litho:
+        if self.is_litho and not override:
             for ii in range(n-1):
                 self.draw_rect(self.name+'_middle', self.coor([x_pos,-width/2]), self.coor_vec([spacing_bridge, width]))
                 x_pos = x_pos+spacing_bridge+width_bridge
-        else:
+        elif not override:
             mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([tot_width, width]))
-            self.modeler.assign_mesh_length(mesh, 2*width)
+            self.modeler.assign_mesh_length(mesh, 0.5*width)
     
             #points = self.append_points([(width/2,0),(-width,0)])
             #self.draw(self.name+'_line', points, closed=False)
