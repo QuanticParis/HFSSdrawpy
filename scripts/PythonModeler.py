@@ -1690,3 +1690,91 @@ class Body(PythonMdlr):
     #            points = self.append_absolute_points([(0, -self.cutIn/2),(0, self.cutIn/2)])
             
         return track
+    
+    @move_port
+    def _connect_jct_corrected(self, width_bridge, iInduct='0nH', n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=None, width_jct=None, thin=False, cross=False, override=False, dose=False, way=1): #opt assymetry=0.25e-6
+        '''  
+        This function is very similar to _connect_jct
+        It is called in draw_dose_test_jct
+        In case of single junction not crossed, it does not draw rectangle
+        
+        Before in _connect_jct
+        --------------
+                |-----|-------
+                |-----|-------
+        -------------
+        
+        After in _connect_jct_corrected
+        --------------
+                |-------
+                |-------
+        -------------
+        
+        The rectangle of the finger of the junction does not go on the big rectangle
+        The rectangle at the end of the big rectangle has been deleted
+        Each aera for the junction is just exposed once.
+        '''
+        
+        limit_dose = 1e-6
+        width = self.inTrack # assume both are equal
+        spacing = (self.posOut-self.pos).norm()
+        #spacing = (iInPort.pos-iOutPort.pos).norm()
+
+        self.pos = (self.pos+self.posOut)/2
+        n = int(n)
+        
+        if width_jct is not None:
+            margin = 2e-6
+        if overlap is None:
+            overlap = 0.0
+        
+        if cross and n==1:
+            tot_width = 1.5*margin + width_bridge + width_jct
+        else:
+            tot_width = n*width_bridge+(n-1)*spacing_bridge
+            
+        if (self.is_litho and not override) or dose:
+            if cross:    
+                self.draw_rect(self.name+'_left', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap, width+2*assymetry]))
+                self.draw_rect(self.name+'_detour', self.coor([-tot_width/2,-way*(margin-width_bridge+0.5*width_jct+width/2)-assymetry]), self.coor_vec([-width,way*(margin-width_bridge+0.5*width_jct)]))
+                self.draw_rect(self.name+'_detour1', self.coor([-tot_width/2,-way*(margin-width_bridge+0.5*width_jct+width/2)-assymetry]), self.coor_vec([margin,way*width_jct]))
+            else:
+                self.draw_rect(self.name+'_left', self.coor([-tot_width/2-limit_dose,-width/2-assymetry]), self.coor_vec([-(spacing-tot_width)/2-overlap+limit_dose, width+2*assymetry]))
+            if thin and width_jct is not None:
+        #                self.draw_rect(self.name+'_left2', self.coor([-tot_width/2-margin,-width/2-assymetry]), self.coor_vec([-limit_dose+margin, width+2*assymetry]))
+                self.draw_rect(self.name+'_left3', self.coor([-tot_width/2,-width_jct/2]), self.coor_vec([-margin+limit_dose, width_jct]))
+            elif not cross:
+                self.draw_rect(self.name+'_left2', self.coor([-tot_width/2,-width/2-assymetry]), self.coor_vec([-limit_dose, width+2*assymetry]))
+        
+            if n%2==0:
+                _width_right = width+2*assymetry
+            else:
+                _width_right = width
+            if width_jct is not None and not cross:
+        #                self.draw_rect(self.name+'_right2', self.coor([tot_width/2+margin,-_width_right/2]), self.coor_vec([limit_dose-margin, _width_right]))
+                self.draw_rect(self.name+'_right3', self.coor([tot_width/2,-width_jct/2]), self.coor_vec([margin-limit_dose, width_jct]))
+            elif not cross:
+                self.draw_rect(self.name+'_right2', self.coor([tot_width/2,-_width_right/2]), self.coor_vec([limit_dose, _width_right]))
+            
+            if cross:
+                self.draw_rect(self.name+'_right', self.coor([tot_width/2-0.5*margin,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap+0.5*margin, _width_right]))
+                self.draw_rect(self.name+'_detour2', self.coor([tot_width/2-0.5*margin-width_jct,way*(_width_right/2)]), self.coor_vec([width_jct,-way*(margin+width)]))
+            else:
+                self.draw_rect(self.name+'_right', self.coor([tot_width/2+limit_dose,-_width_right/2]), self.coor_vec([(spacing-tot_width)/2+overlap-limit_dose, _width_right]))
+        
+            x_pos = -(tot_width)/2+width_bridge
+            
+            for ii in range(n-1):
+                if ii%2==1:
+                    _width_loc = width+2*assymetry b  
+                else:
+                    _width_loc = width
+                self.draw_rect(self.name+'_middle', self.coor([x_pos,-_width_loc/2]), self.coor_vec([spacing_bridge, _width_loc]))
+                x_pos = x_pos+spacing_bridge+width_bridge
+            
+        elif not override:
+            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([spacing, width]))
+            self.modeler.assign_mesh_length(mesh, 0.5*width)
+        
+            JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([spacing, width]))
+            self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
