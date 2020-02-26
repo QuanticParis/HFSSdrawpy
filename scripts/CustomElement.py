@@ -628,3 +628,100 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
 #    self.ports[name+'_1'] = portOut1
 #    self.ports[name+'_2'] = portOut2
     return portOut1, portOut2
+
+@register_method
+@move
+def draw_dose_test_Nb(self, name, pad_size, pad_spacing, array, correction='0um', alum=False, rot=False):
+        pad_size, pad_spacing = parse_entry((pad_size, pad_spacing))
+        pad_size = Vector(pad_size)
+        pads = []
+        
+        width = 2*array[0]*pad_size[0] + 3*array[0]*pad_spacing - correction
+        height = array[1]*pad_size[1] + (1 + array[1])*pad_spacing
+        
+        if not rot:
+            tot_x = width
+            tot_y = height  
+        else:
+            tot_x = height
+            tot_y = width
+            
+        pos_x = pad_spacing - 0.5*width
+        pos_y = pad_spacing - 0.5*height
+        
+        for jj in range(array[1]):
+            for ii in range(array[0]):
+                print((pos_x, pos_y))
+                if not rot:
+                    pads.append(self.rect_corner_2D([pos_x, pos_y], pad_size, name=name+'_%d_%d'%(ii, jj), layer=layer_TRACK))
+                else:
+                    pads.append(self.rect_corner_2D([pos_y, pos_x], pad_size, name=name+'_%d_%d'%(ii, jj), layer=layer_TRACK))
+                pos_x += pad_size[0] + pad_spacing - correction
+                if not rot:
+                    pads.append(self.rect_corner_2D([pos_x, pos_y], pad_size, name=name+'_%d_%d_2'%(ii, jj), layer=layer_TRACK))
+                else:
+                    pads.append(self.rect_corner_2D([pos_y, pos_x], pad_size, name=name+'_%d_%d_2'%(ii, jj), layer=layer_TRACK))
+                pos_x += pad_size[0] + 2*pad_spacing + correction
+            pos_y += pad_size[1]+pad_spacing
+            if jj < array[1]-1:
+                if not rot:
+                    pos_x = pad_spacing - 0.5*tot_x
+                else:
+                    pos_x = pad_spacing - 0.5*tot_y
+            else:
+                if not rot:
+                    pos_x -= pad_spacing - 0.5*tot_x
+                else:
+                    pos_x -= pad_spacing - 0.5*tot_y
+        
+        if not alum:
+            cutout = self.rect_center_2D([0, 0],[tot_x, tot_y], name=name+'_cutout', layer=layer_GAP)
+            pads2 = self.unite(pads, "pads2")
+            cutout = self.subtract(cutout, [pads2],keep_originals=False)
+        if self.is_mask:
+            mask = self.rect_center_2D([0, 0],[tot_x+ 2*self.gap_mask, tot_y+ 2*self.gap_mask], name=name+'_cutout', layer=layer_GAP)
+        return [pos_x, pos_y]
+    
+def draw_dose_test_junction_corrected(self, name, pad_size, pad_spacing, width, width_bridge, iInduct='0nH', n_bridge=1, spacing_bridge=0, alternate_width=True, version=0, override=False, dose=False, rot=False, rotspace=None):
+        pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
+        pad_size = Vector(pad_size)
+        if self.val(width) < 1.5e-6 and n_bridge==1:
+            width_jct = width
+            width = 1.5e-6
+        else: 
+            width_jct=None
+        
+        pads = []
+        if not rot:
+            pads.append(self.rect_corner_2D(self.name+'_left', self.coor([-pad_spacing/2+pad_size[0], -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]])))
+            pads.append(self.rect_corner_2D(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]])))
+        else:
+            fac = 0.5*9/4
+            pads.append(self.rect_corner_2D(self.name+'_left', self.coor([pad_spacing/2-pad_size[0], fac*pad_spacing]), self.coor_vec([pad_size[0],pad_size[1]])))
+            pads.append(self.rect_corner_2D(self.name+'_right', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([pad_size[0],-pad_size[1]])))
+            pads.append(self.rect_corner_2D(self.name+'_leftie', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([pad_spacing - 2*pad_size[0] + width, width])))
+            pads.append(self.rect_corner_2D(self.name+'_lefty', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([width,pad_size[1] - fac*pad_spacing - pad_size[1] - 0.5*width])))
+            pads.append(self.rect_corner_2D(self.name+'_righty', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([width,-pad_size[1] + fac*pad_spacing + pad_size[1] + 0.5*width])))
+        
+        portOut1 = [self.coor([pad_spacing/2-pad_size[0], 0]), -self.ori, width, 0]
+        portOut2 = [self.coor([-pad_spacing/2+pad_size[0], 0]), self.ori, width, 0]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+        jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
+        if alternate_width:
+            if version==0:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, override=override, dose=dose)
+            elif version==1:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, width_jct=width_jct, thin=True, override=override, dose=dose)
+        else:
+            if version==0:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, override=override, dose=dose)
+            elif version==1:
+                jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True, override=override, dose=dose)
+        
+        if version==2:
+            jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, cross=True, override=override, dose=dose)
+        
+        return pads
+
