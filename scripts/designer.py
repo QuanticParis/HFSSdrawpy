@@ -363,7 +363,7 @@ class Circuit(object):
 
 
 
-    def unite(self, iObjs, name=None):
+    def unite(self, iObjs, name=None, keep_originals=False):
         '''
         Performs the unions of the elements of iObjects
 
@@ -374,7 +374,7 @@ class Circuit(object):
         string: name of the merged object: iObjects[0]
         '''
         if len(iObjs) > 1:
-            iObj = self.modeler.unite(iObjs, name=name)
+            iObj = self.modeler.unite(iObjs, name=name, keep_originals=keep_originals)
         else:
             print('Watch out: trying to unit a single element list --> renaming can be an issue')
             iObj = iObjs[0]
@@ -1058,7 +1058,7 @@ class KeyElt(Circuit):
         self.ports[self.name+'_in_jct'] = in_junction
         self.ports[self.name+'_out_jct'] = out_junction
         junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, Jlength, iInduct=Jinduc, fillet=None)
+        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)#Jlength, 
         
         
         right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
@@ -1108,6 +1108,84 @@ class KeyElt(Circuit):
 #        self.draw_rect_center(self.name+"check1", self.coor(cutout_size.px()/2)+self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
 #        self.draw_rect_center(self.name+"check2", self.coor(-cutout_size.px()/2)-self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
 #        self.draw_rect_center(self.name+"check3", self.coor(Vector(pad_spacing/2+pad_size[0],cutout_size[1]/2))+self.ori.orth()*pad_size[1]/20, self.rot(*pad_size)/10)
+
+
+    def draw_half_tansmon(self,
+                           track,
+                           gap,
+                           length,
+                           width_J,
+                           Jinduc):
+
+        track, gap, length, width_J, = parse_entry((track, gap, length, width_J,))
+
+        cutout = self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([length+gap*2-2*self.overdev, track+gap*2-2*self.overdev]))
+        track_poly = self.draw_rect_center(self.name+"_pad", self.coor([0,0]), self.coor_vec([length+2*self.overdev, track+2*self.overdev]))
+        
+        ind = self.key_elt(self.name+'_junction', self.coor([0, -track/2-gap/2]), self.coor_vec([0,1]))
+        ind.draw_ind_inline(track, gap, gap, width_J, Jinduc)
+        
+        if self.is_mask:
+            self.maskObjects.append(self.draw_rect_center(self.name+"_mask", self.coor([0,0]), self.coor_vec(length+gap*2-2*self.overdev+2*self.gap_mask, track+gap*2-2*self.overdev+2*self.gap_mask)))
+
+        self.trackObjects.append(track_poly)
+        self.gapObjects.append(cutout)
+#        
+#        if not self.is_litho:
+#            mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
+#            self.modeler.assign_mesh_length(mesh, 2*track)
+#
+#        track_J=Jwidth*4.
+#        in_junction = [self.coor([-pad_spacing/2+self.overdev, 0]), self.coor_vec([1,0]), track_J+2*self.overdev, 0]
+#        out_junction = [self.coor([pad_spacing/2-self.overdev, 0]), self.coor_vec([-1,0]), track_J+2*self.overdev, 0]
+#        self.ports[self.name+'_in_jct'] = in_junction
+#        self.ports[self.name+'_out_jct'] = out_junction
+#        junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
+#        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)#Jlength, 
+#        
+#        
+#        right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
+#        left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
+#        
+#
+#        pads = right_pad.unite([left_pad, junction_pads], name=self.name+'_pads')
+#        
+##        if fillet is not None:
+##            pads.fillet(fillet+self.overdev,[19])
+##            pads.fillet(0.75*fillet-self.overdev,[18,17,14,13])
+##            pads.fillet(fillet+self.overdev,[12,11,10,9,8,7])
+##            pads.fillet(0.75*fillet-self.overdev,[6,5,2,1])
+##            pads.fillet(fillet+self.overdev,0)
+#      
+#        self.trackObjects.append(pads)
+#
+#        if nport==1:
+#            self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track, gap]
+#        elif nport==2:
+#            self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track, gap]
+#            self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track, gap]
+#        elif nport==3:
+#            self.ports[self.name+'_1a'] = [self.coor(cutout_size.px()/2+pad_size.py()/2), self.ori, track, gap]
+#            self.ports[self.name+'_1b'] = [self.coor(cutout_size.px()/2-pad_size.py()/2), self.ori, track, gap]
+#            self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track, gap]
+#
+#        elif nport==4:
+#            self.ports[self.name+'_1a'] = [self.coor(cutout_size.px()/2+pad_size.py()/2), self.ori, track, gap]
+#            self.ports[self.name+'_1b'] = [self.coor(cutout_size.px()/2-pad_size.py()/2), self.ori, track, gap]
+#            self.ports[self.name+'_2a'] = [self.coor(-cutout_size.px()/2+pad_size.py()/2), -self.ori, track, gap]
+#            self.ports[self.name+'_2b'] = [self.coor(-cutout_size.px()/2-pad_size.py()/2), -self.ori, track, gap]
+#        elif nport==5:
+#            self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track+2*self.overdev, gap-2*self.overdev]
+#            self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track+2*self.overdev, gap-2*self.overdev]
+#            self.ports[self.name+'_3a'] = [self.coor(Vector(pad_spacing/2+pad_size[0],-cutout_size[1]/2)), -self.ori.orth() ,track/2+2*self.overdev,gap/2-2*self.overdev]
+#            if self.is_overdev:
+#                sub_1 = self.draw_rect(self.name + '_sub_1', self.coor([cutout_size[0]/2, -track/2-gap+self.overdev]), self.coor_vec([-self.overdev, track+2*gap-2*self.overdev]))
+#                sub_2 = self.draw_rect(self.name + '_sub_2', self.coor([-cutout_size[0]/2, -track/2-gap+self.overdev]), self.coor_vec([self.overdev, track+2*gap-2*self.overdev]))
+#                sub_3a = self.draw_rect(self.name + '_sub_3a', self.coor([-track/2-gap+self.overdev+pad_spacing/2+pad_size[0],-cutout_size[1]/2]), self.coor_vec([track+2*gap-2*self.overdev, self.overdev]))
+#
+#        if self.is_overdev:
+#            cutout = self.unite([cutout, sub_1, sub_2, sub_3a])
+
 
 
     def draw_ZR_transmon(self,
@@ -3325,7 +3403,7 @@ class KeyElt(Circuit):
         self.ports[self.name+'_R'] = portR
         self.ports[self.name+'_B'] = portB
 
-    def draw_ind_inline(self, iTrack, iGap, ind_length, ind_track, premesh=True):
+    def draw_ind_inline(self, iTrack, iGap, ind_length, ind_track, ind_val):#, premesh=True):
         '''
         iTrack is the track width of the input CPW
         iGap is the gap width of the input CPW
@@ -3344,19 +3422,23 @@ class KeyElt(Circuit):
 
         rect_gap=self.draw_rect(self.name+'_gap', self.coor([-ind_length/2,-iTrack/2-iGap+self.overdev]), self.coor_vec([ind_length,2*iGap+iTrack-2*self.overdev]))
         
-        if premesh:
-            if not self.is_litho:
-                self.draw_rect(self.name+'_mesh', self.coor([-ind_length/2,-ind_track/2]), self.coor_vec([ind_length,ind_track]))   
-                self.modeler.assign_mesh_length(self.name+"_mesh",ind_track)
+#        if premesh:
+#            if not self.is_litho:
+#                self.draw_rect(self.name+'_mesh', self.coor([-ind_length/2,-ind_track/2]), self.coor_vec([ind_length,ind_track]))   
+#                self.modeler.assign_mesh_length(self.name+"_mesh",ind_track)
 
 
-        self.trackObjects.append(rect_ind)
+#        self.trackObjects.append(rect_ind)
         
         self.gapObjects.append(rect_gap)
         if self.is_mask:
             self.maskObjects.append(self.draw_rect_center(self.name+"_mask", self.coor([0,0]), self.coor_vec([ind_length, iTrack + 2*iGap +2*self.gap_mask])))
         
-      
+        self.assign_lumped_RLC(rect_ind, self.ori, (0, ind_val, 0))
+        self.modeler.assign_mesh_length(self.name,ind_track/2)
+        
+        points = self.append_points([(ind_length/2,0),(-ind_length,0)])
+        self.draw(self.name+'_line', points, closed=False)
       
     def draw_T_join(self, iTrack, iGap):
         
@@ -3853,6 +3935,32 @@ class KeyElt(Circuit):
                     else:
                         mask.fillet(iGap/2+self.gap_mask-eps,[0,1])
                 self.maskObjects.append(mask)
+                
+        elif typeEnd=='50ohm' or typeEnd=='50ohms':
+            cutout = self.draw_rect(self.name+'_cutout', self.coor([iGap,-(iTrack+2*iGap)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*iGap-2*self.overdev]))
+            if fillet is not None:
+                if abs(self.ori[0])==1:
+                    cutout.fillet(iGap-self.overdev-eps,[2,1])
+                else:
+                    cutout.fillet(iGap-self.overdev-eps,[2,3])
+            self.gapObjects.append(cutout)
+            portOut = [self.coor([iGap, 0]), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+            
+            
+            track = self.draw_rect(self.name+'_track', self.coor([iGap,-(iTrack)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*self.overdev]))
+            self.assign_lumped_RLC(track, self.ori, ('50ohm', 0, 0))
+            self.modeler.assign_mesh_length(self.name+'_track',iGap/5)
+            if self.is_mask:
+                mask = self.draw_rect(self.name+'_mask', self.coor([-self.gap_mask,-(iTrack+2*iGap)/2-self.gap_mask]), self.coor_vec([iGap+self.gap_mask, iTrack+2*iGap+2*self.gap_mask]))
+                if fillet is not None:
+                    if abs(self.ori[0])==1:
+                        mask.fillet(iGap+self.gap_mask-eps,[0,3])
+                    else:
+                        mask.fillet(iGap+self.gap_mask-eps,[0,1])
+                self.maskObjects.append(mask)
+                
+            points = self.append_points([(0,0),(iGap,0)])
+            self.draw(self.name+'_line', points, closed=False)
         else:
             raise ValueError("typeEnd should be 'open' or 'short', given %s" % typeEnd)
         self.ports[self.name] = portOut
@@ -4421,6 +4529,54 @@ class KeyElt(Circuit):
         self.layers['pits']['trackObjects'].append(pit_left)
         self.layers['pits']['trackObjects'].append(pit_right)
         
+    def draw_coupling_ATS(self, track, gap, middle, length, dist):
+        track, gap, middle, length, dist, = parse_entry((track, gap, middle, length, dist,))
+        
+        points_track = self.append_absolute_points([(0, middle/2),
+                                                    (gap, middle/2),
+                                                    (gap, dist/2+track/2),
+                                                    (gap+track+gap, dist/2+track/2),
+                                                    (gap+track+gap, dist/2-track/2),
+                                                    (gap+track, dist/2-track/2),
+                                                    (gap+track, -(dist/2-track/2)),
+                                                    (gap+track+gap, -(dist/2-track/2)),
+                                                    (gap+track+gap, -(dist/2+track/2)),
+                                                    (gap, -(dist/2+track/2)),
+                                                    (gap, -(middle/2)),
+                                                    (0, -(middle/2)),])
+    
+        track_poly = self.draw(self.name+'_track', points_track, closed=True)
+
+        points_gap = self.append_absolute_points([(0, middle/2+length),
+                                                  (gap, middle/2+length),
+                                                  (gap, (dist/2+track/2+gap)),
+                                                  (gap+track+gap, (dist/2+track/2+gap)),
+                                                  (gap+track+gap,-(dist/2+track/2+gap)),
+                                                  (gap,-(dist/2+track/2+gap)),
+                                                  (gap,-(middle/2+length)),
+                                                  (0,-(middle/2+length)),])
+    
+        gap_poly = self.draw(self.name+'_gap', points_gap, closed=True)
+        
+        self.gapObjects.append(gap_poly)
+        self.trackObjects.append(track_poly)
+
+        portOut_top = [self.coor([gap+track+gap, dist/2]), self.coor_vec([1,0]), track+2*self.overdev, gap-2*self.overdev]
+        portOut_bot = [self.coor([gap+track+gap,-dist/2]), self.coor_vec([1,0]), track+2*self.overdev, gap-2*self.overdev]
+        self.ports[self.name+'_top'] = portOut_top
+        self.ports[self.name+'_bot'] = portOut_bot
+        
+        
+        points_mesh = self.append_absolute_points([(-gap, middle/2+length),
+                                          (gap, middle/2+length),
+                                          (gap, (dist/2+track/2+gap)),
+                                          (gap+track+gap, (dist/2+track/2+gap)),
+                                          (gap+track+gap,-(dist/2+track/2+gap)),
+                                          (gap,-(dist/2+track/2+gap)),
+                                          (gap,-(middle/2+length)),
+                                          (-gap,-(middle/2+length)),])
+        self.draw(self.name+'_mesh', points_mesh, closed=True)
+        self.modeler.assign_mesh_length(self.name+'_mesh',gap/2)
         
 class ConnectElt(KeyElt, Circuit):
     
