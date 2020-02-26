@@ -3605,6 +3605,58 @@ class KeyElt(Circuit):
         self.ports[self.name+'_top'] = portOut_top
         self.ports[self.name+'_bottom'] = portOut_bottom
         
+    def draw_T_fluxline(self, iTrack, iGap, iT):
+        '''
+                   iGap iTrack
+                    |  |  |
+                           __   _
+                _    __   |  |
+           iGap _   |  |  |  |
+           iGap _   ___|  |  |
+        iTtrack _   ______|  |  iT (symmetrical to track middle)
+           iGap _   ______   |
+                          |  |
+                          |__|  _
+        '''
+        
+        iTrack, iGap, iT = parse_entry((iTrack, iGap, iT))
+
+        up_gap = self.draw_rect(self.name+'_up_gap', 
+                                self.coor([0, iTrack/2 + self.overdev]), 
+                                self.coor_vec([iGap - self.overdev, 
+                                               2*iGap - 2*self.overdev]))
+            
+        dn_gap = self.draw_rect(self.name+'_dn_gap', 
+                                self.coor([0, -iTrack/2 - self.overdev]), 
+                                self.coor_vec([iGap + iTrack + self.overdev, 
+                                               -iGap + 2*self.overdev]))
+            
+        T_gap = self.draw_rect(self.name+'_T_gap', 
+                               self.coor([iGap + iTrack + self.overdev,
+                                          -iT/2 + self.overdev]), 
+                               self.coor_vec([iGap - 2*self.overdev, 
+                                              iT - 2*self.overdev]))
+        
+        to_unite = [up_gap, dn_gap, T_gap]
+        gap = self.unite(to_unite, name=self.name+'_gap')
+
+        self.gapObjects.append(gap)
+        
+        if not self.is_litho:
+            self.modeler.assign_mesh_length(gap, iGap)
+
+        if self.is_mask:
+            mask_pos  = [0, -iT/2 + self.overdev]
+            mask_size = [2*iGap + iTrack - self.overdev, iT - 2*self.overdev]
+            mask = self.draw_rect(self.name+'_mask', self.coor(mask_pos), 
+                                  self.coor_vec(mask_size))
+            
+            self.maskObjects.append(mask)
+
+        port = [self.coor([0, 0]), -self.ori, 
+                iTrack + 2*self.overdev, iGap - 2*self.overdev]
+        self.ports[self.name] = port  
+        
     def draw_Xmon_end_cable(self, iTrack, iGap, iWidth, iLength):
         '''
                    iGap iTrack
