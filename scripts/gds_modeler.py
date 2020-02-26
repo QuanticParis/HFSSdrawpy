@@ -294,9 +294,8 @@ class GdsModeler():
         print("ERROR : The function --create_object_from_face-- cannot be used for GDSmodeler")
         pass
 
-    def _fillet(self, radius, vertex_index, entity): 
+    def _fillet(self, radius, vertices, entity): 
         #TODO : Correct the choice of vertices
-        
         #1 We need to extract the associated polygon
         polygon = self.gds_object_instances[entity.name]
         points = polygon.polygons[0]
@@ -305,13 +304,22 @@ class GdsModeler():
 #        vertices_number = len(points)
 ##        new radius = [(i in vertex_index) for i in range(vertices_number)]
         new_radius=[0]*len(points)
-        for i in vertex_index:
+        for i in vertices:
             new_radius[i]=radius
 #        #3 We apply fillet on the polygon
-        
         polygon.fillet(new_radius)
         
-
+    def _fillets(self, radius, vertices, entity):
+        #Vertices = None in gds
+        polygon = self.gds_object_instances[entity.name]
+        points = gdspy.PolygonSet(polygon.get_polygons())
+        self.cell.add(points)
+        points.fillet(radius)
+        
+    def get_vertex_ids(self, entity):
+        return None
+    
+    
     def _sweep_along_path(self, to_sweep, path_obj, name=None):
         try:
             length_to_sweep = (Vector(self.gds_object_instances[to_sweep.name].polygons[0][0])-Vector(self.gds_object_instances[to_sweep.name].polygons[0][1])).norm()
@@ -430,11 +438,6 @@ class GdsModeler():
                                 	])
                 
 
-    def get_face_ids(self, obj):
-        return self._modeler.GetFaceIDs(obj)
-
-    def get_vertex_ids(self, obj):
-        return self._modeler.GetVertexIDsFromObject(obj)
 
     def eval_expr(self, expr, units="mm"):
         if not isinstance(expr, str):

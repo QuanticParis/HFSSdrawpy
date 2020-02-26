@@ -660,7 +660,7 @@ def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
     pad_size = Vector(pad_size)
     
     # connection pads
-    self.rect_corner_2D([-pad_size[0]/2, pad_spacing/2], [pad_size[0],pad_size[1]], name=name+'_left', layer=12)
+    self.rect_corner_2D([-pad_size[0]/2, pad_spacing/2], [pad_size[0],pad_size[1]], name=name+'_left', layer=layer_TRACK)
     self.rect_corner_2D([-pad_size[0]/2, -pad_spacing/2], [pad_size[0],-pad_size[1]], name=name+'_right', layer=12)
     
     r1 = Vector([1,0]).rot(Vector([0,-1]))

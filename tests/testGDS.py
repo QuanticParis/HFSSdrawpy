@@ -16,6 +16,10 @@ print(polySet.polygons)
 poly.fillet([np.array([0,0.1,0,0])])
 print(poly.polygons)
 polySet.fillet([0.1])
+cell = gdspy.Cell("aha3")
+cell.add(poly)
+gdspy.LayoutViewer(library=gdspy.current_library, pattern={'default': 8},background='#FFFFFF')
+
 #print(polySet.polygons[0])
 
 #%%

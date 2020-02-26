@@ -1036,10 +1036,10 @@ class Body(PythonMdlr):
                 connection_track = self.polyline_2D(points, name=name+'path_track'+to_add, closed=False ,layer = layer_TRACK)
     #            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
                 cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
-#                self._fillets(fillet-eps, connection_track)
+                self._fillets(fillet-eps, connection_track)
         
                 connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = layer_Default)
-#                self._fillets(fillet-eps, connection_gap)
+                self._fillets(fillet-eps, connection_gap)
 #                self.set_current_coor([0,0], [0, -1])
                 track_starter = self.polyline_2D([[-ports[2*ii].track,0],[ports[2*ii].track,0]], name = name+'start_gap', layer = 0)
                 gap_starter = self.polyline_2D([[-ports[2*ii].gap,0],[ports[2*ii].gap,0]], name = name+'start_track', layer = 1)

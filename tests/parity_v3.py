@@ -116,7 +116,7 @@ if qubit:
                             track_right, PM.gap, '0.30mm', '30um', '0mm', PM.trm_junction_width, '50um', PM.Lj,
                             pad_size_left=['0.5mm', '0.5mm'], track_left=track_left,
                             gap_left=PM.gap_mem, length_left='0.2mm', spacing_left='-30um', 
-                            short_left='0um', fillet=None)
+                            short_left='0um', fillet=True)
 
     if litho:
         chip1.set_current_coor([PM.x_T, PM.y_T], [-1,0])
