@@ -11,7 +11,7 @@ import numpy as np
 eps = 1e-7
 import gdspy
 from Vector import Vector
-print(gdspy.__version__)
+print("gdspy_version : ",gdspy.__version__)
 
 # Create the geometry: a single rectangle.
 #class Cell( object ):
@@ -40,8 +40,6 @@ class GdsModeler():
         del self.cell
         
     def create_coor_sys(self, coor_name='Global', coor_sys=[[0,0,0], [1,0]]):
-        print('initialisation cell')
-        print(gdspy.current_library.cells)
         try:
             #Test if the cell already exists
             self.cell = gdspy.current_library.cells[coor_name]
@@ -175,28 +173,18 @@ class GdsModeler():
         else:
             list_norm = []
             for polygon in polygonset.polygons:
-                print(polygon)
                 list_norm.append(np.linalg.norm(polygon)**2)
             return np.amin(np.array(list_norm))
         
     def gds_boolean(self, operand1, operand2, operation, precision=0.001, max_points=199, layer=0, datatype=0):
-        print("boolean operation")
-
         ratio = 10**9
-        print(operand1)
-        print(operand2)
         operand1 = operand1.scale(ratio, ratio)
         operand2 = operand2.scale(ratio, ratio)
         result = gdspy.boolean(operand1, operand2, operation, precision, max_points, layer, datatype)
         result = result.scale(ratio**(-1), ratio**(-1))
-        print(result)
-        print("end operation")
-
         return result
         
     def unite(self, entities, name=None, keep_originals=False):
-#        #TODO Use of PolygonSet
-
         blank_entity = entities.pop(0)
         blank_polygon = self.gds_object_instances[blank_entity.name]
         self.cell.polygons.remove(blank_polygon)
@@ -278,7 +266,6 @@ class GdsModeler():
                 sub = blank_polygon
         
         #3 At last we update the cell and the gds_object_instance
-        print("final name", final_name)
         self.gds_object_instances[final_name] = sub
         self.cell.add(sub)
         
@@ -307,10 +294,11 @@ class GdsModeler():
         print("ERROR : The function --create_object_from_face-- cannot be used for GDSmodeler")
         pass
 
-    def _fillet(self, radius, vertex_index, entity):  
+    def _fillet(self, radius, vertex_index, entity): 
+        #TODO : Correct the choice of vertices
+        
         #1 We need to extract the associated polygon
         polygon = self.gds_object_instances[entity.name]
-        print("polgon", entity.name)
         points = polygon.polygons[0]
 #        print("points = ", points)
 #        #2 We adapt the format of the list of radius

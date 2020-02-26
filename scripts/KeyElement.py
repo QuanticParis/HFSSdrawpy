@@ -416,8 +416,6 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
             cylinders.append(self.draw_cylinder_transmon(*transmon_param[4]))
 
             
-            
-    print(cylinders)
     union = self.unite(cylinders, "main_obj")
     if to_subtract !=None:
         self.subtract(union, to_subtract)

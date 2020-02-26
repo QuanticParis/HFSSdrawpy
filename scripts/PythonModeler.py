@@ -713,7 +713,6 @@ class Body(PythonMdlr):
             new_args = [args[0], args[1]]
             compteur = 0
             for i, argument in enumerate(args[2:]):
-                print("port", argument)
                 if isinstance(argument, str) and (argument in Port.dict_instances):
                     new_args.append(Port.dict_instances[argument])
                     compteur+=1

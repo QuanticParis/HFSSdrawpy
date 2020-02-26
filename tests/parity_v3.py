@@ -14,10 +14,13 @@ Changes from v2 to v3:
  - both capacitances to parity circuit increased
  - interdigitated capacitances removed
 '''  
-  
-#import scripts
+from importlib import reload
+import scripts
+reload(scripts)
 import gdspy
+import time
 
+t1 = time.time()
 PM = PythonMdlr('gds')
 
 chip1 = PM.body('chip1', 'Global')
@@ -207,7 +210,8 @@ if not(readout):
     chip1.draw_cable('readout', 'trm_portOut2','constrain_readout1_front', 'constrain_readout1_back','constrain_readout2_front', 'constrain_readout2_back', 'capa_readout_outPort1', is_bond=is_bond, fillet=PM.fillet)
     chip1.draw_cable('bef_capa', 'capa_readout_outPort2', chip1.name+'in_readoutiOut', is_bond=is_bond, fillet=PM.fillet)
 #
-
+t2 = time.time()
+print("execution time: ", t2-t1)
 #%%
 gdspy.LayoutViewer(library=gdspy.current_library, pattern={'default': 8},background='#FFFFFF')
 #### Test junctions

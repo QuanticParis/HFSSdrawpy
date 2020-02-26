@@ -304,7 +304,6 @@ def draw_ZR_transmon(self,
                   (-pad_size_right[0]-2*self.overdev, 0)]
     points_right = self.append_points(raw_points_right)
     right_pad = self.polyline_2D(points_right, name=name+"_pad1", layer=layer_TRACK)
-    print(points_right)
     
     raw_points_left = [(-pad_spacing/2+self.overdev, -pad_size_left[1]/2-self.overdev),
                   (-pad_size_left[0]-2*self.overdev, 0),
@@ -316,7 +315,6 @@ def draw_ZR_transmon(self,
                   (pad_size_left[0]+2*self.overdev, 0)]
     points_left = self.append_points(raw_points_left)
     left_pad = self.polyline_2D(points_left, name=name+"_pad2", layer=layer_TRACK) 
-    print(points_left)
     
     right_track_raw_points = [(cutout_size[0]/2-self.overdev,-track_right/2-self.overdev),
                              (-(cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), 0),
@@ -582,7 +580,6 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
     self.fillet(fillet+self.overdev,[11,6,5,0], pads)
     
     pads_sub = self.subtract(pads, [capagap])
-    #print(pads_sub.vertices())
     
     #####Filets on edge
     self.fillet(fillet-self.overdev,[73,70], pads)
