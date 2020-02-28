@@ -1757,7 +1757,7 @@ class KeyElt(Circuit):
                                                max(dn_left, down, dn_right)/2]
             mask_size = [left + right + track + 2*gap + 2*self.gap_mask,
                          max(dn_left, down, dn_right) + max(up_left, up_right)
-                         + 2*gap + 2*self.gap_masl]
+                         + 2*gap + 2*self.gap_mask]
             mask = self.draw_rect_center(self.name+"_mask", self.coor(mask_center), 
                                          self.coor_vec(mask_size))
             self.maskObjects.append(mask)
@@ -1853,7 +1853,7 @@ class KeyElt(Circuit):
                            max(up_left, up_right)/2 - max(dn_left, dn_right)/2]
             mask_size = [left + right + track + 2*gap + 2*self.gap_mask,
                          max(dn_left, dn_right) + max(up_left, up_right)
-                         + 2*gap + 2*self.gap_masl]
+                         + 2*gap + 2*self.gap_mask]
             mask = self.draw_rect_center(self.name+"_mask", self.coor(mask_center), 
                                          self.coor_vec(mask_size))
             self.maskObjects.append(mask)
@@ -4527,7 +4527,8 @@ class KeyElt(Circuit):
         self.gapObjects.append(gap)
         
         if not self.is_litho:
-            self.modeler.assign_mesh_length(gap, iGap)
+            gap_mesh = self.copy(gap, name=self.name+'_gap_mesh')
+            self.modeler.assign_mesh_length(gap_mesh, iGap)
 
         if self.is_mask:
             mask_pos  = [0, -iT/2 + self.overdev]
