@@ -85,21 +85,22 @@ class GdsModeler():
     def _selections_array(self, *names):
         return ["NAME:Selections", "Selections:=", ",".join(names)]
 
-    def draw_box_corner(self, pos, size, **kwargs):
-        print("ERROR : The function --draw_box_corner-- cannot be used for GDSmodeler")
+    def box_corner_3D(self, pos, size, **kwargs):
+        print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
         pass
-    def draw_box_center(self, pos, size, **kwargs):
-        print("ERROR : The function --draw_box_center-- cannot be used for GDSmodeler")
+    def box_center_3D(self, pos, size, **kwargs):
+        print("ERROR : The function --box_center_3D-- cannot be used for GDSmodeler")
         pass     
     
-    def draw_polyline(self, points, size=[eps, eps], closed=True, **kwargs):
+    def polyline_2D(self, points, closed, **kwargs):
         #TODO sace of open path
         #size is the thickness of the polyline for gds, must be a 2D-list with idential elements
+       
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
-        
         if closed:
+        
             poly1 = gdspy.Polygon(points, layer)
         else:
             poly1 = gdspy.FlexPath(points, 1e-9, layer = layer)
@@ -109,11 +110,7 @@ class GdsModeler():
         self.cell.add(poly1)
         return name
     
-    def draw_rect_corner(self, pos, size, **kwargs):
-#        if len(pos)==3:
-#            pos.pop(-1)
-#        if len(size)==3:
-#            size.pop(-1)
+    def rect_corner_2D(self, pos, size, **kwargs):
         pos, size = parse_entry((pos, size))
         name = kwargs['name']
         layer = kwargs['layer']
@@ -125,22 +122,22 @@ class GdsModeler():
         self.cell.add(poly1)
         return name
     
-    def draw_rect_center(self, pos, size, **kwargs):
+    def rect_center_2D(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.draw_rect_corner(corner_pos, size, **kwargs)
+        return self.rect_corner_2D(corner_pos, size, **kwargs)
 
-    def draw_cylinder(self, pos, radius, height, axis, **kwargs):
-        print("ERROR : The function --draw_cylinder-- cannot be used for GDSmodeler")
+    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
+        print("ERROR : The function --cylinder_3D-- cannot be used for GDSmodeler")
         pass
     
-    def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
+    def cylinder_center_3D(self, pos, radius, height, axis, **kwargs):
         #Useless ?
-        print("ERROR : The function --draw_cylinder_center-- cannot be used for GDSmodeler")
+        print("ERROR : The function --cylinder_center_3D-- cannot be used for GDSmodeler")
         pass
     
-    def draw_disk(self, pos, radius, axis, **kwargs):
+    def disk_2D(self, pos, radius, axis, **kwargs):
         pos = parse_entry(pos)
         radius = parse_entry(radius)
         name = kwargs['name']
@@ -152,7 +149,7 @@ class GdsModeler():
         self.cell.add(round1)
         return name
         
-    def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
+    def wirebond_2D(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pass
     
     def connect_faces(self, entity1, entity2):

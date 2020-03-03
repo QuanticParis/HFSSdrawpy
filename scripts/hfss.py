@@ -961,7 +961,7 @@ class HfssModeler(COMWrapper):
         self._modeler.Delete(self._selections_array(*objects))
                 
     @assert_name
-    def draw_box_corner(self, pos, size, **kwargs):
+    def box_corner_3D(self, pos, size, **kwargs):
         if len(pos)==2:
             pos.append(0)
         if len(size)==2:
@@ -979,14 +979,14 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
 
-    def draw_box_center(self, pos, size, **kwargs):
+    def box_center_3D(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.draw_box_corner(corner_pos, size, **kwargs)
+        return self.box_corner_3D(corner_pos, size, **kwargs)
     
     @assert_name
-    def draw_polyline(self, points, closed=True, **kwargs):
+    def polyline_2D(self, points, closed=True, **kwargs):
         for i in range(len(points)):
             if isinstance(points[i], tuple) and len(points[i])==2:
                 points[i]+=(0,)
@@ -1021,7 +1021,7 @@ class HfssModeler(COMWrapper):
         return name
     
     @assert_name
-    def draw_rect_corner(self, pos, size, **kwargs):
+    def rect_corner_2D(self, pos, size, **kwargs):
         if len(pos)==2:
             pos.append(0)
         if len(size)==2:
@@ -1049,14 +1049,14 @@ class HfssModeler(COMWrapper):
         del kwargs2
         return name
 
-    def draw_rect_center(self, pos, size, **kwargs):
+    def rect_center_2D(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.draw_rect_corner(corner_pos, size, **kwargs)
+        return self.rect_corner_2D(corner_pos, size, **kwargs)
     
     @assert_name
-    def draw_cylinder(self, pos, radius, height, axis, **kwargs):
+    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         assert axis in "XYZ"
@@ -1072,15 +1072,15 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs2))
         return name
     
-    def draw_cylinder_center(self, pos, radius, height, axis, **kwargs):
+    def cylinder_center_3D(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
         edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
-        return self.draw_cylinder(edge_pos, radius, height, axis, **kwargs)
+        return self.cylinder_3D(edge_pos, radius, height, axis, **kwargs)
     
     @assert_name
-    def draw_disk(self, pos, radius, axis, **kwargs):
+    def disk_2D(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateEllipse(
             ["NAME:EllipsdeParameters",
@@ -1094,7 +1094,7 @@ class HfssModeler(COMWrapper):
         return name
     
     @assert_name
-    def draw_wirebond(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
+    def wirebond_2D(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
         xpad = pos[0]-width/2.*ori[1]
         ypad = pos[1]+width/2.*ori[0]

@@ -11,6 +11,9 @@ import numpy as np
 from Vector import Vector
 import sys
 from functools import wraps
+
+
+# PARAMETERS FOR THE GDS OUTPUT AND FOR FILLETS
 eps = 1e-7
 layer_TRACK = 1
 layer_GAP = 0
@@ -27,8 +30,8 @@ from hfss import extract_value_unit, \
                  ModelEntity, \
                  VariableString , \
                  var
-import gds_modeler
 ##IMPORT KEY / CUSTOM Elements
+import gds_modeler
 from Lib import *
 import KeyElement
 import CustomElement
@@ -79,6 +82,20 @@ def equal_float(float1, float2):
         return True
 
 class PythonMdlr():
+    """
+    Modeler which defines basic operations and methods to perform on ModelEntity and on the chosen interface.
+    To create a new interface, one needs to copy an existing one in a new file, and adapt all methods to the formalism of the new interface.
+    
+    The PythonMdlr class is called at the beginning of a script but then it is the body that is always used.
+    The syntax is the following:
+        import scripts
+        PM = PythonMdlr("hfss")
+        chip1 = PM.body(name, coordinate system)
+    
+    Inputs:
+    -------
+    name_interface: string in "gds" or "hfss"
+    """
     is_overdev = False
     is_litho = False
     is_mask = False
@@ -87,7 +104,11 @@ class PythonMdlr():
     gap_mask = parse_entry('20um')
     overdev = parse_entry('0um')
 
-    def __init__(self, name_interface): #"Hfss" or "Gds"
+    def __init__(self, name_interface):
+        """
+        Creates a PythonMdlr object based on the chosen interface.
+        For now the interface cannot be changed during an execution, only at the beginning
+        """
         self.variables = {}     
         if name_interface=="hfss":
             project = get_active_project()
@@ -102,6 +123,9 @@ class PythonMdlr():
         self.mode = name_interface
         
     def set_active_coor_system(func):
+        """
+        Defines a wrapper/decorator which allows the user to always work in the coordinate system of the chosen chip.
+        """
         @wraps(func)
         def updated(*args, **kwargs):
             args[0].interface.set_coor_sys(args[0].coor_sys)
@@ -109,25 +133,46 @@ class PythonMdlr():
         return updated
     
     def append_lists(self):
+        """
+        We use a tree-like architecture to store the entities and port to be moved at the right place.
+        """
         self.modelentities_to_move().append([])
         self.ports_to_move().append([])     
         
     @classmethod
     def append_points(self, coor_list):
-        # coor_list can be [()()] or [[][]]
-        points = [(coor_list[0][0],coor_list[0][1])]
+        """
+        Almost depreciated.
+        It allows the user to defines a polygon using its vertices.
+        
+        Inputs:
+        -------
+        coor_list: [[x1,y1],[x2,y2],...] or [(x1,y1),(x2,y2),...]
+        
+        Outputs:
+        -------
+        new_coor_list: new_coor_list[k] = Somme des k premiers vecteurs de coor_list
+        """
+        new_coor_list = [(coor_list[0][0],coor_list[0][1])]
 
         for coor in coor_list[1:]:
-            points.append((points[-1][0] + coor[0],points[-1][1] + coor[1]))
-        return points
+            new_coor_list.append((new_coor_list[-1][0] + coor[0],new_coor_list[-1][1] + coor[1]))
+        return new_coor_list
 
     def assign_perfect_E(self, entities, name='perfE'):
+        """
+        Change the property of the HFFS objects which correspond to the entites.
+        """
         if isinstance(entities, list):
             self.interface.assign_perfect_E(entities, entities[0].name+name)
         else:
             self.interface.assign_perfect_E(entities, entities.name+name)
 
     def body(self, body_name, coor_name='Global', coor_sys=None):
+        """
+        Creates a Body object which inherits from the current PythonMdlr object.
+        The body is associated with a coordinate system of choice.
+        """
         if coor_name != 'Global':
             if not(coor_sys is None):
                 coor_sys = parse_entry(coor_sys)
@@ -137,67 +182,49 @@ class PythonMdlr():
         return B
     
     @set_active_coor_system
-    def box_corner(self, pos, size, layer=layer_Default, **kwargs):
-        name = self.interface.draw_box_corner(pos, size, **kwargs)
-        return ModelEntity(name, 3, self.coor_sys, layer=layer)
+    def box_corner_3D(self, pos, size, **kwargs):
+        """
+        Draws a 3D box based on the coordinates of its corner.
+        
+        Inputs:
+        -------
+        pos: [x,y,z] the coordinates of the corner of the rectangle in the euclidian basis.
+        size: [lx,ly,lz] the dimensions of the rectangle
+        
+        **kwargs include layer and name
+        Outputs:
+        -------
+        box: Corresponding 3D Model Entity
+        """
+        
+        layer = kwargs['layer'] if layer!=None else layer_Default
+        name = self.interface.box_corner_3D(pos, size, **kwargs)
+        box = ModelEntity(name, 3, self.coor_sys, layer=layer)
+        return box
     
     @set_active_coor_system
     def box_center(self, pos, size, layer, **kwargs):
-        name = self.interface.draw_box_center(pos, size, **kwargs)
+        """
+        Draws a 3D box based on the coordinates of its center.
+        
+        Inputs:
+        -------
+        pos: [x,y,z] the coordinates of the center of the rectangle in the euclidian basis.
+        size: [lx,ly,lz] the dimensions of the rectangle
+        
+        **kwargs include layer and name
+        Outputs:
+        -------
+        box: Corresponding 3D Model Entity
+        """
+        layer = kwargs['layer'] if layer!=None else layer_Default
+        name = self.interface.box_center_3D(pos, size, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=layer)
-  
-#    def polyline_3D(self, points3D, closed=True, **kwargs): # among kwargs, name should be given
-#        if self.mode=='hfss':
-#            name = self.interface.draw_polyline(points3D, closed=closed, **kwargs)
-#        elif self.mode=='gds':
-#            points2D = []
-#            for point in points3D:
-#                points2D.append(points3D[0:2])
-#            name = self.interface.draw_polyline(points2D, [0,0], closed=closed, **kwargs)
-#
-#        dim = closed + 1 # 2D when closed, 1D when open
-#        return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
-#
-#    def rect_corner_3D(self, pos3D, size3D, **kwargs):
-#        if self.mode=='hffs': 
-#            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
-#        elif self.mode=='gds':
-#            pos2D = pos3D[0:2]
-#            size2D = size3D[0:2]
-#            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
-#        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
-#    
-#    def rect_center_3D(self, pos3D, size3D, **kwargs):
-#        if self.mode=='hffs': 
-#            name = self.interface.draw_rect_corner(pos3D, size3D, **kwargs)
-#        elif self.mode=='gds':
-#            pos2D = pos3D[0:2]
-#            size2D = size3D[0:2]
-#            name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
-#        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
-    
-#    def polyline_2D(self, points2D, z=0, closed=True, **kwargs): # among kwargs, name should be given
-#        points3D = []
-#        for point in points2D:
-#            points3D.append(point+(z,))
-#        return self.polyline_3D(points3D, closed, **kwargs)
-#
-#    def rect_corner_2D(self, pos2D, size2D, z=0, **kwargs):
-#        name = self.interface.draw_rect_corner(pos2D, size2D, **kwargs)
-#        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
-#    
-#    def rect_center_2D(self, pos2D, size2D, z=0, **kwargs):
-#        name = self.interface.draw_rect_center(pos2D, size2D, **kwargs)
-#        return ModelEntity(name, 2, self.coor_sys, z, layer=kwargs['layer'])
-
-
-
-
     
     @set_active_coor_system
-    def cylinder(self, pos, radius, height, axis, **kwargs):
+    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
         kwargs['coor_sys']=self.coor_sys
-        name = self.interface.draw_cylinder(pos, radius, height, axis, **kwargs)
+        name = self.interface.cylinder_3D(pos, radius, height, axis, **kwargs)
         return ModelEntity(name, 3, self.coor_sys, layer=kwargs['layer'])
         
     def connect_faces(self, name, entity1, entity2):
@@ -226,12 +253,12 @@ class PythonMdlr():
             self.delete(entity)        
     
     @set_active_coor_system
-    def disk(self, pos, radius, axis, **kwargs):
+    def disk_2D(self, pos, radius, axis, **kwargs):
         kwargs['coor_sys']=self.coor_sys
         if self.mode=='gds':
             pos = self.val(pos)
             radius = self.val(radius)
-        name = self.interface.draw_cylinder(pos, radius, axis, **kwargs)
+        name = self.interface.disk_2D(pos, radius, axis, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
     def duplicate_along_line(self, entity, vec):
@@ -319,12 +346,9 @@ class PythonMdlr():
                 points.pop(i)
             else:
                 i+=1
-                
         if self.mode=='gds':
             points = self.val(points)
-
-            
-        name = self.interface.draw_polyline(points, closed=closed, **kwargs)
+        name = self.interface.polyline_2D(points, closed, **kwargs)
         dim = closed + 1
         return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
     
@@ -339,7 +363,7 @@ class PythonMdlr():
         if self.mode=='gds':
             pos = self.val(pos)
             size = self.val(size)
-        name = self.interface.draw_rect_corner(pos, size, **kwargs)
+        name = self.interface.rect_corner_2D(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
     @set_active_coor_system
@@ -348,7 +372,7 @@ class PythonMdlr():
         if self.mode=='gds':
             pos = self.val(pos)
             size = self.val(size)
-        name = self.interface.draw_rect_center(pos, size, **kwargs)
+        name = self.interface.rect_center_2D(pos, size, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
     def refx_points(self, coor_list, offset=0, absolute=False):
@@ -490,9 +514,9 @@ class PythonMdlr():
             return self.eval_var_str(name)
         
     @set_active_coor_system
-    def wirebond(self, pos, ori, width, **kwargs):
+    def wirebond_2D(self, pos, ori, width, **kwargs):
         kwargs['coor_sys']=self.coor_sys
-        name = self.interface.draw_cylinder(pos, ori, width, **kwargs)
+        name = self.interface.wirebond_2D(pos, ori, width, **kwargs)
         return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
     
 class Port():
@@ -1492,7 +1516,7 @@ class Body(PythonMdlr):
                     pos = A + remain*(B-A).unit()
                     ori = way(self.val(B-A))
                     width = 0.0004
-                    self.draw_wirebond('wire', pos, ori, width)
+                    self.wirebond_2D('wire', pos, ori, width)
                     prev_ori = ori
                 else:
                     next_ori=way(self.val(points[indices[1]+1]-B)) #should be fine, if we have a fillet we have some straight portion after
@@ -1510,7 +1534,7 @@ class Body(PythonMdlr):
                     ori = ey*np.cos(theta) + ex*np.sin(theta)
                     print(f'ori={ori}')
                     width = 0.0004
-                    self.draw_wirebond('wire', pos, ori, width)
+                    self.wirebond_2D('wire', pos, ori, width)
                 dist_fillet += unit_dist_fillet
 
         _, final_choice, _ = check(final_choice)
@@ -1554,10 +1578,10 @@ class Body(PythonMdlr):
             n_bond = int(length/min_dist)+1
             spacing = (B-A).norm()/n_bond
             pos = A+ori*spacing/2
-            self.draw_wirebond('wire', pos, ori, width)
+            self.wirebond_2D('wire', pos, ori, width)
             for ii in range(n_bond-1):
                 pos = pos + ori*spacing
-                self.draw_wirebond('wire', pos, ori, width)
+                self.wirebond_2D('wire', pos, ori, width)
               
 
     @move_port
@@ -1766,7 +1790,7 @@ class Body(PythonMdlr):
             
             for ii in range(n-1):
                 if ii%2==1:
-                    _width_loc = width+2*assymetry b  
+                    _width_loc = width+2*assymetry
                 else:
                     _width_loc = width
                 self.draw_rect(self.name+'_middle', self.coor([x_pos,-_width_loc/2]), self.coor_vec([spacing_bridge, _width_loc]))

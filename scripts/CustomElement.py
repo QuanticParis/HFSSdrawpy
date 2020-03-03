@@ -5,7 +5,8 @@ Created on Mon Oct 28 16:27:24 2019
 @author: Zaki
 """
 
-from designer import Vector, eps
+from Vector import Vector
+
 import numpy as np
 from hfss import parse_entry
 #from PythonModeler import PythonModeler
@@ -15,6 +16,7 @@ import Lib
 
 __methods__ = []
 register_method = Lib.register_method(__methods__)
+eps = 1e-7
 layer_TRACK = 1
 layer_GAP = 0
 layer_RLC = 2
