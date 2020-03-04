@@ -617,8 +617,12 @@ class Circuit(object):
         self.bondwireObjects.append(iObj)
         return iObj
 
-    def draw_box(self, name, pos, iSize, iMaterial='vaccum'):
-        box = self.modeler.draw_box_corner(pos, iSize, material=iMaterial, name=name)
+    def draw_box(self, name, pos, iSize, iMaterial='vaccum', position="corner"):
+        assert position in ["corner", "center"]
+        if position=="corner":
+            box = self.modeler.draw_box_corner(pos, iSize, material=iMaterial, name=name)
+        elif position=="center":
+             box = self.modeler.draw_box_center(pos, iSize, material=iMaterial, name=name)
         self.__dict__[box] = box
         return box
 
@@ -627,7 +631,7 @@ class Circuit(object):
         self.__dict__[box] = box
         return box
     
-    def draw_trapeze(self, name, pos, z, size, height, angle=54.74*np.pi/180):
+    def draw_trapeze(self, name, pos, z, size, height, angle=54.74*np.pi/180, base=True):
         # pos, is central vector position
         # z is position of basis
         # size is the diagonal vector of the basis
@@ -637,8 +641,12 @@ class Circuit(object):
         pos = Vector(pos)
         size = Vector(size)
         rect_base = self.draw_rect_center(name, pos, size, z=z)
-        size_top = size - Vector([height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[0])), 
-                                  height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[1]))])
+        if base:
+            size_top = size - Vector([height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[0])), 
+                                      height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[1]))])
+        else:
+            size_top = size + Vector([height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[0])), 
+                                      height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[1]))])
         rect_top = self.draw_rect_center('rect2', pos, size_top, z=z+height)
         
         pyramid = self.modeler.connect_faces(rect_base, rect_top)
@@ -662,13 +670,20 @@ class Circuit(object):
                                 [self.val(corner2[0]), self.val(corner2[1])]]
         return rect
 
-    def draw_rect(self, name, pos, iSize, z=0):
+    def draw_rect(self, name, pos, iSize, z=0, position="corner"):
+        assert position in ["corner", "center"]
         pos = [pos[0], pos[1], z]
         size = [iSize[0], iSize[1], 0]
-        rect = self.modeler.draw_rect_corner(pos, size, name=name)
+        if position=="corner":
+            rect = self.modeler.draw_rect_corner(pos, size, name=name)
+            corner1 = pos
+            corner2 = pos+iSize
+        elif position=="center":
+            rect = self.modeler.draw_rect_center(pos, size, name=name)
+            corner1 = pos+iSize/2
+            corner2 = pos-iSize/2
         self.__dict__[rect] = rect
-        corner1 = pos
-        corner2 = pos+iSize
+        
         self.all_points += [[corner1[0], corner1[1]], 
                             [corner2[0], corner2[1]]]
         self.all_points_val += [[self.val(corner1[0]), self.val(corner1[1])], 
