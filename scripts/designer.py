@@ -2572,7 +2572,7 @@ class KeyElt(Circuit):
 
     def draw_squid(self, iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid=None, iTrackJ=None, Lj_down='1nH', Lj_up=None,  typePump='down', doublePump=False, iSlope=1, iSlopePump=0.5, fillet=None): #for now assume left and right tracks are the same width
         '''
-        Draws a Joseph's Son Junction.
+        Draws a Josephson Junction.
 
         Draws a rectangle, here called "junction",
         with Bondary condition :lumped RLC, C=R=0, L=iInduct in nH
