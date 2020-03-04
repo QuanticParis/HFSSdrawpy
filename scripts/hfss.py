@@ -509,6 +509,10 @@ class HfssDesign(COMWrapper):
     def delete_setup(self, name):
         if name in self.get_setup_names():
             self._setup_module.DeleteSetups(name)
+    
+    def delete_all_setups(self):
+        for name in self.get_setup_names():
+            self.delete_setup(name)
 
     def get_nominal_variation(self):
         return self._design.GetNominalVariation()
