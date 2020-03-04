@@ -622,10 +622,11 @@ class Circuit(object):
         return iObj
 
     def draw_box(self, name, pos, iSize, iMaterial='vaccum', position="corner"):
-        if(position=="corner"):
+        assert position in ["corner", "center"]
+        if position=="corner":
             box = self.modeler.draw_box_corner(pos, iSize, material=iMaterial, name=name)
-        elif(position=="center"):
-            box = self.modeler.draw_box_center(pos, iSize, material=iMaterial, name=name)
+        elif position=="center":
+             box = self.modeler.draw_box_center(pos, iSize, material=iMaterial, name=name)
         self.__dict__[box] = box
         return box
 
@@ -645,7 +646,7 @@ class Circuit(object):
         pos = Vector(pos)
         size = Vector(size)
         rect_base = self.draw_rect_center(name, pos, size, z=z)
-        if(base):
+        if base:
             size_top = size - Vector([height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[0])), 
                                       height/np.sign(self.val(height))*2/np.tan(angle)*np.sign(self.val(size[1]))])
         else:
@@ -676,17 +677,19 @@ class Circuit(object):
         return rect
 
     def draw_rect(self, name, pos, iSize, z=0, position="corner"):
+        assert position in ["corner", "center"]
         pos = [pos[0], pos[1], z]
         size = [iSize[0], iSize[1], 0]
-        if(position=="corner"):
+        if position=="corner":
             rect = self.modeler.draw_rect_corner(pos, size, name=name)
             corner1 = pos
             corner2 = pos+iSize
-        elif(position=="center"):
+        elif position=="center":
             rect = self.modeler.draw_rect_center(pos, size, name=name)
             corner1 = pos+iSize/2
             corner2 = pos-iSize/2
         self.__dict__[rect] = rect
+        
         self.all_points += [[corner1[0], corner1[1]], 
                             [corner2[0], corner2[1]]]
         self.all_points_val += [[self.val(corner1[0]), self.val(corner1[1])], 
