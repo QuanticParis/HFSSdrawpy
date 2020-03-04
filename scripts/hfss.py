@@ -426,6 +426,8 @@ class HfssDesign(COMWrapper):
         self.modeler = HfssModeler(self, self._modeler, self._boundaries,
                                    self._mesh)
         self.variables = {}
+        self.current_variation=None
+        self.current_solution=None
 
     def rename_design(self, name):
         old_name = self._design.GetName()
@@ -608,6 +610,91 @@ class HfssDesign(COMWrapper):
 
     def Clear_Field_Clac_Stack(self):
         self._fields_calc.CalcStack("Clear")
+        
+    def get_current_solution_variation(self, variation_index=0):
+        self.current_solution=self.get_solution_names()[-1]
+        self.current_variation=self.get_variations(self.current_solution)[variation_index]
+    
+    def get_solution_names(self):
+        return self._solutions.GetValidISolutionList(True)
+    
+    def get_variations(self, solution_name):
+        return self._solutions.ListVariations(solution_name)
+    
+    def has_fields(self, solution_name, variation):
+        return self._solution.HasFields(solution_name, variation)
+    
+    def has_matrix_data(self, solution_name, variation):
+        return self._solution.HasMatrixData(solution_name, variation)
+    
+    def is_field_available_at(self, solution_name, variation, freq):
+        return self._solutions.IsFieldAvailableAt(solution_name,
+                                                  variation,
+                                                  freq)
+        
+    def export_eigenfrequencies(self, solution_name, variation, filename):
+        self._solutions.ExportEigenmodes(solution_name, variation, filename)
+    
+    def parse_file(self, filename=os.path.join(os.getcwd(), "temp.txt")):
+        freqs=[]
+        Qs=[]
+        numbers=[]
+        with open(filename, 'r') as f:
+            lines=f.readlines()
+        for line in lines:
+            if line.startswith('#'):
+                pass
+            else:
+                i=0
+                for elt in line.rstrip('\n').split(' '):
+                    if elt=='':
+                        pass
+                    else:
+                        if i==0:
+                            numbers.append(int(elt))
+                            i+=1
+                        elif i==1:
+                            freqs.append(float(elt))
+                            i+=1
+                        elif i in [2,3,4]:
+                            i+=1
+                            pass
+                        elif i==5:
+                            Qs.append(float(elt))
+        return freqs, Qs, numbers
+    
+    def parse_variation(self):
+        s=[]
+        for i,elt in enumerate(self.current_variation.split(' ')):
+            sub_elts = elt.split('=')
+            assert len(sub_elts)==2
+            s.append(sub_elts[0]+':=')
+            s.append(sub_elts[1].rstrip("'").lstrip("'"))
+        return s
+    
+    def get_eigenfrequencies(self, variation_index=0):
+        if self.current_solution is None or self.current_variation is None:
+            self.get_current_solution_variation(variation_index=variation_index)
+        filename=os.path.join(os.getcwd(), "temp.txt")
+        self.export_eigenfrequencies(self.current_solution,
+                                     self.current_variation,
+                                     filename)
+        freqs, Qs, numbers = self.parse_file(filename=filename)
+        os.remove(filename)
+        return freqs
+    
+    def get_Q_factors(self, variation_index=0):
+        if self.current_solution is None or self.current_variation is None:
+            self.get_current_solution_variation(variation_index=variation_index)
+        filename=os.path.join(os.getcwd(), "temp.txt")
+        self.export_eigenfrequencies(self.current_solution,
+                                     self.current_variation,
+                                     filename)
+        freqs, Qs, numbers = self.parse_file(filename=filename)
+        os.remove(filename)
+        return Qs
+    
+    
 
 class HfssSetup(HfssPropertyObject):
     prop_tab = "HfssTab"
