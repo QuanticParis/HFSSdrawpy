@@ -3409,7 +3409,7 @@ class KeyElt(Circuit):
         iGap is the gap width of the input CPW
         ind_length is the length of the inductive rectangle
         ind_track is the width of the inductive rectangle
-        
+        if input inductance is 0, assume perfect E
         '''
         
         iTrack, iGap, ind_length, ind_track = parse_entry((iTrack, iGap, ind_length, ind_track))
@@ -3434,7 +3434,10 @@ class KeyElt(Circuit):
         if self.is_mask:
             self.maskObjects.append(self.draw_rect_center(self.name+"_mask", self.coor([0,0]), self.coor_vec([ind_length, iTrack + 2*iGap +2*self.gap_mask])))
         
-        self.assign_lumped_RLC(rect_ind, self.ori, (0, ind_val, 0))
+        if ind_val!=0:
+            self.assign_lumped_RLC(rect_ind, self.ori, (0, ind_val, 0))
+        else:
+            self.trackObjects.append(rect_ind)
         self.modeler.assign_mesh_length(self.name,ind_track/2)
         
         points = self.append_points([(ind_length/2,0),(-ind_length,0)])
@@ -4577,6 +4580,80 @@ class KeyElt(Circuit):
                                           (-gap,-(middle/2+length)),])
         self.draw(self.name+'_mesh', points_mesh, closed=True)
         self.modeler.assign_mesh_length(self.name+'_mesh',gap/2)
+        
+        
+        
+    def draw_coupling_ATS_parallel(self, track, gap, dist_ports, sep_ports, fillet,width_rectangle, track_rect, length_meander,fillet_meander, gap_rect,rect_meander=True, is_coupler_straight=True, is_bond=True):
+        '''
+        Draws a cable that goes to the ATS on orthogonal way to ATS central inductance
+        track, gap are the track gap of the cable
+        dist_ports is the "vertical" distance of the ports wrt the ATS (same for both ports)
+        sep_ports is the "horizontal" distance between the  two ports
+        fillet is the fillet of the cable that approaches the ATS
+        width rectangle is the width of the rectangle that connects the track of the cable to the ground
+        ("vertical" and "horizontal" in the sense of our local referential)
+        
+         __               __
+         !!               !!
+         !!               !!
+         !!               !!                        
+         \\_______! !_____//
+           _______   ______
+           _______!x!______
+            
+         The local (0,0) is at x. We have not represented the gap on the drawing
+         Two rectangles to connect the central track to the ground (for DC)
+         There is an option to make the rectangle with meanders
+        '''
+        
+        track, gap, dist_ports ,sep_ports,fillet,width_rectangle,rect_meander,track_rect,length_meander,fillet_meander, gap_rect, is_coupler_straight = parse_entry((track, gap, dist_ports,sep_ports,fillet,width_rectangle,rect_meander,track_rect,length_meander,fillet_meander,gap_rect,is_coupler_straight))   
+        
+        if is_coupler_straight:
+            portOut_L = [self.coor([-sep_ports/2,gap+track/2]), self.coor_vec([1,0]), track+2*self.overdev, gap-2*self.overdev]
+            portOut_R = [self.coor([sep_ports/2, gap+track/2]), self.coor_vec([-1,0]), track+2*self.overdev, gap-2*self.overdev]  
+            self.ports[self.name+'_L'] = portOut_L
+            self.ports[self.name+'_R'] = portOut_R
+            cable_coupler=self.connect_elt(self.name+'_cable_coupler', self.name+'_L', self.name+'_R')
+            cable_coupler.draw_cable(is_bond=is_bond)
+        else:
+            portOut_L = [self.coor([-sep_ports/2, dist_ports]), self.coor_vec([0,-1]), track+2*self.overdev, gap-2*self.overdev]
+            portOut_R = [self.coor([sep_ports/2, dist_ports]), self.coor_vec([0,-1]), track+2*self.overdev, gap-2*self.overdev]
+            portOut_constraint=[self.coor([0, gap+track/2]),self.coor_vec([1,0]),track+2*self.overdev, gap-2*self.overdev]
+            self.ports[self.name+'_L'] = portOut_L
+            self.ports[self.name+'_R'] = portOut_R
+            self.ports[self.name+'_constraint'] = portOut_constraint
+            
+            cable_coupler=self.connect_elt(self.name+'_cable_coupler', self.name+'_L', self.name+'_R')
+            cable_coupler.draw_cable(fillet=fillet,constrains=[self.name+'_constraint'])
+      
+          
+        #Rectange from the coupler to the ground (for DC pump)
+        rect_bot=self.draw_rect(self.name+'rect_ground_up',self.coor([-width_rectangle/2,0]),self.coor_vec([width_rectangle,gap]))
+        self.trackObjects.append(rect_bot)
+        
+        if rect_meander:
+            port_1_meander=[self.coor([0, gap+track]), self.coor_vec([0,1]), track_rect+2*self.overdev, gap_rect-2*self.overdev]
+            port_2_meander=[self.coor([0, 2*gap+track]), self.coor_vec([0,-1]), track_rect+2*self.overdev, gap_rect-2*self.overdev]
+            port_constraint_meander=[self.coor([length_meander, 1.5*gap+track]), self.coor_vec([0,-1]), track_rect+2*self.overdev, gap_rect-2*self.overdev]
+            self.ports[self.name+'_meander_1'] = port_1_meander
+            self.ports[self.name+'_meander_2'] = port_2_meander
+            self.ports[self.name+'_meander_constraint'] = port_constraint_meander 
+#            cable_meander=self.connect_elt(self.name+'_cable_meander', self.name+'_meander_1', self.name+'_meander_2')
+#            cable_meander.draw_cable(fillet=fillet_meander,constrains=[self.name+'_meander_constraint'])
+            cable_meander=self.connect_elt(self.name+'_cable_meander', self.name+'_meander_1', self.name+'_meander_constraint')
+            cable_meander.draw_slanted_cable()
+            #I made gap and length_meander varies but I was not able to get a slanted cable or a regular cable drawn by HFSS. Seems the meander is too compacted so that HFSS can draw it 
+            
+        else:
+            rect_up=self.draw_rect(self.name+'rect_ground_up',self.coor([-width_rectangle/2,gap+track]),self.coor_vec([width_rectangle,gap]))
+            self.trackObjects.append(rect_up)
+        
+            
+        #return the ports to use them from outside the key elt
+        portOut_L = [self.coor([-sep_ports/2, dist_ports]), self.coor_vec([0,1]), track+2*self.overdev, gap-2*self.overdev]
+        portOut_R = [self.coor([sep_ports/2, dist_ports]), self.coor_vec([0,1]), track+2*self.overdev, gap-2*self.overdev]
+        self.ports[self.name+'_L'] = portOut_L
+        self.ports[self.name+'_R'] = portOut_R
         
 class ConnectElt(KeyElt, Circuit):
     
