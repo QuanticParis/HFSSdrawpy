@@ -4117,9 +4117,9 @@ class KeyElt(Circuit):
             pos_y += pad_size[1]+pad_spacing
             pos_x = pad_spacing
                 
-        cutout = self.draw_rect(self.name+'_cutout', self.coor([0, 0]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*5*array[0],pad_size[1]*array[1]+pad_spacing*(array[1]+1)]))
+        cutout = self.draw_rect(self.name+'_cutout', self.coor([0, 0]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*(array[0])+pad_spacing*(array[0]+1)+4*pad_spacing*(array[0]-1),pad_size[1]*array[1]+pad_spacing*(array[1]+1)]))
         if self.is_mask:
-            mask = self.draw_rect(self.name+'_cutout', self.coor([-self.gap_mask, -self.gap_mask]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*5*array[0]+2*self.gap_mask,pad_size[1]*array[1]+pad_spacing*(array[1]+1)+2*self.gap_mask]))
+            mask = self.draw_rect(self.name+'_cutout', self.coor([-self.gap_mask, -self.gap_mask]), self.coor_vec([pad_size[0]*2*array[0]+pad_spacing*(array[0])+pad_spacing*(array[0]+1)+4*pad_spacing*(array[0]-1)+2*self.gap_mask,pad_size[1]*array[1]+pad_spacing*(array[1]+1)+2*self.gap_mask]))
             self.maskObjects.append(mask)
         cutout = self.subtract(cutout, pads)
         self.gapObjects.append(cutout)
