@@ -677,8 +677,7 @@ class HfssDesign(COMWrapper):
         return s
     
     def get_eigenfrequencies(self, variation_index=0):
-        if self.current_solution is None or self.current_variation is None:
-            self.get_current_solution_variation(variation_index=variation_index)
+        self.get_current_solution_variation(variation_index=variation_index)
         filename=os.path.join(os.getcwd(), "temp.txt")
         self.export_eigenfrequencies(self.current_solution,
                                      self.current_variation,
@@ -688,8 +687,7 @@ class HfssDesign(COMWrapper):
         return freqs
     
     def get_Q_factors(self, variation_index=0):
-        if self.current_solution is None or self.current_variation is None:
-            self.get_current_solution_variation(variation_index=variation_index)
+        self.get_current_solution_variation(variation_index=variation_index)
         filename=os.path.join(os.getcwd(), "temp.txt")
         self.export_eigenfrequencies(self.current_solution,
                                      self.current_variation,

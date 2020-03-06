@@ -101,7 +101,8 @@ class Vector(list):
 
     def __add__(self, other):
         if self.check(other):
-            return Vector([self[0]+other[0], self[1]+other[1]])
+            vec=[self[i]+other[i] for i in range(len(self))]
+            return Vector(vec)
         else:
             raise TypeError('Could not perform add operation')
 
@@ -110,21 +111,25 @@ class Vector(list):
 
     def __sub__(self, other):
         if self.check(other):
-            return Vector([self[0]-other[0], self[1]-other[1]])
+            vec=[self[i]-other[i] for i in range(len(self))]
+            return Vector(vec)
         else:
             raise TypeError('Could not perform sub operation')
 
     def __neg__(self):
-        return Vector([-self[0], -self[1]])
+        vec=[-self[i] for i in range(len(self))]
+        return Vector(vec)
 
     def __rsub__(self, other):
         return -self + other
 
     def __mul__(self, other):
         if self.check(other):
-            return Vector([self[0]*other[0], self[1]*other[1]])
+            vec=[self[i]*other[i] for i in range(len(self))]
+            return Vector(vec)
         elif self.check_nb(other):
-            return Vector([self[0]*other, self[1]*other])
+            vec=[self[i]*other for i in range(len(self))]
+            return Vector(vec)
         else:
             raise TypeError('Could not perform mul operation')
 
@@ -133,23 +138,28 @@ class Vector(list):
 
     def __truediv__(self, other):
         if self.check(other):
-            return Vector([self[0]/other[0], self[1]/other[1]])
+            vec=[self[i]/other[i] for i in range(len(self))]
+            return Vector(vec)
         elif self.check_nb(other):
-            return Vector([self[0]/other, self[1]/other])
+            vec=[self[i]/other for i in range(len(self))]
+            return Vector(vec)
         else:
             raise TypeError('Could not perform div operation')
 
     def __rtruediv__(self, other):
         if self.check(other):
-            return Vector([other[0]/self[0], other[1]/self[1]])
+            vec=[other[i]/self[i] for i in range(len(self))]
+            return Vector(vec)
         elif self.check_nb(other):
-            return Vector([other/self[0], other/self[1]])
+            vec=[other/self[i] for i in range(len(self))]
+            return Vector(vec)
         else:
             raise TypeError('Could not perform rdiv operation')
 
     def dot(self, other):
         if self.check(other):
-            return self[0]*other[0]+self[1]*other[1]
+            vec=sum([other[i]*self[i] for i in range(len(self))])
+            return Vector(vec)
         else:
             raise TypeError('Could not perform dot operation')
 
@@ -160,14 +170,16 @@ class Vector(list):
             raise TypeError('Could not perform dot operation')
 
     def norm(self):
-        return (self[0]**2+self[1]**2)**0.5
+        return sum([self[i]**2 for i in range(len(self))])**0.5
 
     def abs(self):
-        return Vector([abs(self[0]), abs(self[1])])
+        vec=[abs(self[i]) for i in range(len(self))]
+        return Vector(vec)
 
     def unit(self):
         norm = self.norm()
-        return Vector([self[0]/norm, self[1]/norm])
+        vec=[self[i]/norm for i in range(len(self))]
+        return Vector(vec)
 
     def orth(self):
         return Vector([-self[1], self[0]])
@@ -576,7 +588,11 @@ class Circuit(object):
         prev_val_x=0
         prev_val_y=0
         for iPoint in iPoints:
-            val_x = self.val(iPoint[0])
+            points_to_append_val.append( [self.val(iPoint[i]) for i in range(len(iPoint))])
+            points.append([self.val(iPoint[i]) for i in range(len(iPoint))])
+            if(len(iPoint)==2):
+                points[-1].append(0)
+            '''val_x = self.val(iPoint[0])
             val_y = self.val(iPoint[1])
             x = iPoint[0]
             y = iPoint[1]
@@ -595,10 +611,10 @@ class Circuit(object):
                 prev_val_x = val_x
                 prev_val_y = val_y
             else:
-                pass
+                pass'''
 #                print('Warning: Found two overlapping points while creating the polyline, supressed one')
         iObj = self.modeler.draw_polyline(points, closed=closed, name=iObj)
-        self.all_points += points_to_append
+        self.all_points += points
         self.all_points_val += points_to_append_val
         return iObj
 
