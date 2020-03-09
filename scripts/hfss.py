@@ -1539,8 +1539,8 @@ class Polyline(ModelEntity): # Assume closed polyline
 #        for point in points:
 #            X =
     
-    def unite(self, list_other):
-        union = self.modeler.unite(self + list_other)
+    def unite(self, list_other, name):
+        union = self.modeler.unite(self + list_other, name=name)
         return Polyline(union, self.modeler)
 
     def make_center_line(self, axis): # Expects to act on a rectangle...
