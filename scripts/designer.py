@@ -6021,13 +6021,6 @@ class KeyElt(Circuit):
         self.ports_dc[self.name+'_2'] = portOut2
         
     def draw_dc_test_Nrect(self, layer_name, N, length, rel_pos, widths, border='10um'):
-        '''
-<<<<<<< HEAD
-        Poorly coded: rel_pos is the center of one edge but we use draw_rect instead of draw_rect_center
-=======
->>>>>>> simplified routines draw rect
-        REL_POS HAS TO BE A LIST
-        '''
 
         if isinstance(widths, list):
             if len(widths) is not len(rel_pos):
@@ -7737,16 +7730,11 @@ class ConnectElt(KeyElt, Circuit):
             self.modeler.assign_mesh_length(JJ,   iTrackJ/10)
             self.modeler.assign_mesh_length(pads, iTrackJ)
     
-<<<<<<< HEAD
-            points = self.append_points([(iLengthJ/2,0), (-iLengthJ,0)])
-            self.draw(self.name+'_line', points, closed=False)
-=======
             points = self.append_points([(Jlength/2,0),(-Jlength,0)])
             self.draw(self.name+'_line', points, closed=False)
     
             JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([Jlength, Jwidth]))
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, capa_plasma))
->>>>>>> designer_modified renamed designer
 
         return pads
     
