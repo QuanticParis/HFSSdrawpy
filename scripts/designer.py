@@ -5544,7 +5544,6 @@ class KeyElt(Circuit):
         right_pad_1 = self.draw_rect(self.name+'_right_1', self.coor([pad_spacing/2 + length_connection, pad_size[1]/2]), self.coor_vec([pad_size[0], -pad_size[1]]))
         right_pad_2 = self.draw_rect(self.name+'_right_2', self.coor([pad_spacing/2, width_connection/2]), self.coor_vec([length_connection, -width_connection]))
         
-=======
     def draw_dose_test_junction(self, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0, alternate_width=True, version=0):
         pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
         pad_size = Vector(pad_size)
@@ -5970,7 +5969,6 @@ class KeyElt(Circuit):
         right_pad_1 = self.draw_rect(self.name+'_right_1', self.coor([pad_spacing/2 + length_connection, pad_size[1]/2]), self.coor_vec([pad_size[0], -pad_size[1]]))
         right_pad_2 = self.draw_rect(self.name+'_right_2', self.coor([pad_spacing/2, width_connection/2]), self.coor_vec([length_connection, -width_connection]))
         
->>>>>>> cleanup
         pads = left_pad_1.unite([left_pad_2, right_pad_1, right_pad_2], name=self.name+'_pads')
         
         self.trackObjects.append(pads)
@@ -7994,41 +7992,6 @@ class ConnectElt(KeyElt, Circuit):
     def _connect_squids(self, squid_size, width_top, width_bot, N, width_bridge, spacing_bridge):
         
         width_track = self.inTrack # assume both are equal
-<<<<<<< HEAD
-=======
-        spacing = (self.posOut-self.pos).norm()
-        
-        self.pos = (self.pos+self.posOut)/2
-        
-        width_snail = squid_size[0]
-        
-        tot_width = width_snail*N
-        if np.abs(self.val(tot_width))>np.abs(self.val(spacing)):
-            raise ValueError("cannot put all snails in given space")
-        offset = 0.5*(squid_size[1] + width_track)
-
-        squids = []
-        squids.append(self.draw_rect(self.name+'_pad_left', self.coor([-tot_width/2, -width_track/2]), self.coor_vec([-(spacing-tot_width)/2, width_track])))
-        squids.append(self.draw_rect(self.name+'_pad_right', self.coor([tot_width/2, -width_track/2]), self.coor_vec([(spacing-tot_width)/2, width_track])))
-        if N%2==1:
-            x_pos = -(N//2)*width_snail - width_track/2
-        else:
-            x_pos = -(N//2-1/2)*width_snail - width_track/2
-
-        for jj in range(int(N)):
-            if jj == 0:
-                squids.append(self.draw_rect(self.name+'_left', self.coor([x_pos-squid_size[0]/2, -width_track/2-offset]), self.coor_vec([width_track, squid_size[1]+width_top+width_bot])))
-            squids.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -width_track/2-offset]), self.coor_vec([width_track, squid_size[1]+width_top+width_bot])))
-            for width, way in [[width_top, 1], [width_bot, -1]]:
-                squids.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2+width_track/2, (1+way)*squid_size[1]/2+width_bot-width_track/2-offset]), self.coor_vec([(squid_size[0]-width_bridge)/2, way*width])))
-                squids.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2+width_track/2, (1+way)*squid_size[1]/2+width_bot-width_track/2-offset]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way*width])))
-            x_pos = x_pos+width_snail
-        self.unite(squids, name=self.name+'_squids')
-
-    def _connect_jct(self, width_bridge, n=1, spacing_bridge=0, assymetry=0.1e-6, overlap=5e-6, width_jct=None, thin=False): #opt assymetry=0.25e-6
-        limit_dose = 8e-6
-        width = self.inTrack # assume both are equal
->>>>>>> cleanup
         spacing = (self.posOut-self.pos).norm()
         
         self.pos = (self.pos+self.posOut)/2
