@@ -799,8 +799,6 @@ class Circuit(object):
 
 
 class KeyElt(Circuit):
-    
-    trackObjects, gapObjects, bondwireObjects, maskObjects = [], [], [], []
 
     pcb_track = parse_entry('300um')
     pcb_gap = parse_entry('200um')
@@ -969,7 +967,10 @@ class KeyElt(Circuit):
                              (0, -2*iGap-iTrack+2*self.overdev),
                              (-adaptDist, (iGap-self.pcb_gap)+(iTrack-self.pcb_track)*0.5),
                              (-(self.pcb_gap/2+iBondLength)+self.overdev, 0)])
-        self.gapObjects.append(self.draw(self.name+"_gap", points))
+        gap = self.draw(self.name+"_gap", points)
+        self.gapObjects.append(gap)
+        print(self.gapObjects)
+        print(gap)
 
         if self.is_mask:
             points = self.append_points([(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
