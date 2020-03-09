@@ -8808,12 +8808,12 @@ class ConnectElt(KeyElt, Circuit):
             self.__init__(self.name, *port_names[2*ii:2*ii+2])
             
             points = self.find_path(fillet, is_meander, to_meander, m_length, meander_offset)
-            connection = self.draw(self.name+'_dummy_track'+to_add, points, closed=False)
+            connection = self.draw(self.name+'_track'+to_add, points, closed=False)
 #            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
             cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
             connection.fillets(fillet-eps)
     
-            connection_gap = connection.copy(self.name+"_dummy_gap"+to_add)
+            connection_gap = connection.copy(self.name+"_gap"+to_add)
     
             track_starter = self.cable_starter('track')
             gap_starter = self.cable_starter('gap')
