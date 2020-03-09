@@ -97,7 +97,7 @@ class Vector(list):
         return isinstance(elt, list) or isinstance(elt, tuple)
 
     def check_nb(self, nb):
-        return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, VariableString)
+        return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, VariableString) or isinstance(nb, str)
 
     def __add__(self, other):
         if self.check(other):
@@ -381,7 +381,6 @@ class Circuit(object):
             print('Watch out: trying to unit a single element list --> renaming can be an issue')
             iObj = iObjs[0]
         return iObj
-    
     
     def intersect(self, iObjs, keep_originals=False):
         '''
@@ -1066,6 +1065,86 @@ class KeyElt(Circuit):
         self.ports[self.name] = portOut
 
 
+    def draw_scaled_connector(self, iTrack, iGap, iBondLength, scale, iSlope=1):
+        '''
+        Draws a CPW connector for inputs and outputs.
+
+        Inputs:
+        -------
+
+        iBondLength: (float) corresponds to dimension a in the drawing
+        iSlope (float): 1 is 45 degrees to adpat lengths between Bonding pad and iout
+        iLineTest (Bool): unclear, keep False
+
+            ground plane
+            +------+
+            |       \
+            |        \
+            |   +-a-+\|
+        iIn |   |.....| iOut
+            |   +---+/|
+            |        /
+            |       /
+            +------+
+
+        Outputs:
+        --------
+        returns iIn and recalculated iOut
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        iBondLength, iSlope = parse_entry((iBondLength, iSlope))
+
+        adaptDist = (self.pcb_track*scale/2-iTrack/2)/iSlope
+
+        portOut = [self.coor([adaptDist+self.pcb_gap*scale+iBondLength,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+#        print(self.pos, self.ori)
+#        print(adaptDist)
+#        print(self.pos+self.ori*(adaptDist+iGap+iBondLength), self.ori)
+        points = self.append_points([(self.pcb_gap*scale-self.overdev, self.pcb_track*scale/2+self.overdev),
+                                     (iBondLength+self.overdev, 0),
+                                     (adaptDist, iTrack/2-self.pcb_track*scale/2),
+                                     (0, -iTrack-2*self.overdev),
+                                     (-adaptDist, iTrack/2-self.pcb_track*scale/2),
+                                     (-iBondLength-self.overdev, 0)])
+        self.trackObjects.append(self.draw(self.name+"_track", points))
+        print('updated trackObjects  :')
+        print(self)
+        print(self.trackObjects)
+        
+        points = self.append_points([(self.pcb_gap*scale/2+self.overdev, self.pcb_gap*scale+self.pcb_track*scale/2-self.overdev),
+                             (self.pcb_gap*scale/2+iBondLength-self.overdev, 0),
+                             (adaptDist, (iGap-self.pcb_gap*scale)+(iTrack-self.pcb_track*scale)*0.5),
+                             (0, -2*iGap-iTrack+2*self.overdev),
+                             (-adaptDist, (iGap-self.pcb_gap*scale)+(iTrack-self.pcb_track*scale)*0.5),
+                             (-(self.pcb_gap*scale/2+iBondLength)+self.overdev, 0)])
+        self.gapObjects.append(self.draw(self.name+"_gap", points))
+
+        if self.is_mask:
+            points = self.append_points([(self.pcb_gap*scale/2-self.gap_mask, self.pcb_gap*scale+self.pcb_track*scale/2+self.gap_mask),
+                             (self.pcb_gap*scale/2+iBondLength+self.gap_mask, 0),
+                             (adaptDist, (iGap-self.pcb_gap*scale)+(iTrack-self.pcb_track*scale)*0.5),
+                             (0, -2*iGap-iTrack-2*self.gap_mask),
+                             (-adaptDist, (iGap-self.pcb_gap*scale)+(iTrack-self.pcb_track*scale)*0.5),
+                             (-(self.pcb_gap*scale/2+iBondLength)-self.gap_mask, 0)])
+            self.maskObjects.append(self.draw(self.name+"_mask", points))
+
+
+        if not self.is_litho:
+            points = self.append_points([(self.pcb_gap*scale/2+self.overdev, self.pcb_track*scale/2+self.overdev),
+                                         (self.pcb_gap*scale/2-2*self.overdev, 0),
+                                         (0, -self.pcb_track*scale-2*self.overdev),
+                                         (-self.pcb_gap*scale/2+2*self.overdev, 0)])
+            ohm = self.draw(self.name+"_ohm", points)
+            self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
+            self.modeler.assign_mesh_length(ohm, self.pcb_track*scale/10)
+#            self.trackObjects.append(ohm)
+            points = self.append_points([(self.pcb_gap*scale/2+self.overdev,0),(self.pcb_gap*scale/2-2*self.overdev,0)])
+            self.draw(self.name+'_line', points, closed=False)
+
+        self.ports[self.name] = portOut
+
+
+
     def draw_JJ(self, iTrack, iGap, iTrackJ, iLength, iInduct='1nH', fillet=None):
         '''
         Draws a Joseph's Son Junction.
@@ -1169,10 +1248,14 @@ class KeyElt(Circuit):
             self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track+2*self.overdev, gap-2*self.overdev]
             self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track+2*self.overdev, gap-2*self.overdev]
             self.ports[self.name+'_3a'] = [self.coor(Vector(pad_spacing/2+pad_size[0],-cutout_size[1]/2)), -self.ori.orth() ,track/2+2*self.overdev,gap/2-2*self.overdev]
+            self.ports[self.name+'_3b'] = [self.coor(Vector(pad_spacing/2-pad_size[0],-cutout_size[1]/2)), -self.ori.orth() ,track/2+2*self.overdev,gap/2-2*self.overdev]
+
             if self.is_overdev:
                 sub_1 = self.draw_rect(self.name + '_sub_1', self.coor([cutout_size[0]/2, -track/2-gap+self.overdev]), self.coor_vec([-self.overdev, track+2*gap-2*self.overdev]))
                 sub_2 = self.draw_rect(self.name + '_sub_2', self.coor([-cutout_size[0]/2, -track/2-gap+self.overdev]), self.coor_vec([self.overdev, track+2*gap-2*self.overdev]))
                 sub_3a = self.draw_rect(self.name + '_sub_3a', self.coor([-track/2-gap+self.overdev+pad_spacing/2+pad_size[0],-cutout_size[1]/2]), self.coor_vec([track+2*gap-2*self.overdev, self.overdev]))
+            ##ema
+            self.ports[self.name+'_3c'] = [self.coor(Vector(pad_spacing/2+pad_size[0],cutout_size[1]/2)), self.ori.orth() ,track/2+2*self.overdev,gap/2-2*self.overdev]
 
         if self.is_overdev:
             cutout = self.unite([cutout, sub_1, sub_2, sub_3a])
@@ -2832,10 +2915,1098 @@ class KeyElt(Circuit):
                     iTrack + 2 * self.overdev, iGap - 2 * self.overdev]
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
+#    
+    def draw_capa_interdigitated_rectangle(self, cool, iTrack, iGap, teeth_size, gap_size, N_period, wire_gap_size, wire_size, 
+                                           inductance_wire, pad_height, gap_height, gap_width, chip_width, chip_length):
 
+        print(self)
+        print(cool)
+        #parse entry converts text values like '0.01 mm' to numerical values
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        wire_gap_size=parse_entry(wire_gap_size)
+        wire_size=parse_entry(wire_size)
+        teeth_size = Vector(teeth_size)
+        pad_height = parse_entry(pad_height)
+        gap_height = parse_entry(gap_height)
+        gap_width = parse_entry(gap_width)       
+        chip_length = parse_entry(chip_length)
+        chip_width = parse_entry(chip_width)
+        
+        #create a zig-zag line of points. This will be used to create the 'teeth'
+        #of the inter-digitated resonator    
+        start_point = wire_size/2+wire_gap_size+1.5*teeth_size[1]
+        raw_points_top = [(0,start_point)]
+        raw_points_bottom = [(0,-start_point)]
+            
+        #Loop over the number of teeth (periods). Need four points to define a 'tooth'... 
+        # above (top) and below (bottom) the inductive wire
+        for i in range(N_period):
+            
+            #define teeth above the wire
+            raw_points_top.append((teeth_size[0], 4*i*teeth_size[1] + start_point))
+            raw_points_top.append((teeth_size[0], (4*i+2)*teeth_size[1]+start_point))
+            raw_points_top.append((0, (4*i+2)*teeth_size[1]+start_point))
+            raw_points_top.append((0, (4*i+4)*teeth_size[1]+start_point))
+            
+            #define teeth below the wire
+            raw_points_bottom.append((teeth_size[0], -4*i*teeth_size[1] - start_point))
+            raw_points_bottom.append((teeth_size[0], -(4*i+2)*teeth_size[1]-start_point))
+            raw_points_bottom.append((0, -(4*i+2)*teeth_size[1]-start_point))
+            raw_points_bottom.append((0, -(4*i+4)*teeth_size[1]-start_point))
+
+        #create a list of points in absolute reference to the design
+        points_top = self.append_absolute_points(raw_points_top)
+        points_bottom = self.append_absolute_points(raw_points_bottom)
+        
+        #remove (pop) the last two points, they are unnecessary
+        N_teeth=2*N_period+1 
+        points_top.pop(2*N_teeth-2)
+        points_bottom.pop(2*N_teeth-2)
+        
+        #join the points to make all the interdigitated fingers, symmetric about the induction wire
+        points = (points_top)[::-1]+points_bottom
+
+
+        #draw a zig-zag line in the design using the points; labelled "capagap"  
+        connection = self.draw(self.name+"_capagap", points, closed=False)
+
+        
+        #to make the teeth, we need to sweep out a section of material around the line 'capagap'
+        #To do this, fisrt define two points on either side of the first point in the line.
+        #both points are a distance gap/2 from the zig-zag line 
+        end_point = (4*N_period-2)*teeth_size[1]+start_point
+        raw_sweep_points=[(0,end_point-gap_size),(0,end_point+gap_size)]
+        print(raw_sweep_points[1][0])
+        sweep_points=self.append_absolute_points(raw_sweep_points)
+        
+        #Make a "T" shape at the start of the zig-zag line by joining these two points.
+        capagap_starter = self.draw(self.name+'_width_top', sweep_points, closed=False)
+       
+        #now follow the zig-zag line and sweep out a section of material with thickness = gap
+        capagap = connection.sweep_along_path(capagap_starter)
+        
+        #create a wide gap around the inductive wire
+        wiregap = self.draw_rect_center(self.name+"wiregap",  self.pos + [teeth_size[0]/2,0], self.coor_vec([teeth_size[0]+2*gap_size, wire_gap_size*2+wire_size]))  
+        
+        #fill the gap with the inductive wire. Set the wire as a lumped element and use a fine mesh.
+        wire = self.draw_rect_center(self.name+"wire", self.pos + [teeth_size[0]/2,0], self.coor_vec([teeth_size[0]+2*gap_size, wire_size]))  
+#        self.assign_lumped_RLC(wire,self.ori,[0, inductance_wire ,0])
+        wire_mesh = self.draw_rect_center(self.name+"wire_mesh", self.pos + [teeth_size[0]/2,0], self.coor_vec([teeth_size[0]+2*gap_size, wire_size]))  
+        self.modeler.assign_mesh_length(wire_mesh, wire_size/2.)
+#
+        #width of the rectangle made of the pad and the padgap
+        pad_and_gap_height = pad_height + gap_height + gap_size
+        padgap = self.draw_rect_center(self.name+"padgap", self.pos + [gap_size-(pad_and_gap_height)/2,0], self.coor_vec([pad_and_gap_height, 2*(gap_width + end_point-gap_size)]))
+        pad = self.draw_rect_center(self.name+"padgap",  self.pos + [gap_size-(pad_height)/2,0], self.coor_vec([pad_height, 2*(end_point-gap_size)]))
+        
+        #subtract the pad from the pad & gap
+        self.subtract(padgap,[pad])
+
+        #add all the gaps together 
+        self.unite([capagap, wiregap, padgap])
+        
+        #subtract the inductive wire from the all the gaps (ie: remake metal layer at location of wire)
+        self.subtract(capagap, [wire])
+               
+        capagap_mesh=connection.copy(self.name+"_capagapmesh")      
+        self.modeler.assign_mesh_length(capagap_mesh,2*gap_size)
+   
+#        
+#        Nb_layer = self.draw_rect_center(self.name+"_Nb_layer", self.pos + [pad_and_gap_height+2*gap_size,0], self.coor_vec([pad_and_gap_height + 2*teeth_size[1] +teeth_size[0] , 2*(gap_width + end_point)]))
+#        
+
+        #subtract all the gaps from the Niobium layer
+#       self.subtract(Nb_layer, [capagap])
+        
+        self.gapObjects.append(capagap)
+        
+        
+        
+        #self.assign_perfE(Nb_layer)
+#
+
+#
+#        points=self.append_points([[-teeth_size[1]*0.5+self.overdev,0], [teeth_size[1]-2*self.overdev,0]])
+#        print(points)
+#        self.draw(self.name+"wire_line", points , closed=False)  
+        
+    def draw_Transmon_dual(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire, capacitance):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        teeth_size = Vector(teeth_size)
+
+
+
+        N_teeth=2*N_period+1    
+        raw_points = [(teeth_size[0], -N_teeth*teeth_size[1]/2-self.overdev)]
+        raw_points.append((0, teeth_size[1]/2))
+        for i in range(N_period):
+
+            raw_points.append((-2*teeth_size[0]+2*2*i*teeth_size[0]/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+         
+            raw_points.append((2*teeth_size[0]-2*(2*i+1)*teeth_size[0]/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+        raw_points.append((-2*teeth_size[0]+2*2*(N_period)*teeth_size[0]/N_period, 0))
+        raw_points.append((0, teeth_size[1]/2+self.overdev))
+
+
+
+        points = self.append_points(raw_points)
+        points.pop(N_teeth)
+        points.pop(N_teeth)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        
+
+        connection.fillets(fillet)
+        raw_points_starter=[(-gap_size/2+teeth_size[0]+self.overdev,-N_teeth*teeth_size[1]/2-self.overdev),(gap_size/2+teeth_size[0]-self.overdev,-N_teeth*teeth_size[1]/2-self.overdev)]
+        points_starter=self.append_absolute_points(raw_points_starter)
+        capagap_starter = self.draw(self.name+'_width', points_starter, closed=False)
+        
+        connection.copy(self.name+"_path")
+
+        
+        capagap = connection.sweep_along_path(capagap_starter)
+        capagap_mesh=connection.copy(self.name+"__Kinductancemesh")
+        
+        
+        self.modeler.assign_mesh_length(capagap_mesh,2*gap_size)
+
+        phaseslip_gap = self.draw_rect_center(self.name+"_cutout", self.pos, self.coor_vec([ gap_size, teeth_size[1]/2]))
+        
+        self.subtract(capagap, [phaseslip_gap])
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size/2, teeth_size[1]/2]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size/2, teeth_size[1]/2]))
+
+        self.assign_lumped_RLC(phaseslip_element,self.ori,[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+
+        
+        cutout = self.draw_rect_center(self.name+"_cutout", self.pos, self.coor_vec([  2*teeth_size[0]+4*iTrack+2*self.overdev,N_teeth*teeth_size[1]+2*self.overdev]))
+        
+#        kinetic_inductances=[]
+#        for i in range(4*N_period+1):            
+##            if i==2*N_period:
+##                kinetic_inductance = self.draw_rect_center(self.name+"PhaseSlipElement", self.pos+(points[i+1]+points[i])/2,(points[i+1]-points[i])+Vector([gap_size*np.mod(i+1,2),gap_size*np.mod(i,2)])-Vector([2*fillet*np.mod(i,2)*((np.mod(i,4)==3)*2-1),2*fillet*np.mod(i+1,2)]))              
+##                self.assign_lumped_RLC(kinetic_inductance,np.mod(i,2)*Vector(self.ori)+np.mod(i+1,2)*Vector(self.ori.orth()),[0, 0, capacitance])
+##           
+#            if i!=2*N_period:
+#                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", self.pos+(points[i+1]+points[i])/2,(points[i+1]-points[i])+Vector([gap_size*np.mod(i+1,2),gap_size*np.mod(i,2)])-Vector([2*fillet*np.mod(i,2)*((np.mod(i,4)==3)*2-1),2*fillet*np.mod(i+1,2)]))              
+#                kinetic_inductance_copy = self.draw_rect_center(self.name+"Kinductance_copy", self.pos+(points[i+1]+points[i])/2,(points[i+1]-points[i])+Vector([gap_size*np.mod(i+1,2),gap_size*np.mod(i,2)])-Vector([2*fillet*np.mod(i,2)*((np.mod(i,4)==3)*2-1),2*fillet*np.mod(i+1,2)]))              
+#
+#                self.assign_lumped_RLC(kinetic_inductance,np.mod(i,2)*Vector(self.ori)+np.mod(i+1,2)*Vector(self.ori.orth()),[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+#                kinetic_inductances.append(kinetic_inductance_copy)
+#        
+#        self.subtract(capagap, kinetic_inductances)
+        
+        self.trackObjects.append(capagap)
+        self.gapObjects.append(cutout)
+        
+        
+            
+
+
+
+
+
+    
+    def draw_Transmon_dual2(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire, capacitance):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        teeth_size = Vector(teeth_size)
+
+
+
+        N_teeth=2*N_period+1    
+        raw_points = [(teeth_size[0], -N_teeth*teeth_size[1]/2-self.overdev)]
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in range(N_period+1):
+
+            if i != N_period/2:
+                raw_points.append((-2*teeth_size[0]*abs(1-2*i/N_period), 0))
+                raw_points.append((0, teeth_size[1]))
+            else:
+                raw_points.append((0, 3*teeth_size[1]))
+         
+            raw_points.append((2*teeth_size[0]*abs(1-(2*i+1)/N_period), 0))
+            if i+1 != N_period/2:
+                raw_points.append((0, teeth_size[1]))
+                
+        raw_points.append((-2*teeth_size[0]+2*2*(N_period)*teeth_size[0]/N_period, 0))
+        #raw_points.append((0, teeth_size[1]/2+self.overdev))
+
+
+
+        points = self.append_points(raw_points)
+#        points.pop(N_teeth)
+#        points.pop(N_teeth)
+#        points.append(points[0])
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        
+
+        connection.fillets(fillet)
+        
+        raw_points_starter=[(teeth_size[0],-gap_size/2-N_teeth*teeth_size[1]/2),(teeth_size[0],gap_size/2-N_teeth*teeth_size[1]/2)]
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        
+        connection.copy(self.name+"_path")
+
+        
+        capagap = connection.sweep_along_path(capagap_starter)
+        capagap_mesh=connection.copy(self.name+"__Kinductancemesh")
+        
+        
+        self.modeler.assign_mesh_length(capagap_mesh,2*gap_size)
+
+        phaseslip_gap = self.draw_rect_center(self.name+"_cutout", self.pos, self.coor_vec([ gap_size, teeth_size[1]/2]))
+        
+        self.subtract(capagap, [phaseslip_gap])
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size/2, teeth_size[1]/2]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size/2, teeth_size[1]/2]))
+
+        self.assign_lumped_RLC(phaseslip_element,self.ori,[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+
+        
+        cutout = self.draw_rect_center(self.name+"_cutout", self.pos, self.coor_vec([  2*teeth_size[0]+4*iTrack+2*self.overdev,N_teeth*teeth_size[1]+2*self.overdev]))
+        
+        kinetic_inductances=[]
+        for i in range(4*N_period+1):            
+#            if i==2*N_period:
+#                kinetic_inductance = self.draw_rect_center(self.name+"PhaseSlipElement", self.pos+(points[i+1]+points[i])/2,(points[i+1]-points[i])+Vector([gap_size*np.mod(i+1,2),gap_size*np.mod(i,2)])-Vector([2*fillet*np.mod(i,2)*((np.mod(i,4)==3)*2-1),2*fillet*np.mod(i+1,2)]))              
+#                self.assign_lumped_RLC(kinetic_inductance,np.mod(i,2)*Vector(self.ori)+np.mod(i+1,2)*Vector(self.ori.orth()),[0, 0, capacitance])
+#           
+            if i!=2*N_period:
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+Vector([gap_size*np.mod(i,2),gap_size*np.mod(i+1,2)])-Vector([2*fillet*np.mod(i+1,2),2*fillet*np.mod(i,2)]))              
+#                kinetic_inductance_copy = self.draw_rect_center(self.name+"Kinductance_copy", self.pos+(points[i+1]+points[i])/2,(points[i+1]-points[i])+Vector([gap_size*np.mod(i+1,2),gap_size*np.mod(i,2)])-Vector([2*fillet*np.mod(i,2)*((np.mod(i,4)==3)*2-1),2*fillet*np.mod(i+1,2)]))              
+                kinetic_inductance_copy = self.draw_rect_center(self.name+"Kinductance", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+Vector([gap_size*np.mod(i,2),gap_size*np.mod(i+1,2)])-Vector([2*fillet*np.mod(i+1,2),2*fillet*np.mod(i,2)]))              
+
+                self.assign_lumped_RLC(kinetic_inductance,np.mod(i,2)*Vector(self.ori)+np.mod(i+1,2)*Vector(self.ori.orth()),[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+                kinetic_inductances.append(kinetic_inductance_copy)
+        
+        self.subtract(capagap, kinetic_inductances)
+        
+        self.trackObjects.append(capagap)
+        self.gapObjects.append(cutout)
+        
+    def draw_Transmon_dual3(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        teeth_size = Vector(teeth_size)
+
+
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        raw_points.append((-teeth_size[0]-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i+2)/N_period, 0))
+            
+        for i in np.arange(N_period-1,-1,-1):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+2)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i+1)/N_period, 0))
+            
+        raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        
+
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+        
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+            self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+
+
+    def draw_Transmon_dual4(self, iTrack, iGap, tot_length, wire_teethwidth, gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        wire_teethwidth=parse_entry(wire_teethwidth)
+        gap_size=parse_entry(gap_size)
+
+        teeth_size = Vector([(tot_length-(8*N_period+2)*wire_teethwidth - 2*phaseslip_gap)/4/N_period,  wire_teethwidth])
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        raw_points.append((-teeth_size[0]-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i+2)/N_period, 0))
+            
+        for i in np.arange(N_period-1,-1,-1):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+2)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i+1)/N_period, 0))
+            
+        raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        
+
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+        
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+            self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+        
+    def draw_Transmon_dual5(self, iTrack, iGap, tot_length, wire_teethwidth, gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        wire_teethwidth=parse_entry(wire_teethwidth)
+        gap_size=parse_entry(gap_size)
+
+        teeth_size = Vector([(tot_length-(8*N_period+2)*wire_teethwidth - 2*phaseslip_gap)/4/N_period,  wire_teethwidth])
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        raw_points.append((-teeth_size[0]-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i+2)/N_period, 0))
+            
+        for i in np.arange(N_period-1,-1,-1):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+2)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i+1)/N_period, 0))
+            
+        raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        #connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+        
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+            self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+        
+        
+        
+    def draw_Transmon_dual6(self, iTrack, iGap, tot_length, wire_teethwidth, gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        wire_teethwidth=parse_entry(wire_teethwidth)
+        gap_size=parse_entry(gap_size)
+
+        teeth_size = Vector([(tot_length-(8*N_period+2)*wire_teethwidth - 2*phaseslip_gap)/4/N_period,  wire_teethwidth])
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -(2*N_period-0.5)*teeth_size[1]+phaseslip_length/2))
+        raw_points.append((-teeth_size[0]-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period):
+
+            raw_points.append((-teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            
+        for i in np.arange(N_period-1,0,-1):
+
+            raw_points.append((-teeth_size[0]*(2*i-1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i-1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))            
+        
+        raw_points.pop()
+        #raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period-2.5)*teeth_size[1]+phaseslip_length/2))
+        
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        #connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+#        points_starter=self.append_absolute_points(raw_points_starter)
+        
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+            self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+        
+        
+        
+    def draw_Transmon_dual7(self, iTrack, iGap, tot_length, wire_teethwidth, gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        wire_teethwidth=parse_entry(wire_teethwidth)
+        gap_size=parse_entry(gap_size)
+
+        teeth_size = Vector([(tot_length-(8*N_period+2)*wire_teethwidth - 2*phaseslip_gap)/8/N_period,  wire_teethwidth])
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        raw_points.append((-teeth_size[0]-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0], 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0], 0))
+            
+        for i in np.arange(N_period-1,-1,-1):
+
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0], 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0], 0))
+            
+        raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period+0.5)*teeth_size[1]+phaseslip_length/2))
+        
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        #connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+        points_starter=self.append_absolute_points(raw_points_starter)
+        
+        capagap_starter = self.draw(self.name+'_width', points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+            self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+        
+    def draw_Transmon_dual8(self, iTrack, iGap, tot_length, wire_teethwidth, gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap,coupl_length,opening_length,opening_width,conn_width,extra_induct_length):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        wire_teethwidth=parse_entry(wire_teethwidth)
+        gap_size=parse_entry(gap_size)
+        coupl_length=parse_entry(coupl_length)
+        opening_length=parse_entry(opening_length)
+        opening_width=parse_entry(opening_width)
+        conn_width=parse_entry(conn_width)
+        extra_induct_length = parse_entry(extra_induct_length)
+
+        teeth_size = Vector([(tot_length-(8*N_period+2)*wire_teethwidth - 2*phaseslip_gap)/4/N_period,  wire_teethwidth])
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -(2*N_period-0.5)*teeth_size[1]+phaseslip_length/2))
+        raw_points.append((-teeth_size[0]-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period-1):
+
+            raw_points.append((-teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i+1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+
+        #draw connection to the resonator with an opening
+        raw_points.append((-(teeth_size[0]*(2*N_period-1)/N_period+coupl_length-opening_length), 0))
+        raw_points.append((0, -opening_width/2))    
+        raw_points.append((-opening_length,0))    
+        index_ending = len(raw_points) #gets the index of the loop in order to place a bigger lumped L
+        raw_points.append((0, teeth_size[1]+opening_width))
+        raw_points.append((opening_length,0))    
+        raw_points.append((0, -opening_width/2))    
+        raw_points.append((teeth_size[0]*(2*N_period-1)/N_period+coupl_length-opening_length, 0))
+        
+        #raw_points.append((0, teeth_size[1]))
+        
+        for i in np.arange(N_period-1,0,-1):
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0]*(2*i-1)/N_period, 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0]*(2*i-1)/N_period, 0))
+            #raw_points.append((0, teeth_size[1]))            
+        
+        #raw_points.pop()
+        #raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period-2.5)*teeth_size[1]+phaseslip_length/2))
+        
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        #connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+#        points_starter=self.append_absolute_points(raw_points_starter)
+        
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            if i != index_ending-1:
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+            else:
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*(conn_width+gap_size)-ori_orth*2*fillet)              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])                
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*(conn_width+gap_size)-ori_orth*(extra_induct_length+2*fillet))              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*(extra_induct_length+2*fillet))              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+                
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+                
+    def draw_Transmon_dual9(self, iTrack, iGap, tot_length, wire_teethwidth, gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap,coupl_length,opening_length,opening_width,conn_width,extra_induct_length):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        wire_teethwidth=parse_entry(wire_teethwidth)
+        gap_size=parse_entry(gap_size)
+        coupl_length=parse_entry(coupl_length)
+        opening_length=parse_entry(opening_length)
+        opening_width=parse_entry(opening_width)
+        conn_width=parse_entry(conn_width)
+        extra_induct_length = parse_entry(extra_induct_length)
+
+        teeth_size = Vector([(tot_length-(8*N_period+2)*wire_teethwidth - 2*phaseslip_gap)/4/N_period,  wire_teethwidth])
+
+        raw_points = [(0,-phaseslip_length/2)]
+        
+        raw_points.append((0, -gap_size+phaseslip_length/2))
+        raw_points.append((-phaseslip_gap, 0))
+        #raw_points.append((0, teeth_size[1]/2))
+        for i in np.arange(0,N_period-1):
+
+            raw_points.append((0,teeth_size[0]))
+            raw_points.append((teeth_size[1],0))
+            raw_points.append((0, -teeth_size[0]))
+            raw_points.append((teeth_size[1], 0))
+
+        #draw connection to the resonator with an opening
+        raw_points.append((-(teeth_size[0]*(2*N_period-1)/N_period+coupl_length-opening_length), 0))
+        raw_points.append((0, -opening_width/2))    
+        raw_points.append((-opening_length,0))    
+        index_ending = len(raw_points) #gets the index of the loop in order to place a bigger lumped L
+        raw_points.append((0, teeth_size[1]+opening_width))
+        raw_points.append((opening_length,0))    
+        raw_points.append((0, -opening_width/2))    
+        raw_points.append((teeth_size[0]*(2*N_period-1)/N_period+coupl_length-opening_length, 0))
+        
+        #raw_points.append((0, teeth_size[1]))
+        
+        for i in np.arange(N_period-1,0,-1):
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((-teeth_size[0], 0))
+            raw_points.append((0, teeth_size[1]))
+            raw_points.append((teeth_size[0], 0))
+            #raw_points.append((0, teeth_size[1]))            
+        
+        #raw_points.pop()
+        #raw_points.append((0, teeth_size[1]))
+        raw_points.append((teeth_size[0]+phaseslip_gap, 0))
+        raw_points.append((0, -(2*N_period-2.5)*teeth_size[1]+phaseslip_length/2))
+        
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        #connection.fillets(fillet) 
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+#        points_starter=self.append_absolute_points(raw_points_starter)
+        
+        capagap_starter = self.draw(self.name+'_width', raw_points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        
+        
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            if i != index_ending-1:
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+            else:
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*(conn_width+gap_size)-ori_orth*2*fillet)              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])                
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*(conn_width+gap_size)-ori_orth*(extra_induct_length+2*fillet))              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+                kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", (points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*(extra_induct_length+2*fillet))              
+                self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+                
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+        
+
+# iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire, capacitance,phaseslip_length,phaseslip_gap)
+    def draw_Transmon_dual_square(self, iTrack, iGap, tot_length, gap_size, inductance_wire, capacitance, phaseslip_length, phaseslip_gap):
+        
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        gap_size=parse_entry(gap_size)
+        tot_length=parse_entry(tot_length)
+        
+        square_width = (tot_length - 2*phaseslip_gap + phaseslip_length)/2.
+        
+        raw_points = []
+
+        raw_points.append((0,phaseslip_length/2))
+        raw_points.append((0,square_width/2))
+        raw_points.append((phaseslip_gap,0))
+        raw_points.append((0,-square_width))
+        raw_points.append((-phaseslip_gap,0))
+        raw_points.append((0,square_width/2-phaseslip_length))
+        
+        points = self.append_points(raw_points)
+        connection = self.draw(self.name+"_Kinductance", points, closed=False)
+        
+        raw_points_starter=[(points[0][0]+gap_size/2,points[0][1]),(points[0][0]-gap_size/2,points[0][1])]
+        points_starter=self.append_absolute_points(raw_points_starter)
+        
+        capagap_starter = self.draw(self.name+'_width', points_starter, closed=False)
+        connection.copy(self.name+"_path")
+        wire = connection.sweep_along_path(capagap_starter)
+        wire_mesh=connection.copy(self.name+"_Kinductancemesh")
+        self.modeler.assign_mesh_length(wire_mesh,2*gap_size)
+
+        self.assign_perfE(wire)
+        length='0'
+        kinetic_inductances=[]
+        for i in range(len(points)-1):            
+#
+            if points[i+1][1]-points[i][1]=='0':
+                ori=Vector([0,1])
+                ori_orth=Vector([1,0])
+            else:
+                ori=Vector([1,0])
+                ori_orth=Vector([0,1])
+            
+            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size)              
+            self.assign_lumped_RLC(kinetic_inductance,ori_orth,[0, abs((points[i+1][0]-points[i][0])+(points[i+1][1]-points[i][1]))/(gap_size)*inductance_wire,0])
+
+            length += abs(points[i+1][0]-points[i][0])+abs(points[i+1][1]-points[i][1])
+        print(parse_entry(length))
+#            kinetic_inductance = self.draw_rect_center(self.name+"Kinductance_subract", self.pos+(points[i+1]+points[i])/2,Vector(abs(points[i+1][0]-points[i][0]),abs(points[i+1][1]-points[i][1]))+ori*gap_size-ori_orth*2*fillet)              
+#            kinetic_inductances.append(kinetic_inductance_copy)
+        
+        phaseslip_element = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+        phaseslip_element_mesh = self.draw_rect_center(self.name+"_phaseslip", self.pos, self.coor_vec([ gap_size, phaseslip_length]))
+
+        self.assign_lumped_RLC(phaseslip_element,self.ori.orth(),[0, 0, capacitance])
+        self.modeler.assign_mesh_length(phaseslip_element_mesh,gap_size)
+   
+    
+    def draw_Transmon_dual_line(self, Cutout_width, inductance_length, inductance_width, phaseslip_length, inductance_per_square, capacitance):
+        '''
+        '''
+       
+        
+        
+        cutout = self.draw_rect(self.name+"_cutout", self.pos+Vector([-Cutout_width/2,0]), self.coor_vec([ Cutout_width , inductance_length  ]))
+        line = self.draw_rect(self.name+"_line", self.pos+Vector([-inductance_width/2,phaseslip_length]), self.coor_vec([ inductance_width , inductance_length-phaseslip_length ]))
+        self.assign_lumped_RLC(line,self.ori.orth(),[0, inductance_per_square*inductance_length/inductance_width, 0])
+
+        line_mesh = self.draw_rect(self.name+"_linemesh", self.pos+Vector([-inductance_width/2,phaseslip_length]), self.coor_vec([ inductance_width , inductance_length-phaseslip_length  ]))
+        self.modeler.assign_mesh_length(line_mesh,inductance_width)
+
+
+        phase_slip = self.draw_rect(self.name+"_phaseslip", self.pos+Vector([-inductance_width/2,0]), self.coor_vec([ inductance_width , phaseslip_length ]))
+        self.assign_lumped_RLC(phase_slip,self.ori.orth(),[0, 0, capacitance])
+
+
+#        self.trackObjects.append(line)
+        self.gapObjects.append(cutout)
+        
+        
+    def draw_capa_interdigitated_triangle(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        teeth_size = Vector(teeth_size)
+
+
+
+        N_teeth=2*N_period+1    
+        raw_points = [(teeth_size[0], -N_teeth*teeth_size[1]-self.overdev)]
+        raw_points.append((0, teeth_size[1]))
+        for i in range(N_period):
+
+            raw_points.append((-2*teeth_size[0]+2*2*i*teeth_size[0]/N_period, 0))
+            raw_points.append((0, 2*teeth_size[1]))
+         
+            raw_points.append((2*teeth_size[0]-2*(2*i+1)*teeth_size[0]/N_period, 0))
+            raw_points.append((0, 2*teeth_size[1]))
+        raw_points.append((-2*teeth_size[0]+2*2*(N_period)*teeth_size[0]/N_period, 0))
+        raw_points.append((0, teeth_size[1]+self.overdev))
+
+        points = self.append_points(raw_points)
+        points.pop(N_teeth)
+        points.pop(N_teeth)
+        connection = self.draw(self.name+"_capagap", points, closed=False)
+        
+        
+        connection.fillets(fillet)
+        raw_points=[(-gap_size+teeth_size[0]+self.overdev,-N_teeth*teeth_size[1]-self.overdev),(gap_size+teeth_size[0]-self.overdev,-N_teeth*teeth_size[1]-self.overdev)]
+        points=self.append_absolute_points(raw_points)
+        capagap_starter = self.draw(self.name+'_width', points, closed=False)
+        
+        capagap = connection.sweep_along_path(capagap_starter)
+        wire_gap = self.draw_rect_center(self.name+"wire_gap", self.pos, self.coor_vec([ teeth_size[1]-2*self.overdev, teeth_size[1]-2*self.overdev]))  
+        self.unite([capagap,wire_gap])
+        
+        capagap_mesh=connection.copy(self.name+"_capagapmesh")
+        
+        self.modeler.assign_mesh_length(capagap_mesh,iTrack)
+        
+        pads = self.draw_rect_center(self.name+"_pads", self.pos, self.coor_vec([  2*teeth_size[0]+4*iTrack+2*self.overdev,2*N_teeth*teeth_size[1]+2*self.overdev]))
+        
+        self.subtract(pads, [capagap])
+        self.assign_perfE(pads)
+
+        wire = self.draw_rect_center(self.name+"wire", self.pos, self.coor_vec([ teeth_size[1]-2*self.overdev, teeth_size[1]/5.]))  
+        self.assign_lumped_RLC(wire,self.ori,[0, inductance_wire ,0])
+
+        wire_mesh = self.draw_rect_center(self.name+"wire_mesh", self.pos, self.coor_vec([ teeth_size[1]-2*self.overdev, teeth_size[1]/5.]))  
+        self.modeler.assign_mesh_length(wire_mesh, teeth_size[1]/5.)
+
+        points=self.append_points([[-teeth_size[1]*0.5+self.overdev,0], [teeth_size[1]-2*self.overdev,0]])
+        print(points)
+        self.draw(self.name+"wire_line", points , closed=False)  
+
+        
+    def draw_capa_interdigitated_parabole(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire, power):
+        '''
+        '''
+        iTrack, iGap = parse_entry((iTrack, iGap))
+        fillet = parse_entry(fillet)
+        teeth_size=parse_entry(teeth_size)
+        gap_size=parse_entry(gap_size)
+        teeth_size = Vector(teeth_size)
+        power=parse_entry(power)
+        print(power)
+             
+            
+        N_teeth=N_period  
+        raw_points = [(0, teeth_size[1])]
+        raw_points_reverse = [(0, -teeth_size[1])] 
+            
+        for i in range(1,N_period):
+
+#            raw_points.append((2*teeth_size[0]*(2*i/N_period-1), 0))
+            a=power.__rpow__(np.float16((np.abs(i /N_period))))
+            print(a)
+            
+            raw_points.append((a*teeth_size[0], (2*i-1)*teeth_size[1]))
+            raw_points.append((a*teeth_size[0], 2*i*teeth_size[1]))
+            
+            raw_points_reverse.append((a*-teeth_size[0], -(2*i-1)*teeth_size[1]))
+            raw_points_reverse.append((a*-teeth_size[0], -2*i*teeth_size[1]))
+            
+#            raw_points.append((-2*teeth_size[0]*((2*i+1)/N_period-1), 0))
+            
+            raw_points.append((a*-teeth_size[0], 2*i*teeth_size[1]))
+            raw_points.append((a*-teeth_size[0], (2*i+1)*teeth_size[1]))
+            
+            raw_points_reverse.append((a*teeth_size[0], -2*i*teeth_size[1]))
+            raw_points_reverse.append((a*teeth_size[0], -(2*i+1)*teeth_size[1]))
+            
+            
+#        raw_points.append((-2*teeth_size[0]+2*2*(N_period)*teeth_size[0]/N_period, 0))
+#        raw_points.append((0, teeth_size[1]+self.overdev))
+
+        points = self.append_absolute_points(raw_points)
+        points_reverse = self.append_absolute_points(raw_points_reverse)
+        
+        points_all = (points_reverse[1:])[::-1]+points[1:]
+#        points_all = (points_reverse)[::-1]+points
+        points_all =points
+        print(points_all)    
+#
+#        points.pop(N_teeth)
+#        points.pop(N_teeth)
+#        points[N_teeth][0]=0.0
+#        points[N_teeth-1][0]=0.0
+        
+#        connection = self.draw(self.name+"_capagap", points_all, closed=False)
+        connection = self.draw("sdf_capagap", points_all, closed=False)
+
+        
+        connection.fillets(fillet)
+        raw_points=[(-gap_size+points_all[0][0]+self.overdev,points_all[0][1]-self.overdev),(gap_size+points_all[0][0]-self.overdev,points_all[0][1]-self.overdev)]
+        points=self.append_absolute_points(raw_points)
+        capagap_starter = self.draw(self.name+'_width', points, closed=False)
+        
+        capagap = connection.sweep_along_path(capagap_starter)
+        wire_gap = self.draw_rect_center(self.name+"wire_gap", self.pos, self.coor_vec([ teeth_size[1]-2*self.overdev, teeth_size[1]-2*self.overdev]))  
+        self.unite([capagap,wire_gap])
+        
+        capagap_mesh=connection.copy(self.name+"_capagapmesh")
+        
+        self.modeler.assign_mesh_length(capagap_mesh,iTrack)
+        
+        pads = self.draw_rect_center(self.name+"_pads", self.pos, self.coor_vec([  2*teeth_size[0]+4*iTrack+2*self.overdev,(4*N_teeth-2)*teeth_size[1]+2*self.overdev]))
+        
+        self.subtract(pads, [capagap])
+        self.assign_perfE(pads)
+
+        wire = self.draw_rect_center(self.name+"wire", self.pos, self.coor_vec([ teeth_size[1]-2*self.overdev, teeth_size[1]/5.]))  
+        self.assign_lumped_RLC(wire,self.ori,[0, inductance_wire ,0])
+
+        wire_mesh = self.draw_rect_center(self.name+"wire_mesh", self.pos, self.coor_vec([ teeth_size[1]-2*self.overdev, teeth_size[1]/5.]))  
+        self.modeler.assign_mesh_length(wire_mesh, teeth_size[1]/5.)
+
+        points=self.append_points([[-teeth_size[1]*0.5+self.overdev,0], [teeth_size[1]-2*self.overdev,0]])
+        print(points)
+        self.draw(self.name+"wire_line", points , closed=False)  
+        
+        
+        
+        
     def draw_squid(self, iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid=None, iTrackJ=None, Lj_down='1nH', Lj_up=None,  typePump='down', doublePump=False, iSlope=1, iSlopePump=0.5, fillet=None): #for now assume left and right tracks are the same width
         '''
-        Draws a Josephson Junction.
+        Draws a Joseph's Son Junction.
 
         Draws a rectangle, here called "junction",
         with Bondary condition :lumped RLC, C=R=0, L=iInduct in nH
@@ -2893,16 +4064,12 @@ class KeyElt(Circuit):
         print(self.ori)
         in_junction_up = [self.coor([-iTrackSquid/2,squid_size[1]/2+iTrackSquid/2]), self.coor_vec([1,0]), iTrackSquid, 0]
         out_junction_up = [self.coor([iTrackSquid/2,squid_size[1]/2+iTrackSquid/2]), self.coor_vec([-1,0]), iTrackSquid, 0]
-        self.ports[self.name+'_in_junction_up'] = in_junction_up
-        self.ports[self.name+'_out_junction_up'] = out_junction_up
-        junction = self.connect_elt(self.name+'_junction_up', self.name+'_in_junction_up', self.name+'_out_junction_up')
+        junction = self.connect_elt(self.name+'_junction_up', in_junction_up, out_junction_up)
         junction_pads_up = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
         #junction down
         in_junction_down = [self.coor([-iTrackSquid/2,-squid_size[1]/2-iTrackSquid/2]), self.coor_vec([1,0]), iTrackSquid, 0]
         out_junction_down = [self.coor([iTrackSquid/2,-squid_size[1]/2-iTrackSquid/2]), self.coor_vec([-1,0]), iTrackSquid, 0]
-        self.ports[self.name+'_in_junction_down'] = in_junction_down
-        self.ports[self.name+'_out_junction_down'] = out_junction_down
-        junction = self.connect_elt(self.name+'_junction_down', self.name+'_in_junction_down', self.name+'_out_junction_down')
+        junction = self.connect_elt(self.name+'_junction_down', in_junction_down, out_junction_down)
         junction_pads_down = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
 
         right_track = self.draw_rect_center(self.name+"_added_track1", self.coor([2*(squid_size[0]/2+adapt_dist),0]), self.coor_vec([squid_size[0]+2*adapt_dist, iTrack]))
@@ -2984,10 +4151,90 @@ class KeyElt(Circuit):
             self.ports[self.name+'_pump'] = portOutpump1
 
 
+    def draw_squid_lambda_over_4(self, iTrack, iGap,LineOut_size,Pad_depth,Pad_size,EndCurrendLopp,Coupling, Lj_down='1nH',  fillet=None): #for now assume left and right tracks are the same width
+        '''
+
+        --------
+
+        '''
+        iTrack=iTrack/10
+        iGap=iGap/10
+        a=Pad_size/2-iGap-iTrack/2 #pad side without the line
+        b=Pad_size-2*iGap-2*iTrack-a
+        c=Pad_size-2*iGap-2*iTrack
+        
+        JJ2border=iTrack
+        
+        connector_size=2*LineOut_size+Pad_depth+Coupling+EndCurrendLopp+iGap
+        adapt_origin=iGap+iTrack/2
+        #adapta
+        raw_points_a = [(0,-adapt_origin),
+                        (0,iGap ),
+                        (LineOut_size+Pad_depth-JJ2border,0),
+                        (0,iTrack),
+                        (-LineOut_size-Pad_depth+JJ2border,0),
+                        (0,iGap ),
+                        (LineOut_size,0),
+                        (0,(Pad_size-2*iGap-iTrack)/2 ),
+                        (Pad_depth,0),
+                        (0,-Pad_size),
+                        (-Pad_depth,0 ),
+                        (0,(Pad_size-2*iGap-iTrack)/2 )]
+        
+        points_a = self.append_points(raw_points_a)
+        track_a = self.draw(self.name+"_track_a", points_a)
+
+        startxb=LineOut_size+Pad_depth+Coupling+EndCurrendLopp
+        startyb=-a-adapt_origin+iGap
+        
+        raw_points_b = [(startxb,startyb),
+                        (0,-iGap ),
+                        (-EndCurrendLopp,0),
+                        (0,Pad_size),
+                        (EndCurrendLopp+iGap,0),
+                        (0,-a ),
+                        (LineOut_size,0),
+                        (0,-iGap),
+                        (-LineOut_size-iGap,0),
+                        (0,a),
+                        (-EndCurrendLopp+iGap,0 ),
+                        (0,-(Pad_size-2*iGap) )]
+        points_b = self.append_points(raw_points_b)
+        track_b = self.draw(self.name+"_track_b", points_b)
+        
+        startxc=startxb+LineOut_size+iGap
+        startyc=startyb+iTrack
+        
+        raw_points_c = [(startxc,startyc),
+                        (-LineOut_size-EndCurrendLopp+iTrack,0),
+                        (0,c),
+                        (EndCurrendLopp-iGap-2*iTrack,0),
+                        (0,b-c),
+                        (LineOut_size+iTrack+iGap,0)]
+        
+        
+        points_c = self.append_points(raw_points_c)
+        track_c = self.draw(self.name+"_track_c", points_c)
+
+        self.gapObjects.append(track_a)
+        self.gapObjects.append(track_b)
+        self.gapObjects.append(track_c)
+        
+        capa_plasma=0
+        JJ = self.draw_rect_center(self.name, self.coor([LineOut_size+Pad_depth-(JJ2border-iTrack/2),0]), self.coor_vec([iTrack, iTrack]))
+        self.assign_lumped_RLC(JJ, self.ori, (0, Lj_down, capa_plasma))
+        
+        portOut1 = [self.pos,-self.ori, iTrack, iGap]
+        portOut2 = [self.pos+self.ori*connector_size, self.ori, iTrack, iGap]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+
+
     def squid2chain(squid_param, Nsquid, dist2ground):
         
-        w1,L1,v1,w2,L2,v2,vv,LL,ww = squid_param
-        w1,L1,v1,w2,L2,v2,vv,LL,ww, dist2ground = parse_entry((w1,L1,v1,w2,L2,v2,vv,LL,ww, dist2ground))
+        w, ww, v, vv, L, LL = squid_param
+        w, ww, v, vv, L, LL, dist2ground = parse_entry((w, ww, v, vv, L, LL, dist2ground))
         
         length_chain = Nsquid*(v+w)
         track = 2*L + LL
@@ -3389,6 +4636,175 @@ class KeyElt(Circuit):
             
         portOut1 = [self.coor([(3*(array_room+2*adapt_dist))/2,0]), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
         portOut2 = [self.coor([-(3*(array_room+2*adapt_dist))/2,0]), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+        if doublePump:
+            portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump+2*self.overdev, iGapPump-2*self.overdev]
+            self.ports[self.name+'_pump1'] = portOutpump1
+            portOutpump2 = [self.coor(Vector(pos_pump).refx()), -self.coor_vec(ori_pump), iTrackPump+2*self.overdev, iGapPump-2*self.overdev]
+            self.ports[self.name+'_pump2'] = portOutpump2
+        else:
+            portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump+2*self.overdev, iGapPump-2*self.overdev]
+            self.ports[self.name+'_pump'] = portOutpump1
+
+    def draw_snails_sym(self, iTrack, iGap, array_room, iTrackPump, iGapPump, approach='20um', mode='litho', iTrackMinPump=None, iTrackSnail=None, fillet=None, N_snails=1, snail_dict={'loop_width':20e-6, 'loop_length':20e-6, 'length_big_junction':10e-6, 'length_small_junction':2e-6, 'bridge':1e-6, 'bridge_spacing':1e-6}, L_eq = '1nH'): #for now assume left and right tracks are the same width
+        '''
+        --------
+
+        '''
+        if iTrackSnail is None:
+            iTrackSnail = iTrack/10
+        if iTrackMinPump is None:
+            iTrackMinPump=iTrackSnail
+
+        iTrack, iGap, array_room, iTrackPump, iGapPump, iTrackMinPump, iTrackSnail, approach = parse_entry((iTrack, iGap, array_room, iTrackPump, iGapPump, iTrackMinPump, iTrackSnail, approach))
+
+        adapt_dist = iTrack/2 #if slope ==1 !!!!
+        
+        track_a = self.draw_rect(self.name+"_track_a", self.coor([array_room/2,-iTrackSnail/2]), self.coor_vec([adapt_dist, iTrackSnail]))
+        track_c = self.draw_rect(self.name+"_track_c", self.coor([-array_room/2,-iTrackSnail/2]), self.coor_vec([-adapt_dist, iTrackSnail]))
+        
+
+        #snail array
+        if mode=='litho':
+            in_array = [self.coor([array_room/2, 0]), -self.ori, iTrackSnail, 0]
+            out_array = [self.coor([-array_room/2, 0]), self.ori, iTrackSnail, 0]      
+            snail_array = self.connect_elt(self.name+'_array', out_array, in_array)
+            snail_track = snail_array._connect_snails2([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 4, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])
+        
+        if 0:
+            in_array = [self.coor([array_room/2, 0]), -self.ori, iTrackSnail, 0]
+            out_array = [self.coor([-array_room/2, 0]), self.ori, iTrackSnail, 0]      
+            snail_array = self.connect_elt(self.name+'_array', in_array, out_array)
+            snail_track = snail_array._connect_JJ(iTrack, iInduct=L_eq)
+        
+        if mode=='equivalent':
+            connect_left = self.draw_rect(self.name+"_left", self.coor([array_room/2,-iTrackSnail/2]), self.coor_vec([-iTrackSnail, iTrackSnail]))
+            connect_right = self.draw_rect(self.name+"_right", self.coor([-array_room/2,-iTrackSnail/2]), self.coor_vec([iTrackSnail, iTrackSnail]))
+            if not self.is_litho:
+                array_eq = self.draw_rect_center(self.name+"_array_eq", self.coor([0,0]), self.coor_vec([array_room-2*iTrackSnail, iTrackSnail]))
+                self.assign_lumped_RLC(array_eq, self.ori, (0, L_eq, 0))
+                points = self.append_points([(-array_room/2+iTrackSnail,0),(array_room-2*iTrackSnail,0)])
+                self.draw(self.name+'_array_eq_line', points, closed=False)
+            
+#        #junction up
+#        print(self.ori)
+#        in_junction_up = [self.coor([-iTrackSnail/2,squid_size[1]/2+iTrackSnail/2]), self.coor_vec([1,0]), iTrackSnail, 0]
+#        out_junction_up = [self.coor([iTrackSnail/2,squid_size[1]/2+iTrackSnail/2]), self.coor_vec([-1,0]), iTrackSnail, 0]
+#        junction = self.connect_elt(self.name+'_junction_up', in_junction_up, out_junction_up)
+#        junction_pads_up = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
+#        
+#        #junction down
+#        in_junction_down = [self.coor([-iTrackSnail/2,-squid_size[1]/2-iTrackSnail/2]), self.coor_vec([1,0]), iTrackSnail, 0]
+#        out_junction_down = [self.coor([iTrackSnail/2,-squid_size[1]/2-iTrackSnail/2]), self.coor_vec([-1,0]), iTrackSnail, 0]
+#        junction = self.connect_elt(self.name+'_junction_down', in_junction_down, out_junction_down)
+#        junction_pads_down = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
+
+        right_track = self.draw_rect_center(self.name+"_added_track1", self.coor([2*(array_room/2+adapt_dist)+iTrackMinPump/2,0]), self.coor_vec([array_room+2*adapt_dist+iTrackMinPump, iTrack+2*self.overdev]))
+        left_track = self.draw_rect_center(self.name+"_added_track2", self.coor([-2*(array_room/2+adapt_dist)-iTrackMinPump/2,0]), self.coor_vec([array_room+2*adapt_dist+iTrackMinPump, iTrack+2*self.overdev]))
+        if mode=='equivalent':
+            squid = self.unite([right_track, left_track, track_a, track_c, connect_left, connect_right], name=self.name+'_temp')
+        else:
+            squid = self.unite([right_track, left_track, track_a, track_c], name=self.name+'_temp')
+            
+        self.trackObjects.append(squid)
+
+        adapt_dist_pump = 4*iTrackPump
+        
+        gaps=[]
+        masks=[]
+        
+        raw_points_gap = [(-(3*(array_room+2*adapt_dist)+2*iTrackMinPump)/2,iTrack/2+iGap-self.overdev),
+                          (iTrackMinPump-self.overdev, 0),
+                          (0, -approach),
+                          (array_room+2*adapt_dist+2*adapt_dist+array_room+2*self.overdev,0),
+                          (0,approach),
+                          (array_room+2*adapt_dist+iTrackMinPump-self.overdev,0),
+                          (0, -(iTrack/2+iGap-self.overdev)),
+                          (-(3*(array_room+2*adapt_dist)+2*iTrackMinPump),0)]
+        points_gap = self.append_points(raw_points_gap)
+        gap1 = self.draw(self.name+"_gap_1", points_gap)
+        gap1.fillet(2*iTrackMinPump,[2,3])
+        gaps.append(gap1)
+        points_gap = self.append_points(self.refy_points(self.refx_points(raw_points_gap)))
+        gap2 = self.draw(self.name+"_gap_2", points_gap)
+        gap2.fillet(2*iTrackMinPump,[2,3])
+        gaps.append(gap2)
+        
+#        gaps.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([3*(array_room+2*adapt_dist)+2*iTrackMinPump, iTrack+2*iGap-2*self.overdev])))
+        if self.is_mask:
+            masks.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([3*(array_room+2*adapt_dist), iTrack+2*iGap+2*self.gap_mask])))
+
+        raw_points_adapt_pump_a = [(3/2*(array_room+2*adapt_dist)-self.overdev-iTrackMinPump,-iTrack/2-iGap-iTrackMinPump-self.overdev+approach),
+                                   (-((array_room+2*adapt_dist))+2*iTrackMinPump+2*self.overdev,0),
+                                   (iTrackPump/2-iTrackMinPump, -adapt_dist_pump+self.overdev),
+                                   (iGapPump-2*self.overdev, 0)]
+        if self.is_mask:
+            raw_points_adapt_pump_a_mask = [(3/2*(array_room+2*adapt_dist)+self.gap_mask,-iTrack/2-iGap-iTrackMinPump+self.gap_mask),
+                                            (-((array_room+2*adapt_dist))+iTrackMinPump-2*self.gap_mask,0),
+                                            (iTrackPump/2-iTrackMinPump-(iTrackPump/2-self.gap_mask), -adapt_dist_pump-self.gap_mask),
+                                            (iGapPump+2*self.gap_mask+(iTrackPump/2-self.gap_mask), 0)]
+
+
+
+        
+
+        points_adapt_pump_a = self.append_points(raw_points_adapt_pump_a)
+        cutout_pump_a=self.draw(self.name+"_cutout_pump_a", points_adapt_pump_a)
+        cutout_pump_a.fillet(iTrackMinPump,[0,1])
+        gaps.append(cutout_pump_a)
+        if self.is_mask:
+            points_adapt_pump_a_mask = self.append_points(raw_points_adapt_pump_a_mask)
+            masks.append(self.draw(self.name+"_cutout_pump_a_mask", points_adapt_pump_a_mask))
+            
+        raw_points_adapt_pump_b = self.refy_points(raw_points_adapt_pump_a, offset = ((array_room+2*adapt_dist))/2)
+        points_adapt_pump_b = self.append_points(raw_points_adapt_pump_b)
+        cutout_pump_b=self.draw(self.name+"_cutout_pump_b", points_adapt_pump_b)
+        cutout_pump_b.fillet(iTrackMinPump,[0,1])
+        gaps.append(cutout_pump_b)
+        if self.is_mask:
+            raw_points_adapt_pump_b_mask = self.refy_points(raw_points_adapt_pump_a_mask, offset = ((array_room+2*adapt_dist))/2)
+            points_adapt_pump_b_mask = self.append_points(raw_points_adapt_pump_b_mask)
+            masks.append(self.draw(self.name+"_cutout_pump_b_mask", points_adapt_pump_b_mask))
+        
+        ori_pump = [0,-1]
+        pos_pump = [((array_room+2*adapt_dist))/2, -iTrack/2-iGap-iTrackMinPump-adapt_dist_pump+approach]
+        
+        raw_points_adapt_pump_c = self.refy_points(self.refx_points(raw_points_adapt_pump_a))
+        points_adapt_pump_c = self.append_points(raw_points_adapt_pump_c)
+        cutout_pump_c = self.draw(self.name+"_cutout_pump_c", points_adapt_pump_c)
+        cutout_pump_c.fillet(iTrackMinPump,[0,1])
+        gaps.append(cutout_pump_c)
+        if self.is_mask:
+            raw_points_adapt_pump_c_mask = self.refy_points(self.refx_points(raw_points_adapt_pump_a_mask))
+            points_adapt_pump_c_mask = self.append_points(raw_points_adapt_pump_c_mask)
+            masks.append(self.draw(self.name+"_cutout_pump_c_mask", points_adapt_pump_c_mask))
+
+        raw_points_adapt_pump_d = self.refy_points(self.refx_points(raw_points_adapt_pump_b))
+        points_adapt_pump_d = self.append_points(raw_points_adapt_pump_d)
+        cutout_pump_d = self.draw(self.name+"_cutout_pump_d", points_adapt_pump_d)
+        cutout_pump_d.fillet(iTrackMinPump,[0,1])
+        gaps.append(cutout_pump_d)
+        if self.is_mask:
+            raw_points_adapt_pump_d_mask = self.refy_points(self.refx_points(raw_points_adapt_pump_b_mask))
+            points_adapt_pump_d_mask = self.append_points(raw_points_adapt_pump_d_mask)
+            masks.append(self.draw(self.name+"_cutout_pump_d_mask", points_adapt_pump_d_mask))
+        
+#        if fillet is not None:
+#            cutout_pump_a.fillet(fillet/2,1)
+#            cutout_pump_a.fillet(fillet/4,0)
+#            cutout_pump_b.fillet(fillet/2,1)
+#            cutout_pump_b.fillet(fillet/4,0)
+
+        gaps = self.unite(gaps, self.name+'_cutout')
+        self.gapObjects.append(gaps)
+        if self.is_mask:
+            masks = self.unite(masks, self.name+'_mask')
+            self.maskObjects.append(masks)
+            
+        portOut1 = [self.coor([(3*(array_room+2*adapt_dist))/2+iTrackMinPump,0]), self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
+        portOut2 = [self.coor([-(3*(array_room+2*adapt_dist))/2-iTrackMinPump,0]), -self.ori, iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name+'_1'] = portOut1
         self.ports[self.name+'_2'] = portOut2
 
@@ -6237,6 +7653,364 @@ class KeyElt(Circuit):
         portOut_R = [self.coor([sep_ports/2, -dist_ports]), self.coor_vec([0,-1]), track+2*self.overdev, gap-2*self.overdev]
         self.ports[self.name+'_L'] = portOut_L
         self.ports[self.name+'_R'] = portOut_R
+
+
+
+    def draw_fake_squid(self, iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid=None, iTrackJ=None, Lj_down='1nH', Lj_up=None,  typePump='down',  iSlope=1, iSlopePump=0.5, fillet=None, is_junction=True): #for now assume left and right tracks are the same width
+        '''
+        Draws a Josephson Junction.
+
+        Draws a rectangle, here called "junction",
+        with Bondary condition :lumped RLC, C=R=0, L=iInduct in nH
+        Draws needed adaptors on each side
+
+        Inputs:
+        -------
+        name:
+        iIn: (tuple) input port
+        iOut: (tuple) output port - None, ignored and recalculated
+        iSize: (float) length of junction
+        iWidth: (float) width of junction
+        iLength: (float) distance between iIn and iOut, including
+                 the adaptor length
+        iInduct: (float in nH)
+
+        Outputs:
+        --------
+
+        '''
+        if iTrackSquid is None:
+            iTrackSquid = iTrack/4
+        if iTrackJ is None:
+            iTrackJ = iTrackSquid/2
+        if Lj_up is None:
+            Lj_up = Lj_down
+        iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid, iTrackJ = parse_entry((iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid, iTrackJ))
+        squid_size = Vector(squid_size)
+
+        adapt_dist = squid_size[1]/2 #if slope ==1 !!!!
+
+        #adapta
+        raw_points_a = [(squid_size[0]/2+adapt_dist,0),
+                        (0, iTrack/2),
+                        (-adapt_dist, squid_size[1]/2+iTrackSquid-iTrack/2),
+                        (-squid_size[0]/2+iTrackSquid/2, 0),
+                        (0, -iTrackSquid),
+                        (squid_size[0]/2-iTrackSquid/2, 0)]
+        points_a = self.append_points(raw_points_a)
+        track_a = self.draw(self.name+"_track_a", points_a)
+
+        raw_points_b = self.refx_points(raw_points_a)
+        points_b = self.append_points(raw_points_b)
+        track_b = self.draw(self.name+"_track_b", points_b)
+
+        raw_points_c = self.refy_points(raw_points_a)
+        points_c = self.append_points(raw_points_c)
+        track_c = self.draw(self.name+"_track_c", points_c)
+
+        raw_points_d = self.refy_points(raw_points_b)
+        points_d = self.append_points(raw_points_d)
+        track_d = self.draw(self.name+"_track_d", points_d)
+
+        right_track = self.draw_rect_center(self.name+"_added_track1", self.coor([squid_size[0]/2+adapt_dist,0]), self.coor_vec([2*squid_size[0]/100, iTrack]))
+        left_track = self.draw_rect_center(self.name+"_added_track2", self.coor([-squid_size[0]/2-adapt_dist,0]), self.coor_vec([-2*squid_size[0]/100, iTrack]))
+          
+        if is_junction:
+            #junction up
+            print(self.ori)
+            in_junction_up = [self.coor([-iTrackSquid/2,squid_size[1]/2+iTrackSquid/2]), self.coor_vec([1,0]), iTrackSquid, 0]
+            out_junction_up = [self.coor([iTrackSquid/2,squid_size[1]/2+iTrackSquid/2]), self.coor_vec([-1,0]), iTrackSquid, 0]
+            self.ports[self.name+'_in_junction_up'] = in_junction_up
+            self.ports[self.name+'_out_junction_up'] = out_junction_up
+            junction = self.connect_elt(self.name+'_junction_up', self.name+'_in_junction_up', self.name+'_out_junction_up')
+            junction_pads_up = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
+            #junction down
+            if typePump is not None:
+                in_junction_down = [self.coor([-iTrackSquid/2,-squid_size[1]/2-iTrackSquid/2]), self.coor_vec([1,0]), iTrackSquid, 0]
+                out_junction_down = [self.coor([iTrackSquid/2,-squid_size[1]/2-iTrackSquid/2]), self.coor_vec([-1,0]), iTrackSquid, 0]
+                self.ports[self.name+'_in_junction_down'] = in_junction_down
+                self.ports[self.name+'_out_junction_down'] = out_junction_down
+                junction = self.connect_elt(self.name+'_junction_down', self.name+'_in_junction_down', self.name+'_out_junction_down')
+                junction_pads_down = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
+    
+            if typePump is not None:
+                squid = self.unite([right_track, left_track, track_a, track_b, track_c, track_d, junction_pads_down, junction_pads_up], name=self.name)
+                #squid = self.unite([ track_a, track_b, track_c, track_d, junction_pads_down, junction_pads_up], name=self.name)
+
+            else:
+                squid = self.unite([right_track, left_track, track_a, track_b, track_c, track_d, junction_pads_up], name=self.name)
+                #squid = self.unite([track_a, track_b, track_c, track_d, junction_pads_up], name=self.name)
+
+        else:
+            squid = self.unite([right_track, left_track, track_a, track_b, track_c, track_d], name=self.name)
+            #squid = self.unite([ track_a, track_b, track_c, track_d], name=self.name)
+
+            
+        self.trackObjects.append(squid)
+        
+
+        if fillet is not None:
+            fillet=parse_entry(fillet)
+            squid.fillet(fillet,[32,31,26,25,24,19,18,16,11,10,9,4,3,0])
+
+        adapt_dist_pump = 4*iTrackPump#(4*iTrackPump - 2*iTrackSquid)/2/iSlopePump
+
+
+        self.gapObjects.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([2.02*(squid_size[0]), iTrack+2*iGap])))
+        if self.is_mask:
+            self.maskObjects.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([2.02*(squid_size[0]), iTrack+3*iGap])))
+
+        raw_points_adapt_pump_a = [(3/2*(squid_size[0]+2*adapt_dist),-iTrack/2-iGap-iTrackSquid),
+                                         (-(squid_size[0]+2*adapt_dist)+iTrackSquid,0),
+                                         (iTrackPump/2-iTrackSquid, -adapt_dist_pump),
+                                         (iGapPump, 0)]
+        if self.is_mask:
+            raw_points_adapt_pump_mask = [(3/2*(squid_size[0]+2*adapt_dist)+iGapPump,-iTrack/2-iGap-iTrackSquid-iGapPump),
+                                          (0,iTrackSquid+iGapPump),
+                                             (-(squid_size[0]+2*adapt_dist)+iTrackSquid-iGapPump-iTrackPump/2,0),
+                                             (iTrackPump/2-iTrackSquid, -adapt_dist_pump-iTrackSquid),
+                                             (3*iGapPump+iTrackPump/2, 0)]
+            self.maskObjects.append(self.draw(self.name+"_cutout_pump_a_mask", self.append_points(raw_points_adapt_pump_mask)))
+            raw_points_adapt_pump_mask_b = self.refy_points(raw_points_adapt_pump_mask, offset = (squid_size[0]+2*adapt_dist)/2)
+            self.maskObjects.append(self.draw(self.name+"_cutout_pump_b_mask", self.append_points(raw_points_adapt_pump_mask_b)))
+        if typePump is not None:
+            if typePump == 'up' or typePump == 'Up':
+                raw_points_adapt_pump_a = self.refx_points(raw_points_adapt_pump_a)
+                ori_pump = [0,1]
+                pos_pump = [(squid_size[0]+2*adapt_dist)/2, iTrack/2+iGap+iTrackSquid+adapt_dist_pump]
+            elif typePump =='down' or typePump == 'Down':
+                ori_pump = [0,-1]
+                pos_pump = [(squid_size[0]+2*adapt_dist)/2, -iTrack/2-iGap-iTrackSquid-adapt_dist_pump]
+    
+            else:
+                raise ValueError("typePump should be 'up' or 'down' or None, given %s" % typePump)
+            points_adapt_pump_a = self.append_points(raw_points_adapt_pump_a)
+            cutout_pump_a=self.draw(self.name+"_cutout_pump_a", points_adapt_pump_a)
+            self.gapObjects.append(cutout_pump_a)
+            
+            raw_points_adapt_pump_b = self.refy_points(raw_points_adapt_pump_a, offset = (squid_size[0]+2*adapt_dist)/2)
+            points_adapt_pump_b = self.append_points(raw_points_adapt_pump_b)
+            cutout_pump_b=self.draw(self.name+"_cutout_pump_b", points_adapt_pump_b)
+            self.gapObjects.append(cutout_pump_b)
+            
+            if fillet is not None:
+                cutout_pump_a.fillet(fillet/2,1)
+                cutout_pump_a.fillet(fillet/4,0)
+                cutout_pump_b.fillet(fillet/2,1)
+                cutout_pump_b.fillet(fillet/4,0)
+
+
+        portOut1 = [self.pos+self.ori*(squid_size[0]/2+adapt_dist)*2, self.ori, iTrack, iGap]
+        portOut2 = [self.pos-self.ori*(squid_size[0]/2+adapt_dist)*2, -self.ori, iTrack, iGap]
+        #portOut1 = [self.pos+self.ori*(squid_size[0]/2+adapt_dist/2)*2, self.ori, iTrack, iGap]
+        #portOut2 = [self.pos-self.ori*(squid_size[0]/2+adapt_dist/2)*2, -self.ori, iTrack, iGap]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+
+        if typePump is not None:
+            portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump, iGapPump]
+            self.ports[self.name+'_pump'] = portOutpump1
+            
+            
+    def draw_asym_T(self, iTrack1, iGap1,iTrack2, iGap2,is_mesh=False):
+        
+        iTrack1, iGap1, iTrack2, iGap2 = parse_entry((iTrack1, iGap1, iTrack2, iGap2))
+        
+        if not self.is_overdev or self.val(self.overdev<0):
+            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,self.overdev/2]), self.coor_vec([2*iGap1+iTrack1, 2*iGap2+iTrack2-self.overdev]))
+            self.gapObjects.append(cutout)
+        else:
+            points = self.append_points([(-(iGap1+iTrack1/2),-iTrack2/2-iGap2+self.overdev),
+                             (0, 2*iGap2+iTrack2-2*self.overdev),
+                             ((iGap1+iTrack1/2)*2, 0),
+                             (0, -(2*iGap2+iTrack2)+2*self.overdev),
+                             (-self.overdev, 0),
+                             (0, -self.overdev), 
+                             (-iTrack1-2*iGap1+2*self.overdev, 0),
+                             (0, self.overdev)])
+            cutout = self.draw(self.name+'_cutout', points)
+            self.gapObjects.append(cutout)
+        
+        if self.is_mask:
+            mask = self.draw_rect(self.name+'_mask', self.coor([-iGap1-iTrack1/2,-iGap2-iTrack2/2]), self.coor_vec([2*iGap1+iTrack1, 2*iGap2+iTrack2+self.gap_mask]))
+            self.maskObjects.append(mask)
+            
+        points = self.append_points([(-(iGap1+iTrack1/2),-iTrack2/2-self.overdev),
+                                     (0, iTrack2+2*self.overdev),
+                                     ((iGap1+iTrack1/2)*2, 0),
+                                     (0, -iTrack2-2*self.overdev),
+                                     (-iGap1+self.overdev, 0),
+                                     (0, -iGap2+self.overdev), 
+                                     (-iTrack1-2*self.overdev, 0),
+                                     (0, iGap2-self.overdev)])
+            
+            
+        track = self.draw(self.name+'_track', points)
+        if self.val(iGap2)<self.val(iTrack2):
+            fillet=iGap2
+        else:
+            fillet=iTrack2
+        #track.fillet(fillet-eps,[4,7])
+        
+        self.trackObjects.append(track)
+        
+        if is_mesh is True:
+            if not self.is_litho:
+                self.modeler.assign_mesh_length(track,iTrack2/2)
+        
+        
+        portOut1 = [self.coor([iTrack1/2+iGap1, 0]), self.coor_vec([1,0]), iTrack2+2*self.overdev, iGap2-2*self.overdev]
+        self.ports[self.name+'_1'] = portOut1
+        portOut2 = [self.coor([-(iTrack1/2+iGap1), 0]), self.coor_vec([-1,0]), iTrack2+2*self.overdev, iGap2-2*self.overdev]
+        self.ports[self.name+'_2'] = portOut2
+        portOut3 = [self.coor([0, -(iTrack2/2+iGap2)]), self.coor_vec([0,-1]), iTrack1+2*self.overdev, iGap1-2*self.overdev]
+        self.ports[self.name+'_3'] = portOut3
+        
+    def draw_highZ_ring(self, iTrack, iGap,GapFlux, width, height,Lj, Lsuper, Lshunt, lchain,lsquid, is_pump,Lc=None, is_junction=False, is_top_con=False, is_bot_con=True, is_shunt_to_ground=True, is_squid=True, mode='litho',fillet=None, fine_mesh=False): #for now assume left and right tracks are the same width
+        '''
+        --------top of cutout is at y_ring -track/2 
+
+        '''
+
+        iTrack, iGap,GapFlux, width, height,lchain,lsquid, Lj, Lsuper, Lc = parse_entry((iTrack, iGap,GapFlux, width, height, lchain,lsquid, Lj, Lsuper, Lc))
+        T = iTrack # Track
+        A = width+2*iGap # legnth of halfJRM element left to right
+        B = height+2*iGap # legnth of halfJRM element top to bottom
+        G = iGap # Gap. 
+        X=(A-2*G-3*T)/2 #width of a single ring
+        Y=B-2*G-2*T #height of a single ring
+
+        L = 2.02*lsquid# total length of fake_squid element
+        L2 = lchain# length of superinductor
+
+        Fillet=iGap/5
+        #IJ = (C-L)/2 # Island of metal linking junctions to ground C = L+2*IJ
+
+
+
+        
+        if is_bot_con:
+            raw_points_bottom = [(-A/2,-T/2),(A/2,-T/2),(A/2,T/2),(-A/2,T/2)]
+        else:
+            raw_points_bottom = [(-A/2+G,-T/2),(A/2-G,-T/2),(A/2-G,T/2),(-A/2+G,T/2)]
+        raw_points_top=[(-X-3*T/2,Y+T/2),(X+3*T/2,Y+T/2),(X+3*T/2,Y+3*T/2),(-X-3*T/2,Y+3*T/2)]
+        raw_points_left1=[(-X-3*T/2,T/2),(-X-T/2,T/2),(-X-T/2,T/2+(Y-L)/2),(-X-3*T/2,T/2+(Y-L)/2)]
+        raw_points_left2=self.move_points(raw_points_left1, [0, L+(Y-L)/2], absolute=True)
+        raw_points_right1 = self.refy_points(raw_points_left1, absolute=True)
+        raw_points_right2 = self.refy_points(raw_points_left2, absolute=True)
+        raw_points_central_bottom = [(-T/2, T/2),(T/2, T/2),(T/2, T/2+(Y-L2)/2),(-T/2, T/2+(Y-L2)/2)]
+        raw_points_central_top = self.move_points(raw_points_central_bottom, [0, L2+(Y-L2)/2], absolute=True)
+        #raw_points_squid_left1 = [(-A/2,-T/2),(-A/2+E,-T/2),(-A/2+E,T/2),(-A/2,T/2)]
+
+
+
+
+        island_bottom = self.draw(self.name+"bottom", self.append_absolute_points(raw_points_bottom))
+        island_top = self.draw(self.name+"top", self.append_absolute_points(raw_points_top))
+        island_left1 = self.draw(self.name+"left1", self.append_absolute_points(raw_points_left1))
+        island_right1 = self.draw(self.name+"right1", self.append_absolute_points(raw_points_right1))
+        island_left2 = self.draw(self.name+"left2", self.append_absolute_points(raw_points_left2))
+        island_right2 = self.draw(self.name+"right2", self.append_absolute_points(raw_points_right2))
+        island_central_bottom = self.draw(self.name+"central_bottom", self.append_absolute_points(raw_points_central_bottom))
+        island_central_top = self.draw(self.name+"central_top", self.append_absolute_points(raw_points_central_top))
+        
+        
+        if is_top_con:
+            raw_points_connector_top = [(-T/2, 3*T/2+Y),(T/2, 3*T/2+Y),(T/2, B-T/2),(-T/2, B-T/2)]
+            island_connector_top = self.draw(self.name+"connector_top", self.append_absolute_points(raw_points_connector_top))
+        
+        
+        if not self.is_litho:
+
+            array_Lsuper = self.draw_rect(self.name+"_Lsuper", self.coor([-T/2,T/2+(Y-L2)/2]), self.coor_vec([ T,L2]))
+            self.assign_lumped_RLC(array_Lsuper, [0,1], (0, Lsuper, 0))
+            pointssuper = [(0,(Y-L2)/2+T/2),(0,(Y+L2)/2+T/2)]
+            self.draw(self.name+'_eq_linesuper', self.append_absolute_points(pointssuper), closed=False)
+            
+            if is_squid:
+                if is_pump:
+                    direction='up'
+                else:
+                    direction=None
+                self.key_elt('squid1', self.coor([-X-T,Y/2+T/2]), [0,1])
+                self.squid1.draw_fake_squid(iTrack=T, iGap=lsquid/2+T/4, squid_size=[lsquid,lsquid], iTrackPump='10um', iGapPump='25um',typePump=direction,is_junction=is_junction)
+                self.key_elt('squid2', self.coor([X+T,Y/2+T/2]), [0,1])
+                self.squid2.draw_fake_squid(iTrack=T, iGap=lsquid/2+T/4, squid_size=[lsquid,lsquid], iTrackPump='10um', iGapPump='25um',typePump=None,is_junction=is_junction)
+                 
+                
+            if is_junction:
+                array_LJ1 = self.draw_rect(self.name+"_LJ1", self.coor([-X-3*T/2,T/2+(Y-L)/2]), self.coor_vec([ T,L]))
+                array_LJ2 = self.draw_rect(self.name+"_LJ2", self.coor([X+T/2,T/2+(Y-L)/2]), self.coor_vec([ T,L]))
+                self.assign_lumped_RLC(array_LJ1, [0,1], (0, Lj, 0))
+                self.assign_lumped_RLC(array_LJ2, [0,1], (0, Lj, 0))
+                pointsJ1 = [(-T-X,T/2+(Y-L)/2),(-T-X,T/2+(Y+L)/2)]
+                pointsJ2 = [(T+X,T/2+(Y-L)/2),(T+X,T/2+(Y+L)/2)]
+                self.draw(self.name+'_eq_lineJ1', self.append_absolute_points(pointsJ1), closed=False)
+                self.draw(self.name+'_eq_lineJ2', self.append_absolute_points(pointsJ2), closed=False)
+  
+            if is_shunt_to_ground:
+                array_Lshunt = self.draw_rect(self.name+"_Lshunt", self.coor([-T/2,-T/2-G]), self.coor_vec([ T,G]))
+                self.assign_lumped_RLC(array_Lshunt, [0,1], (0, Lshunt, 0))
+                pointsshunt = [(0,-T/2-G),(0,-T/2)]
+                self.draw(self.name+'_eq_lineshunt', self.append_absolute_points(pointsshunt), closed=False)
+     
+
+
+        
+        if is_top_con:
+            connect = self.unite([island_bottom,
+                                  island_top,island_left1,island_right1,island_left2,
+                                  island_right2,island_connector_top,island_central_bottom,
+                                  island_central_top])
+        else:
+            connect = self.unite([island_bottom,
+                                  island_top,island_left1,island_right1,island_left2,
+                                  island_right2,island_central_bottom,
+                                  island_central_top])            
+        if Lc is not None:
+            gapLc1=self.draw_rect(self.name+"_Lc1", self.coor([-X/2-T/2,-T/2]), self.coor_vec([T, T]))
+            gapLc2=self.draw_rect(self.name+"_Lc2", self.coor([X/2-T/2,-T/2]), self.coor_vec([T, T]))
+
+            connect=self.subtract(connect,[gapLc1,gapLc2]) 
+            
+            gapLc1=self.draw_rect(self.name+"_Lc1", self.coor([-X/2-T/2,-T/2]), self.coor_vec([T, T]))
+            gapLc2=self.draw_rect(self.name+"_Lc2", self.coor([X/2-T/2,-T/2]), self.coor_vec([T, T]))
+
+            self.assign_lumped_RLC(gapLc1, [1,0], (0, Lc, 0))
+            self.assign_lumped_RLC(gapLc2, [1,0], (0, Lc, 0))
+        self.trackObjects.append(connect)
+
+
+
+        if fillet is not None:
+            
+            connect.fillet(Fillet,[32,31,26,25,24,19,18,16,11,10,9,4,3,0])
+
+        gap = self.draw_rect(self.name+"_cutout", self.coor([-A/2,-T/2-G]), self.coor_vec([A, B]))
+        self.gapObjects.append(gap)
+
+#        if self.is_mask:
+#            mask = self.draw_rect(self.name+"_mask", self.coor([-all_length/2,-iTrack/2-iGap-self.gap_mask]), self.coor_vec([all_length, iTrack+2*iGap+2*self.gap_mask]))
+#            self.maskObjects.append(mask)
+        
+        if not self.is_litho:
+            #self.draw(self.name+"_mesh", points)
+            #self.modeler.assign_mesh_length(self.name+"_mesh",1/2*T)  
+            print('meshing')
+            self.draw_rect(self.name+"_mesh", self.coor([-A/2,-T/2-G]), self.coor_vec([A, B]))
+            if fine_mesh:
+                self.modeler.assign_mesh_length(self.name+"_mesh",T) 
+            else:
+                self.modeler.assign_mesh_length(self.name+"_mesh",4*T)  
+            
+        portT = [self.coor([0, B-T/2]), self.coor_vec([0,1]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portL = [self.coor([-A/2,0]), self.coor_vec([-1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portR = [self.coor([A/2,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_T'] = portT
+        self.ports[self.name+'_L'] = portL
+        self.ports[self.name+'_R'] = portR
+
         
 class ConnectElt(KeyElt, Circuit):
     
@@ -6403,6 +8177,57 @@ class ConnectElt(KeyElt, Circuit):
         self.iOut = retOut
 #        return [retIn, retOut]
 
+    def draw_half_capa(self, iLength, iWidth, iGap, add_gap=False,fillet=None):
+        '''
+        Inputs:
+        -------
+        name: string name of object
+        iIn: (position, direction, track, gap) defines the input port
+        iOut: (position, direction, track, gap) defines the output port
+               position and direction are None: this is calculated from
+               other parameters
+        iLength: (float) length of pads
+        iWidth: (float) width of pads
+
+        Outputs:
+        --------
+        retIn: same as iIn, with flipped vector
+        retOut: calculated output port to match all input dimensions
+
+            igap iWidth
+                 +--+
+                 |  |
+            +----+  | iLength
+        iIn |       |
+            +----+  |
+                 |  |
+                 +--+
+        '''
+        iLength, iWidth, iGap = parse_entry((iLength, iWidth, iGap))
+        self.ori = -self.ori
+
+        points = self.append_points([(0, self.inTrack/2),
+                                     (iGap-self.overdev, 0),
+                                     (0, (iLength-self.inTrack)/2+self.overdev),
+                                     (iWidth+2*self.overdev, 0),
+                                     (0, -iLength-2*self.overdev),
+                                     (-iWidth-2*self.overdev, 0),
+                                     (0, (iLength-self.inTrack)/2+self.overdev),
+                                     (-iGap+self.overdev, 0)])
+        halfcapa=self.draw(self.name+"_pad", points)
+        if fillet is not None:
+            halfcapa.fillet(fillet-self.overdev,6)
+            halfcapa.fillet(fillet+self.overdev,5)
+            halfcapa.fillet(fillet+self.overdev,4)
+            halfcapa.fillet(fillet+self.overdev,3)
+            halfcapa.fillet(fillet+self.overdev,2)
+            halfcapa.fillet(fillet-self.overdev,1)
+        
+
+        if not self.is_litho:
+            self.modeler.assign_mesh_length(halfcapa, iWidth)
+            
+        self.trackObjects.append(halfcapa)
 
 #        CreateBondwire(name+"_bondwire", iIn)
     def find_slanted_path(self):
@@ -6947,6 +8772,7 @@ class ConnectElt(KeyElt, Circuit):
   
         all_constrains = []
         for constrain in constrains:
+#            print(constrain)
             all_constrains.append([self.ports[constrain][POS], -self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
             all_constrains.append(constrain)#[self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
             # preivous modification to tackle the case where a cable is drawn between two ports defined on the fly
@@ -6961,6 +8787,13 @@ class ConnectElt(KeyElt, Circuit):
         masks = []
         port_names = [self.iIn]+all_constrains+[self.iOut]
         print(port_names)
+        
+        flat_list = [item for sublist in to_meanders for item in sublist]
+        nb_meander=0
+        for j in flat_list:
+            if j!=0:
+                nb_meander+=j
+                
         for ii in range(len(constrains)+1):
             to_meander = to_meanders[ii]
             if isinstance(meander_length, (list, np.ndarray)):
@@ -6975,12 +8808,12 @@ class ConnectElt(KeyElt, Circuit):
             self.__init__(self.name, *port_names[2*ii:2*ii+2])
             
             points = self.find_path(fillet, is_meander, to_meander, m_length, meander_offset)
-            connection = self.draw(self.name+'_dummy_track'+to_add, points, closed=False)
+            connection = self.draw(self.name+'_track'+to_add, points, closed=False)
 #            print('length_adaptor = %.3f'%(self.val(adaptor_length)*1000))
             cable_length.append(self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length))
             connection.fillets(fillet-eps)
     
-            connection_gap = connection.copy(self.name+"_dummy_gap"+to_add)
+            connection_gap = connection.copy(self.name+"_gap"+to_add)
     
             track_starter = self.cable_starter('track')
             gap_starter = self.cable_starter('gap')
@@ -7053,6 +8886,7 @@ class ConnectElt(KeyElt, Circuit):
             print('{0}_length = {1:.3f} mm'.format(self.name, length*1000))
         print('sum = %.3f mm'%(1000*np.sum(cable_length)))
         
+        return np.sum(cable_length), nb_meander
         
     def draw_slanted_cable(self, fillet=None, is_bond=False, is_mesh=False, constrains=[], reverse_adaptor=False, layer=None):
         '''
@@ -7151,6 +8985,9 @@ class ConnectElt(KeyElt, Circuit):
             names = [self.name+'_track', self.name+'_gap', self.name+'_mask']
             if track_adaptor is not None:
                 names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
+                if len(constrains)!=0:
+                    names = [self.name+'_track_1_1', self.name+'_gap_1_1', self.name+'_mask_1_1']
+
             track = self.unite(tracks, names[0])
             gap = self.unite(gaps, names[1])
             if layer is None:
@@ -7177,8 +9014,6 @@ class ConnectElt(KeyElt, Circuit):
         if is_mesh is True:
             if not self.is_litho:
                 self.modeler.assign_mesh_length(track,2*self.inTrack)
-            
-
 
 
     def draw_bond(self, width, min_dist='0.5mm'):
@@ -7220,6 +9055,7 @@ class ConnectElt(KeyElt, Circuit):
             # calculate the output
             # do not forget to add the new port to dict
             adaptDist = abs(self.outTrack/2-self.inTrack/2)/iSlope
+
             outPort = [self.pos+self.ori*adaptDist, self.ori, self.outTrack, self.outGap]
             self.ports[self.iIn+'_bis'] = outPort
             self.__init__(self.name, self.iIn, self.iIn+'_bis')
@@ -8004,3 +9840,7 @@ class ConnectElt(KeyElt, Circuit):
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
             
         return pads
+    
+    
+    
+    
