@@ -81,8 +81,8 @@ ORI = 1
 TRACK = 2
 GAP = 3
 
-from hfss import parse_entry
-from hfss import VariableString
+from .hfss import parse_entry
+from .hfss import VariableString
 import numpy as np
 
 
