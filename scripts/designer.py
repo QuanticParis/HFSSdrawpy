@@ -6371,6 +6371,364 @@ class KeyElt(Circuit):
         portOut_R = [self.coor([sep_ports/2, -dist_ports]), self.coor_vec([0,-1]), track+2*self.overdev, gap-2*self.overdev]
         self.ports[self.name+'_L'] = portOut_L
         self.ports[self.name+'_R'] = portOut_R
+
+
+
+    def draw_fake_squid(self, iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid=None, iTrackJ=None, Lj_down='1nH', Lj_up=None,  typePump='down',  iSlope=1, iSlopePump=0.5, fillet=None, is_junction=True): #for now assume left and right tracks are the same width
+        '''
+        Draws a Josephson Junction.
+
+        Draws a rectangle, here called "junction",
+        with Bondary condition :lumped RLC, C=R=0, L=iInduct in nH
+        Draws needed adaptors on each side
+
+        Inputs:
+        -------
+        name:
+        iIn: (tuple) input port
+        iOut: (tuple) output port - None, ignored and recalculated
+        iSize: (float) length of junction
+        iWidth: (float) width of junction
+        iLength: (float) distance between iIn and iOut, including
+                 the adaptor length
+        iInduct: (float in nH)
+
+        Outputs:
+        --------
+
+        '''
+        if iTrackSquid is None:
+            iTrackSquid = iTrack/4
+        if iTrackJ is None:
+            iTrackJ = iTrackSquid/2
+        if Lj_up is None:
+            Lj_up = Lj_down
+        iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid, iTrackJ = parse_entry((iTrack, iGap, squid_size, iTrackPump, iGapPump, iTrackSquid, iTrackJ))
+        squid_size = Vector(squid_size)
+
+        adapt_dist = squid_size[1]/2 #if slope ==1 !!!!
+
+        #adapta
+        raw_points_a = [(squid_size[0]/2+adapt_dist,0),
+                        (0, iTrack/2),
+                        (-adapt_dist, squid_size[1]/2+iTrackSquid-iTrack/2),
+                        (-squid_size[0]/2+iTrackSquid/2, 0),
+                        (0, -iTrackSquid),
+                        (squid_size[0]/2-iTrackSquid/2, 0)]
+        points_a = self.append_points(raw_points_a)
+        track_a = self.draw(self.name+"_track_a", points_a)
+
+        raw_points_b = self.refx_points(raw_points_a)
+        points_b = self.append_points(raw_points_b)
+        track_b = self.draw(self.name+"_track_b", points_b)
+
+        raw_points_c = self.refy_points(raw_points_a)
+        points_c = self.append_points(raw_points_c)
+        track_c = self.draw(self.name+"_track_c", points_c)
+
+        raw_points_d = self.refy_points(raw_points_b)
+        points_d = self.append_points(raw_points_d)
+        track_d = self.draw(self.name+"_track_d", points_d)
+
+        right_track = self.draw_rect_center(self.name+"_added_track1", self.coor([squid_size[0]/2+adapt_dist,0]), self.coor_vec([2*squid_size[0]/100, iTrack]))
+        left_track = self.draw_rect_center(self.name+"_added_track2", self.coor([-squid_size[0]/2-adapt_dist,0]), self.coor_vec([-2*squid_size[0]/100, iTrack]))
+          
+        if is_junction:
+            #junction up
+            print(self.ori)
+            in_junction_up = [self.coor([-iTrackSquid/2,squid_size[1]/2+iTrackSquid/2]), self.coor_vec([1,0]), iTrackSquid, 0]
+            out_junction_up = [self.coor([iTrackSquid/2,squid_size[1]/2+iTrackSquid/2]), self.coor_vec([-1,0]), iTrackSquid, 0]
+            self.ports[self.name+'_in_junction_up'] = in_junction_up
+            self.ports[self.name+'_out_junction_up'] = out_junction_up
+            junction = self.connect_elt(self.name+'_junction_up', self.name+'_in_junction_up', self.name+'_out_junction_up')
+            junction_pads_up = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
+            #junction down
+            if typePump is not None:
+                in_junction_down = [self.coor([-iTrackSquid/2,-squid_size[1]/2-iTrackSquid/2]), self.coor_vec([1,0]), iTrackSquid, 0]
+                out_junction_down = [self.coor([iTrackSquid/2,-squid_size[1]/2-iTrackSquid/2]), self.coor_vec([-1,0]), iTrackSquid, 0]
+                self.ports[self.name+'_in_junction_down'] = in_junction_down
+                self.ports[self.name+'_out_junction_down'] = out_junction_down
+                junction = self.connect_elt(self.name+'_junction_down', self.name+'_in_junction_down', self.name+'_out_junction_down')
+                junction_pads_down = junction._connect_JJ(iTrackJ, iInduct=Lj_up, fillet=fillet)
+    
+            if typePump is not None:
+                squid = self.unite([right_track, left_track, track_a, track_b, track_c, track_d, junction_pads_down, junction_pads_up], name=self.name)
+                #squid = self.unite([ track_a, track_b, track_c, track_d, junction_pads_down, junction_pads_up], name=self.name)
+
+            else:
+                squid = self.unite([right_track, left_track, track_a, track_b, track_c, track_d, junction_pads_up], name=self.name)
+                #squid = self.unite([track_a, track_b, track_c, track_d, junction_pads_up], name=self.name)
+
+        else:
+            squid = self.unite([right_track, left_track, track_a, track_b, track_c, track_d], name=self.name)
+            #squid = self.unite([ track_a, track_b, track_c, track_d], name=self.name)
+
+            
+        self.trackObjects.append(squid)
+        
+
+        if fillet is not None:
+            fillet=parse_entry(fillet)
+            squid.fillet(fillet,[32,31,26,25,24,19,18,16,11,10,9,4,3,0])
+
+        adapt_dist_pump = 4*iTrackPump#(4*iTrackPump - 2*iTrackSquid)/2/iSlopePump
+
+
+        self.gapObjects.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([2.02*(squid_size[0]), iTrack+2*iGap])))
+        if self.is_mask:
+            self.maskObjects.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([2.02*(squid_size[0]), iTrack+3*iGap])))
+
+        raw_points_adapt_pump_a = [(3/2*(squid_size[0]+2*adapt_dist),-iTrack/2-iGap-iTrackSquid),
+                                         (-(squid_size[0]+2*adapt_dist)+iTrackSquid,0),
+                                         (iTrackPump/2-iTrackSquid, -adapt_dist_pump),
+                                         (iGapPump, 0)]
+        if self.is_mask:
+            raw_points_adapt_pump_mask = [(3/2*(squid_size[0]+2*adapt_dist)+iGapPump,-iTrack/2-iGap-iTrackSquid-iGapPump),
+                                          (0,iTrackSquid+iGapPump),
+                                             (-(squid_size[0]+2*adapt_dist)+iTrackSquid-iGapPump-iTrackPump/2,0),
+                                             (iTrackPump/2-iTrackSquid, -adapt_dist_pump-iTrackSquid),
+                                             (3*iGapPump+iTrackPump/2, 0)]
+            self.maskObjects.append(self.draw(self.name+"_cutout_pump_a_mask", self.append_points(raw_points_adapt_pump_mask)))
+            raw_points_adapt_pump_mask_b = self.refy_points(raw_points_adapt_pump_mask, offset = (squid_size[0]+2*adapt_dist)/2)
+            self.maskObjects.append(self.draw(self.name+"_cutout_pump_b_mask", self.append_points(raw_points_adapt_pump_mask_b)))
+        if typePump is not None:
+            if typePump == 'up' or typePump == 'Up':
+                raw_points_adapt_pump_a = self.refx_points(raw_points_adapt_pump_a)
+                ori_pump = [0,1]
+                pos_pump = [(squid_size[0]+2*adapt_dist)/2, iTrack/2+iGap+iTrackSquid+adapt_dist_pump]
+            elif typePump =='down' or typePump == 'Down':
+                ori_pump = [0,-1]
+                pos_pump = [(squid_size[0]+2*adapt_dist)/2, -iTrack/2-iGap-iTrackSquid-adapt_dist_pump]
+    
+            else:
+                raise ValueError("typePump should be 'up' or 'down' or None, given %s" % typePump)
+            points_adapt_pump_a = self.append_points(raw_points_adapt_pump_a)
+            cutout_pump_a=self.draw(self.name+"_cutout_pump_a", points_adapt_pump_a)
+            self.gapObjects.append(cutout_pump_a)
+            
+            raw_points_adapt_pump_b = self.refy_points(raw_points_adapt_pump_a, offset = (squid_size[0]+2*adapt_dist)/2)
+            points_adapt_pump_b = self.append_points(raw_points_adapt_pump_b)
+            cutout_pump_b=self.draw(self.name+"_cutout_pump_b", points_adapt_pump_b)
+            self.gapObjects.append(cutout_pump_b)
+            
+            if fillet is not None:
+                cutout_pump_a.fillet(fillet/2,1)
+                cutout_pump_a.fillet(fillet/4,0)
+                cutout_pump_b.fillet(fillet/2,1)
+                cutout_pump_b.fillet(fillet/4,0)
+
+
+        portOut1 = [self.pos+self.ori*(squid_size[0]/2+adapt_dist)*2, self.ori, iTrack, iGap]
+        portOut2 = [self.pos-self.ori*(squid_size[0]/2+adapt_dist)*2, -self.ori, iTrack, iGap]
+        #portOut1 = [self.pos+self.ori*(squid_size[0]/2+adapt_dist/2)*2, self.ori, iTrack, iGap]
+        #portOut2 = [self.pos-self.ori*(squid_size[0]/2+adapt_dist/2)*2, -self.ori, iTrack, iGap]
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+
+        if typePump is not None:
+            portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump, iGapPump]
+            self.ports[self.name+'_pump'] = portOutpump1
+            
+            
+    def draw_asym_T(self, iTrack1, iGap1,iTrack2, iGap2,is_mesh=False):
+        
+        iTrack1, iGap1, iTrack2, iGap2 = parse_entry((iTrack1, iGap1, iTrack2, iGap2))
+        
+        if not self.is_overdev or self.val(self.overdev<0):
+            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,self.overdev/2]), self.coor_vec([2*iGap1+iTrack1, 2*iGap2+iTrack2-self.overdev]))
+            self.gapObjects.append(cutout)
+        else:
+            points = self.append_points([(-(iGap1+iTrack1/2),-iTrack2/2-iGap2+self.overdev),
+                             (0, 2*iGap2+iTrack2-2*self.overdev),
+                             ((iGap1+iTrack1/2)*2, 0),
+                             (0, -(2*iGap2+iTrack2)+2*self.overdev),
+                             (-self.overdev, 0),
+                             (0, -self.overdev), 
+                             (-iTrack1-2*iGap1+2*self.overdev, 0),
+                             (0, self.overdev)])
+            cutout = self.draw(self.name+'_cutout', points)
+            self.gapObjects.append(cutout)
+        
+        if self.is_mask:
+            mask = self.draw_rect(self.name+'_mask', self.coor([-iGap1-iTrack1/2,-iGap2-iTrack2/2]), self.coor_vec([2*iGap1+iTrack1, 2*iGap2+iTrack2+self.gap_mask]))
+            self.maskObjects.append(mask)
+            
+        points = self.append_points([(-(iGap1+iTrack1/2),-iTrack2/2-self.overdev),
+                                     (0, iTrack2+2*self.overdev),
+                                     ((iGap1+iTrack1/2)*2, 0),
+                                     (0, -iTrack2-2*self.overdev),
+                                     (-iGap1+self.overdev, 0),
+                                     (0, -iGap2+self.overdev), 
+                                     (-iTrack1-2*self.overdev, 0),
+                                     (0, iGap2-self.overdev)])
+            
+            
+        track = self.draw(self.name+'_track', points)
+        if self.val(iGap2)<self.val(iTrack2):
+            fillet=iGap2
+        else:
+            fillet=iTrack2
+        #track.fillet(fillet-eps,[4,7])
+        
+        self.trackObjects.append(track)
+        
+        if is_mesh is True:
+            if not self.is_litho:
+                self.modeler.assign_mesh_length(track,iTrack2/2)
+        
+        
+        portOut1 = [self.coor([iTrack1/2+iGap1, 0]), self.coor_vec([1,0]), iTrack2+2*self.overdev, iGap2-2*self.overdev]
+        self.ports[self.name+'_1'] = portOut1
+        portOut2 = [self.coor([-(iTrack1/2+iGap1), 0]), self.coor_vec([-1,0]), iTrack2+2*self.overdev, iGap2-2*self.overdev]
+        self.ports[self.name+'_2'] = portOut2
+        portOut3 = [self.coor([0, -(iTrack2/2+iGap2)]), self.coor_vec([0,-1]), iTrack1+2*self.overdev, iGap1-2*self.overdev]
+        self.ports[self.name+'_3'] = portOut3
+        
+    def draw_highZ_ring(self, iTrack, iGap,GapFlux, width, height,Lj, Lsuper, Lshunt, lchain,lsquid, is_pump,Lc=None, is_junction=False, is_top_con=False, is_bot_con=True, is_shunt_to_ground=True, is_squid=True, mode='litho',fillet=None, fine_mesh=False): #for now assume left and right tracks are the same width
+        '''
+        --------top of cutout is at y_ring -track/2 
+
+        '''
+
+        iTrack, iGap,GapFlux, width, height,lchain,lsquid, Lj, Lsuper, Lc = parse_entry((iTrack, iGap,GapFlux, width, height, lchain,lsquid, Lj, Lsuper, Lc))
+        T = iTrack # Track
+        A = width+2*iGap # legnth of halfJRM element left to right
+        B = height+2*iGap # legnth of halfJRM element top to bottom
+        G = iGap # Gap. 
+        X=(A-2*G-3*T)/2 #width of a single ring
+        Y=B-2*G-2*T #height of a single ring
+
+        L = 2.02*lsquid# total length of fake_squid element
+        L2 = lchain# length of superinductor
+
+        Fillet=iGap/5
+        #IJ = (C-L)/2 # Island of metal linking junctions to ground C = L+2*IJ
+
+
+
+        
+        if is_bot_con:
+            raw_points_bottom = [(-A/2,-T/2),(A/2,-T/2),(A/2,T/2),(-A/2,T/2)]
+        else:
+            raw_points_bottom = [(-A/2+G,-T/2),(A/2-G,-T/2),(A/2-G,T/2),(-A/2+G,T/2)]
+        raw_points_top=[(-X-3*T/2,Y+T/2),(X+3*T/2,Y+T/2),(X+3*T/2,Y+3*T/2),(-X-3*T/2,Y+3*T/2)]
+        raw_points_left1=[(-X-3*T/2,T/2),(-X-T/2,T/2),(-X-T/2,T/2+(Y-L)/2),(-X-3*T/2,T/2+(Y-L)/2)]
+        raw_points_left2=self.move_points(raw_points_left1, [0, L+(Y-L)/2], absolute=True)
+        raw_points_right1 = self.refy_points(raw_points_left1, absolute=True)
+        raw_points_right2 = self.refy_points(raw_points_left2, absolute=True)
+        raw_points_central_bottom = [(-T/2, T/2),(T/2, T/2),(T/2, T/2+(Y-L2)/2),(-T/2, T/2+(Y-L2)/2)]
+        raw_points_central_top = self.move_points(raw_points_central_bottom, [0, L2+(Y-L2)/2], absolute=True)
+        #raw_points_squid_left1 = [(-A/2,-T/2),(-A/2+E,-T/2),(-A/2+E,T/2),(-A/2,T/2)]
+
+
+
+
+        island_bottom = self.draw(self.name+"bottom", self.append_absolute_points(raw_points_bottom))
+        island_top = self.draw(self.name+"top", self.append_absolute_points(raw_points_top))
+        island_left1 = self.draw(self.name+"left1", self.append_absolute_points(raw_points_left1))
+        island_right1 = self.draw(self.name+"right1", self.append_absolute_points(raw_points_right1))
+        island_left2 = self.draw(self.name+"left2", self.append_absolute_points(raw_points_left2))
+        island_right2 = self.draw(self.name+"right2", self.append_absolute_points(raw_points_right2))
+        island_central_bottom = self.draw(self.name+"central_bottom", self.append_absolute_points(raw_points_central_bottom))
+        island_central_top = self.draw(self.name+"central_top", self.append_absolute_points(raw_points_central_top))
+        
+        
+        if is_top_con:
+            raw_points_connector_top = [(-T/2, 3*T/2+Y),(T/2, 3*T/2+Y),(T/2, B-T/2),(-T/2, B-T/2)]
+            island_connector_top = self.draw(self.name+"connector_top", self.append_absolute_points(raw_points_connector_top))
+        
+        
+        if not self.is_litho:
+
+            array_Lsuper = self.draw_rect(self.name+"_Lsuper", self.coor([-T/2,T/2+(Y-L2)/2]), self.coor_vec([ T,L2]))
+            self.assign_lumped_RLC(array_Lsuper, [0,1], (0, Lsuper, 0))
+            pointssuper = [(0,(Y-L2)/2+T/2),(0,(Y+L2)/2+T/2)]
+            self.draw(self.name+'_eq_linesuper', self.append_absolute_points(pointssuper), closed=False)
+            
+            if is_squid:
+                if is_pump:
+                    direction='up'
+                else:
+                    direction=None
+                self.key_elt('squid1', self.coor([-X-T,Y/2+T/2]), [0,1])
+                self.squid1.draw_fake_squid(iTrack=T, iGap=lsquid/2+T/4, squid_size=[lsquid,lsquid], iTrackPump='10um', iGapPump='25um',typePump=direction,is_junction=is_junction)
+                self.key_elt('squid2', self.coor([X+T,Y/2+T/2]), [0,1])
+                self.squid2.draw_fake_squid(iTrack=T, iGap=lsquid/2+T/4, squid_size=[lsquid,lsquid], iTrackPump='10um', iGapPump='25um',typePump=None,is_junction=is_junction)
+                 
+                
+            if is_junction:
+                array_LJ1 = self.draw_rect(self.name+"_LJ1", self.coor([-X-3*T/2,T/2+(Y-L)/2]), self.coor_vec([ T,L]))
+                array_LJ2 = self.draw_rect(self.name+"_LJ2", self.coor([X+T/2,T/2+(Y-L)/2]), self.coor_vec([ T,L]))
+                self.assign_lumped_RLC(array_LJ1, [0,1], (0, Lj, 0))
+                self.assign_lumped_RLC(array_LJ2, [0,1], (0, Lj, 0))
+                pointsJ1 = [(-T-X,T/2+(Y-L)/2),(-T-X,T/2+(Y+L)/2)]
+                pointsJ2 = [(T+X,T/2+(Y-L)/2),(T+X,T/2+(Y+L)/2)]
+                self.draw(self.name+'_eq_lineJ1', self.append_absolute_points(pointsJ1), closed=False)
+                self.draw(self.name+'_eq_lineJ2', self.append_absolute_points(pointsJ2), closed=False)
+  
+            if is_shunt_to_ground:
+                array_Lshunt = self.draw_rect(self.name+"_Lshunt", self.coor([-T/2,-T/2-G]), self.coor_vec([ T,G]))
+                self.assign_lumped_RLC(array_Lshunt, [0,1], (0, Lshunt, 0))
+                pointsshunt = [(0,-T/2-G),(0,-T/2)]
+                self.draw(self.name+'_eq_lineshunt', self.append_absolute_points(pointsshunt), closed=False)
+     
+
+
+        
+        if is_top_con:
+            connect = self.unite([island_bottom,
+                                  island_top,island_left1,island_right1,island_left2,
+                                  island_right2,island_connector_top,island_central_bottom,
+                                  island_central_top])
+        else:
+            connect = self.unite([island_bottom,
+                                  island_top,island_left1,island_right1,island_left2,
+                                  island_right2,island_central_bottom,
+                                  island_central_top])            
+        if Lc is not None:
+            gapLc1=self.draw_rect(self.name+"_Lc1", self.coor([-X/2-T/2,-T/2]), self.coor_vec([T, T]))
+            gapLc2=self.draw_rect(self.name+"_Lc2", self.coor([X/2-T/2,-T/2]), self.coor_vec([T, T]))
+
+            connect=self.subtract(connect,[gapLc1,gapLc2]) 
+            
+            gapLc1=self.draw_rect(self.name+"_Lc1", self.coor([-X/2-T/2,-T/2]), self.coor_vec([T, T]))
+            gapLc2=self.draw_rect(self.name+"_Lc2", self.coor([X/2-T/2,-T/2]), self.coor_vec([T, T]))
+
+            self.assign_lumped_RLC(gapLc1, [1,0], (0, Lc, 0))
+            self.assign_lumped_RLC(gapLc2, [1,0], (0, Lc, 0))
+        self.trackObjects.append(connect)
+
+
+
+        if fillet is not None:
+            
+            connect.fillet(Fillet,[32,31,26,25,24,19,18,16,11,10,9,4,3,0])
+
+        gap = self.draw_rect(self.name+"_cutout", self.coor([-A/2,-T/2-G]), self.coor_vec([A, B]))
+        self.gapObjects.append(gap)
+
+#        if self.is_mask:
+#            mask = self.draw_rect(self.name+"_mask", self.coor([-all_length/2,-iTrack/2-iGap-self.gap_mask]), self.coor_vec([all_length, iTrack+2*iGap+2*self.gap_mask]))
+#            self.maskObjects.append(mask)
+        
+        if not self.is_litho:
+            #self.draw(self.name+"_mesh", points)
+            #self.modeler.assign_mesh_length(self.name+"_mesh",1/2*T)  
+            print('meshing')
+            self.draw_rect(self.name+"_mesh", self.coor([-A/2,-T/2-G]), self.coor_vec([A, B]))
+            if fine_mesh:
+                self.modeler.assign_mesh_length(self.name+"_mesh",T) 
+            else:
+                self.modeler.assign_mesh_length(self.name+"_mesh",4*T)  
+            
+        portT = [self.coor([0, B-T/2]), self.coor_vec([0,1]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portL = [self.coor([-A/2,0]), self.coor_vec([-1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        portR = [self.coor([A/2,0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
+        self.ports[self.name+'_T'] = portT
+        self.ports[self.name+'_L'] = portL
+        self.ports[self.name+'_R'] = portR
+
         
 class ConnectElt(KeyElt, Circuit):
     
@@ -8047,3 +8405,7 @@ class ConnectElt(KeyElt, Circuit):
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
             
         return pads
+    
+    
+    
+    
