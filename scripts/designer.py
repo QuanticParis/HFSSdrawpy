@@ -380,7 +380,6 @@ class Circuit(object):
             iObj = iObjs[0]
         return iObj
     
-    
     def intersect(self, iObjs, keep_originals=False):
         '''
         Performs the intersection of the elements of iObjects
@@ -8923,6 +8922,13 @@ class ConnectElt(KeyElt, Circuit):
         masks = []
         port_names = [self.iIn]+all_constrains+[self.iOut]
         print(port_names)
+        
+        flat_list = [item for sublist in to_meanders for item in sublist]
+        nb_meander=0
+        for j in flat_list:
+            if j!=0:
+                nb_meander+=j
+                
         for ii in range(len(constrains)+1):
             to_meander = to_meanders[ii]
             if isinstance(meander_length, (list, np.ndarray)):
@@ -9013,6 +9019,7 @@ class ConnectElt(KeyElt, Circuit):
             print('{0}_length = {1:.3f} mm'.format(self.name, length*1000))
         print('sum = %.3f mm'%(1000*np.sum(cable_length)))
         
+        return np.sum(cable_length), nb_meander
         
     def draw_slanted_cable(self, fillet=None, is_bond=False, is_mesh=False, constrains=[], reverse_adaptor=False, layer=None):
         '''
@@ -9140,127 +9147,6 @@ class ConnectElt(KeyElt, Circuit):
         if is_mesh is True:
             if not self.is_litho:
                 self.modeler.assign_mesh_length(track,2*self.inTrack)
-            
-        print('{0}_length = {1:.3f} mm'.format(self.name, cable_length*1000))
-        return cable_length,nb_meander
-        
-    def draw_slanted_cable(self, fillet=None, is_bond=True, is_mesh=False, constrains=[], reverse_adaptor=False):
-        '''
-        Draws a CPW transmission line between iIn and iOut
-
-        if iIn and iOut are facing eachother, and offset,
-        draws a transmission line with two elbows half-way in between.
-
-        if iIn and iOut are perpendicular,
-        draws a transmission line with one elbow.
-
-        if iIn and iOut do not have the same track/ gap size, this function calls
-        drawAdaptor before iOut.
-
-        N.B: do not separate the two ports by their track or gap size.
-
-        Inputs:
-        -------
-        name: (string) base-name of object, draws 'name_adaptor' etc
-        iIn: (tuple) input port
-        iOut: (tuple) output port
-        iMaxfillet: (float), maximum fillet radius
-
-        '''
-        if fillet is not None:
-            fillet =parse_entry(fillet)
-#        inPos, inOri = Vector(iIn[POS]), Vector(iIn[ORI])
-#        outPos, outOri = Vector(iOut[POS]), Vector(iOut[ORI])
-#        _, _, track, gap = iIn
-        self.to_bond=[]
-        adaptor_length=0
-        track_adaptor = None
-        if (not equal_float(self.val(self.inTrack), self.val(self.outTrack))) or (not equal_float(self.val(self.inGap), self.val(self.outGap))):
-            if reverse_adaptor:
-                if self.val(self.inTrack+self.inGap) > self.val(self.outTrack+self.outGap):
-                    adaptor = ConnectElt(self.name+'_adaptor', self.iIn, [self.outTrack, self.outGap])
-                    iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                    self.__init__(self.name, iIn, self.iOut)
-                else:
-                    adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.inTrack, self.inGap])
-                    iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                    self.__init__(self.name, self.iIn, iOut)
-            else:
-                if self.val(self.inTrack+self.inGap) > self.val(self.outTrack+self.outGap):
-                    adaptor = ConnectElt(self.name+'_adaptor', self.iOut, [self.inTrack, self.inGap])
-                    iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                    self.__init__(self.name, self.iIn, iOut)
-                else:
-                    adaptor = ConnectElt(self.name+'_adaptor', self.iIn, [self.outTrack, self.outGap])
-                    iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = adaptor.draw_adaptor()
-                    self.__init__(self.name, iIn, self.iOut)
-  
-        
-        
-        tracks = []
-        gaps = []
-        masks = []
-        to_add = ''
-        
-        points, calc_fillet = self.find_slanted_path()
-        if fillet is None:
-            fillet = calc_fillet
-        connection = self.draw(self.name+'_track', points, closed=False)
-# TODO Implement cable_lenght calculation for slanted cable
-#        cable_length = self.length(points, 0, len(points)-1, fillet)+self.val(adaptor_length)#        print('{0}_length = {1:.3f} mm'.format(self.name, cable_length*1000))
-        connection.fillets(fillet-eps)
-
-        connection_gap = connection.copy(self.name+"_gap")
-
-        track_starter = self.cable_starter('track')
-        gap_starter = self.cable_starter('gap')
-    
-        if self.is_mask:
-            connection_mask = connection.copy(self.name+"_mask"+to_add)
-            mask_starter = self.cable_starter('mask')
-            masks.append(connection_mask.sweep_along_path(mask_starter))
-
-        tracks.append(connection.sweep_along_path(track_starter))
-        gaps.append(connection_gap.sweep_along_path(gap_starter))
-
-        
-        if is_bond:
-            self.draw_bond((self.inTrack+self.inGap*2)*1.5)
-        
-        if track_adaptor is not None:
-            self.trackObjects.pop()
-            self.gapObjects.pop()
-            tracks = [*tracks, track_adaptor]
-            gaps = [*gaps, gap_adaptor]
-            if self.is_mask:
-                self.maskObjects.pop()
-                masks = [*masks, mask_adaptor]
-                
-        if len(tracks)>1:
-            print(tracks)
-            names = [self.name+'_track', self.name+'_gap', self.name+'_mask']
-            if track_adaptor is not None:
-                names = [self.name+'_track_1', self.name+'_gap_1', self.name+'_mask_1']
-            track = self.unite(tracks, names[0])
-            self.trackObjects.append(track)
-            gap = self.unite(gaps, names[1])
-            self.gapObjects.append(gap)
-            if self.is_mask:
-                mask = self.unite(masks, names[2])
-                self.maskObjects.append(mask)
-        else:
-            track = tracks[0]
-            gap = gaps[0]
-            self.trackObjects.append(track)
-            self.gapObjects.append(gap)
-            if self.is_mask:
-                self.maskObjects.append(*masks)
-                
-        if is_mesh is True:
-            if not self.is_litho:
-                self.modeler.assign_mesh_length(track,2*self.inTrack)
-            
-
 
 
     def draw_bond(self, width, min_dist='0.5mm'):
