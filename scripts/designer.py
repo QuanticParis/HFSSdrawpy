@@ -854,8 +854,6 @@ class Circuit(object):
         return gapObject
 
 class KeyElt(Circuit):
-    
-    trackObjects, gapObjects, bondwireObjects, maskObjects = [], [], [], []
 
     pcb_track = parse_entry('300um')
     pcb_gap = parse_entry('200um')
