@@ -1164,6 +1164,46 @@ class HfssModeler(COMWrapper):
         		"TranslateVectorY:="	, vector[1],
         		"TranslateVectorZ:="	, vector[2]]
         )
+    
+    def relative_CS(self, position, name):
+        self._modeler.CreateRelativeCS(
+	[
+		"NAME:RelativeCSParameters",
+		"Mode:="		, "Axis/Position",
+		"OriginX:="		, position[0],
+		"OriginY:="		, position[1],
+		"OriginZ:="		, position[2],
+		"XAxisXvec:="		, "1mm",
+		"XAxisYvec:="		, "0mm",
+		"XAxisZvec:="		, "0mm",
+		"YAxisXvec:="		, "0mm",
+		"YAxisYvec:="		, "1mm",
+		"YAxisZvec:="		, "0mm"
+	], 
+	[
+		"NAME:Attributes",
+		"Name:="		, name
+	])
+        
+    def set_working_CS(self, name):
+        self._modeler.SetWCS(
+	[
+		"NAME:SetWCS Parameter",
+		"Working Coordinate System:=", name,
+		"RegionDepCSOk:="	, False
+	])
+        
+    def rotation(self, name, angle):
+        self._modeler.Rotate([
+		"NAME:Selections",
+		"Selections:="		, name,
+		"NewPartsModelFlag:="	, "Model"
+	], 
+	[
+		"NAME:RotateParameters",
+		"RotateAxis:="		, "Z",
+		"RotateAngle:="		, angle+"deg"
+	])
 
 
     def separate_bodies(self, name):
