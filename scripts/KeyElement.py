@@ -109,7 +109,7 @@ def create_dc_port(self, name, layer, cut, rel_pos, wid):
 
 @register_method
 @move
-def draw_connector(self, name, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=None, pcbGap=None, tr_line=True):
+def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iSlope=1, tr_line=True):
     '''
     Draws a CPW connector for inputs and outputs.
 
@@ -136,63 +136,55 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, iSlope=1, pcbTrack=Non
     returns created entities with formalism [Port], [ModelEntiy]
     '''
     
-    iTrack, iGap = parse_entry((iTrack, iGap))
+    iTrack, iGap, pcb_gap, pcb_track = parse_entry((iTrack, iGap, pcb_gap, pcb_track))
     iBondLength, iSlope = parse_entry((iBondLength, iSlope))
-    
-    if pcbGap is not None:
-        pcbGap = parse_entry(pcbGap)
-        self.pcb_gap = pcbGap
         
-    if pcbTrack is not None:
-        pcbTrack = parse_entry(pcbTrack)
-        self.pcb_track = pcbTrack
-        
-    adaptDist = (self.pcb_track/2-iTrack/2)/iSlope
+    adaptDist = (pcb_track/2-iTrack/2)/iSlope
 
-    portOut = self.port(name+'iOut', [adaptDist+self.pcb_gap+iBondLength,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
+    portOut = self.port(name+'iOut', [adaptDist+pcb_gap+iBondLength,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
     
-    points = [(self.pcb_gap-self.overdev, self.pcb_track/2+self.overdev),
-              (self.pcb_gap+iBondLength, self.pcb_track/2+self.overdev),
-              (self.pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2),
-              (self.pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev),
-              (self.pcb_gap+iBondLength, -self.pcb_track/2-self.overdev),
-              (self.pcb_gap-self.overdev, -self.pcb_track/2-self.overdev)]
+    points = [(pcb_gap-self.overdev, pcb_track/2+self.overdev),
+              (pcb_gap+iBondLength, pcb_track/2+self.overdev),
+              (pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2),
+              (pcb_gap+iBondLength+adaptDist, -iTrack/2-self.overdev),
+              (pcb_gap+iBondLength, -pcb_track/2-self.overdev),
+              (pcb_gap-self.overdev, -pcb_track/2-self.overdev)]
 
     track = self.polyline_2D(points, name=name+'_track', layer=layer_TRACK)
 #        self.trackObjects.append(self.draw(points, ))
    
-    points = [(self.pcb_gap/2+self.overdev, self.pcb_gap+self.pcb_track/2-self.overdev),
-             (self.pcb_gap+iBondLength, self.pcb_gap+self.pcb_track/2-self.overdev),
-             (self.pcb_gap+iBondLength+adaptDist, iGap+iTrack/2-self.overdev),
-             (self.pcb_gap+iBondLength+adaptDist, -iGap-iTrack/2+self.overdev),
-             (self.pcb_gap+iBondLength, -self.pcb_gap-self.pcb_track/2+self.overdev),
-             (self.pcb_gap/2+self.overdev, -self.pcb_gap-self.pcb_track/2+self.overdev)]
+    points = [(pcb_gap/2+self.overdev, pcb_gap+pcb_track/2-self.overdev),
+             (pcb_gap+iBondLength, pcb_gap+pcb_track/2-self.overdev),
+             (pcb_gap+iBondLength+adaptDist, iGap+iTrack/2-self.overdev),
+             (pcb_gap+iBondLength+adaptDist, -iGap-iTrack/2+self.overdev),
+             (pcb_gap+iBondLength, -pcb_gap-pcb_track/2+self.overdev),
+             (pcb_gap/2+self.overdev, -pcb_gap-pcb_track/2+self.overdev)]
 
     gap = self.polyline_2D(points, name=name+'_gap', layer=layer_GAP)
 #        self.gapObjects.append(self.draw(name+"_gap", points))
     mask = None
     if self.is_mask:
-        points =[(self.pcb_gap/2-self.gap_mask, self.pcb_gap+self.pcb_track/2+self.gap_mask),
-                 (self.pcb_gap+iBondLength, self.pcb_gap+self.pcb_track/2+self.gap_mask),
-                 (self.pcb_gap+iBondLength+adaptDist, iGap+iTrack/2+self.gap_mask),
-                 (self.pcb_gap+iBondLength+adaptDist, -iGap-self.gap_mask),
-                 (self.pcb_gap+iBondLength, (self.pcb_gap)+(iTrack-self.pcb_track)*0.5-self.gap_mask),
-                 (self.pcb_gap/2-self.gap_mask, (self.pcb_gap)+(iTrack-self.pcb_track)*0.5-self.gap_mask)]
+        points =[(pcb_gap/2-self.gap_mask, pcb_gap+pcb_track/2+self.gap_mask),
+                 (pcb_gap+iBondLength, pcb_gap+pcb_track/2+self.gap_mask),
+                 (pcb_gap+iBondLength+adaptDist, iGap+iTrack/2+self.gap_mask),
+                 (pcb_gap+iBondLength+adaptDist, -iGap-self.gap_mask),
+                 (pcb_gap+iBondLength, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask),
+                 (pcb_gap/2-self.gap_mask, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask)]
         
         mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
 
         self.maskObjects.append(mask)  
         
 #        if not self.is_litho and tr_line:
-#            points = self.append_points([(self.pcb_gap/2+self.overdev, self.pcb_track/2+self.overdev),
-#                                         (self.pcb_gap/2-2*self.overdev, 0),
-#                                         (0, -self.pcb_track-2*self.overdev),
-#                                         (-self.pcb_gap/2+2*self.overdev, 0)])
+#            points = self.append_points([(pcb_gap/2+self.overdev, pcb_track/2+self.overdev),
+#                                         (pcb_gap/2-2*self.overdev, 0),
+#                                         (0, -pcb_track-2*self.overdev),
+#                                         (-pcb_gap/2+2*self.overdev, 0)])
 #            ohm = self.draw(points, name=name+'_ohm')
 #            self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
-#            self.modeler.assign_mesh_length(ohm, self.pcb_track/10)
+#            self.modeler.assign_mesh_length(ohm, pcb_track/10)
 ##            self.trackObjects.append(ohm)
-#            points = self.append_points([(self.pcb_gap/2+self.overdev,0),(self.pcb_gap/2-2*self.overdev,0)])
+#            points = self.append_points([(pcb_gap/2+self.overdev,0),(pcb_gap/2-2*self.overdev,0)])
 #            self.draw(name+'_line', points, closed=False)
         
     return [portOut], [track, gap, mask]
@@ -604,7 +596,7 @@ def draw_selfparity(self,
         mesh = self.rect_center_2D([0,0], cutout_size, name=name+"_mesh", layer=layer_MESH)
         self.mesh_zone(mesh, '4um')
     if self.is_mask:
-        mask = self.rect_center_2D([0,0], cutout_size+2*Vector([self.gap_mask,self.gap_mask]) ,name=name+'_mask', layer=layer_MASK)
+        mask = self.rect_center_2D([0,0], cutout_size+2*Vector([self.gap_mask,self.gap_mask]), name=name+'_mask', layer=layer_MASK)
         self.maskObjects.append(mask)
     self.gapObjects.append(cutout)
     

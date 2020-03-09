@@ -99,8 +99,6 @@ class PythonMdlr():
     is_overdev = False
     is_litho = False
     is_mask = False
-    pcb_track = parse_entry('300um')
-    pcb_gap = parse_entry('200um')
     gap_mask = parse_entry('20um')
     overdev = parse_entry('0um')
 
@@ -286,9 +284,15 @@ class PythonMdlr():
             self.interface._fillet(radius, vertex_index, entity)
         except Exception:
             print("Fillet operation resulted in an error")
-    def _fillets(self, radius, entity):
+            
+    def _fillets(self, radius, entity, kind='open'):
+        print(self)
+        print(type(entity))
         vertices = self.interface.get_vertex_ids(entity)
-        self.interface._fillets(radius, vertices, entity)
+        if entity.dimension==1:
+            self.interface._fillets(radius, vertices[1:-1], entity)
+        elif entity.dimension==2:
+            self.interface._fillets(radius, entity)
 
     def generate_gds(self, name_file):
         '''Only for gds modeler'''
@@ -339,6 +343,11 @@ class PythonMdlr():
     
     @set_active_coor_system
     def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
+#        try:
+#            print(kwargs['name'])
+#        except:
+#            pass
+#        
         kwargs['coor_sys']=self.coor_sys
         i = 0
         while i < len(points[:-1]):
@@ -575,7 +584,7 @@ class Network(PythonMdlr):
 #        self.__class__.variables = variables
     
             
-    def update(self,coor_sys):
+    def update(self, coor_sys):
         self.coor_sys = coor_sys
 
     
@@ -762,7 +771,7 @@ class Body(PythonMdlr):
             elif compteur==2:
                 args[0].set_current_coor(1/2*(new_args[2].pos+new_args[3].pos), new_args[2].ori)
             new_args = tuple(new_args)
-            return KeyElement._moved(func,previous_pos, previous_ori,*new_args, **kwargs)
+            return KeyElement._moved(func, previous_pos, previous_ori,*new_args, **kwargs)
         return moved  
     
     def port(self, name, pos, ori, track, gap):
@@ -774,10 +783,11 @@ class Body(PythonMdlr):
         return self.network.port(name, pos, ori, track, gap)
     
     def double_port(self, name, pos, ori, track, gap):
-        port1 = self.port( name+'_front', pos, ori, track, gap)
-        port2 = self.port( name+'_back', pos, -Vector(ori), track, gap)
+        port1 = self.port(name+'_front', pos, ori, track, gap)
+        port2 = self.port(name+'_back', pos, -Vector(ori), track, gap)
         return port1, port2
-    @staticmethod    
+    
+    @staticmethod
     def number_ports():
         return len(Port.instances_to_move)
     
@@ -1001,7 +1011,7 @@ class Body(PythonMdlr):
             
             '''
             #TODO change the format of the arguments
-            meander_length, meander_offset=parse_entry((meander_length, meander_offset))
+            meander_length, meander_offset, fillet =parse_entry((meander_length, meander_offset, fillet))
 
             self.to_bond=[]
             adaptor_length=0
@@ -1010,7 +1020,6 @@ class Body(PythonMdlr):
             outTrack = self.variables[ports[-1].track]
             inGap = self.variables[ports[0].gap]
             outGap = self.variables[ports[-1].gap]
-            fillet = self.variables[fillet]
             
             if (not equal_float(inTrack, outTrack)) or (not equal_float(inGap, outGap)):
                 if reverse_adaptor:
@@ -1065,8 +1074,8 @@ class Body(PythonMdlr):
                 connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = layer_Default)
                 self._fillets(fillet-eps, connection_gap)
 #                self.set_current_coor([0,0], [0, -1])
-                track_starter = self.polyline_2D([[-ports[2*ii].track,0],[ports[2*ii].track,0]], name = name+'start_gap', layer = 0)
-                gap_starter = self.polyline_2D([[-ports[2*ii].gap,0],[ports[2*ii].gap,0]], name = name+'start_track', layer = 1)
+                track_starter = self.polyline_2D([[-ports[2*ii].track/2,0],[ports[2*ii].track/2,0]], closed=False, name = name+'start_gap', layer = layer_Default)
+                gap_starter = self.polyline_2D([[-ports[2*ii].gap,0],[ports[2*ii].gap,0]], closed=False, name = name+'start_track', layer = layer_Default)
                 
                 if self.is_mask:
                     connection_mask = self.polyline_2D(points, name=name+'_mask'+to_add, closed=False ,layer = layer_MASK)
@@ -1074,7 +1083,8 @@ class Body(PythonMdlr):
                     mask_starter = self.cable_starter(name, ports[2*ii].name)
                     mask = self._sweep_along_path(mask_starter, connection_mask)
 #                    masks.append(connection_mask.sweep_along_path(mask_starter))
-        
+                
+                raise Exception
                 track = self._sweep_along_path(track_starter, connection_track)
                 tracks.append(track)
                 gap = self._sweep_along_path(gap_starter, connection_gap)

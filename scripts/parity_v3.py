@@ -17,19 +17,19 @@ Changes from v2 to v3:
   
 
 import scripts
-PM = scripts.PythonMdlr('gds')
+PM = scripts.PythonMdlr('hfss')
 from scripts.hfss import parse_entry as parse_entry
 from scripts.Vector import Vector as Vector
-chip1 = PM.body('chip1', 'Global')
+chip1 = PM.body('chip1', 'Global') # create a chip
 
 # use litho for optical
 # use litho + mask for ground plane mesh
 # use litho + ebeam for ebeam
 # use nothing for hfss
 
-litho = True
+litho = False
 mask = False
-ebeam = True
+ebeam = False
 
 if litho:
     is_bond = False
@@ -52,20 +52,17 @@ flux_lines = True
 
 #### Standard dimensions
 
-#TODO
-chip_thickness = "12mm" # 6*PM.chip_thickness
-
-PM.set_variable("chip_width", "8.67mm")
-PM.set_variable("chip_length", "8.12mm")
-PM.set_variable("chip_thickness", "280um")
-PM.set_variable("pcb_thickness", "320um")
-PM.set_variable('vaccuum_thickness', chip_thickness)
+PM.set_variable('chip_width', '8.67mm')
+PM.set_variable('chip_length', '8.12mm')
+PM.set_variable('chip_thickness', '280um')
+PM.set_variable('pcb_thickness', '320um')
+PM.set_variable('vaccuum_thickness', 6*PM.chip_thickness)
 
 #### Connectors
 
 con1, con2, con3, con4, con5 = '4.06mm', '3.01mm', '7.54mm', '3.01mm', '6.36mm'
-PM.pcb_track, PM.pcb_gap = parse_entry('300um'), parse_entry('200um')
-bond_length, bond_slope = '200um', '0.5'
+
+bond_length, bond_slope, pcb_track, pcb_gap = '200um', '0.5', '300um', '200um'
 PM.set_variable('track', '42um')
 PM.set_variable('gap', '25um')
 PM.set_variable('track_mem', '10um')
@@ -77,15 +74,15 @@ PM.set_variable('fillet', '200um')
 #print([(k.name, k.ori) for k in PythonModeler.Port.dict_instances.values()])
  
 chip1.set_current_coor([con2, PM.chip_length], [0, -1])
-chip1.draw_connector(chip1.name+'in_flux_top', PM.track, PM.gap, bond_length, bond_slope)
+chip1.draw_connector(chip1.name+'in_flux_top', PM.track, PM.gap, bond_length, pcb_track, pcb_gap, bond_slope)
 chip1.set_current_coor([0, con1], [1, 0])
-chip1.draw_connector(chip1.name+'in_readout', PM.track, PM.gap, bond_length, bond_slope)
+chip1.draw_connector(chip1.name+'in_readout', PM.track, PM.gap, bond_length, pcb_track, pcb_gap, bond_slope)
 chip1.set_current_coor([con5, 0], [0, 1])
-chip1.draw_connector(chip1.name+'in_mem', PM.track, PM.gap, bond_length, bond_slope)
+chip1.draw_connector(chip1.name+'in_mem', PM.track, PM.gap, bond_length, pcb_track, pcb_gap, bond_slope)
 chip1.set_current_coor([con4, 0], [0, 1])
-chip1.draw_connector(chip1.name+'in_unused', PM.track, PM.gap, bond_length, bond_slope)
+chip1.draw_connector(chip1.name+'in_unused', PM.track, PM.gap, bond_length, pcb_track, pcb_gap, bond_slope)
 chip1.set_current_coor([con3, PM.chip_length], [0, -1])
-chip1.draw_connector(chip1.name+'in_other_flux', PM.track, PM.gap, bond_length, bond_slope)
+chip1.draw_connector(chip1.name+'in_other_flux', PM.track, PM.gap, bond_length, pcb_track, pcb_gap, bond_slope)
 #print([(k.name, k.ori) for k in PythonModeler.Port.dict_instances.values()])
 #PM.set_variable('gap_capa_readout', '8um')
 #chip1.set_current_coor(['0.9mm', con1], [1,0])
@@ -167,7 +164,7 @@ if parity:
                 #                                  spacing_bridge='1.047um')
 
 if memory and parity:
-    chip1.draw_cable('mem', 'parity_portOut1', 'trm_portOut1', is_bond=is_bond, fillet=PM.fillet, is_mesh=True)
+    chip1.draw_cable('mem', 'parity_portOut1', 'trm_portOut1', is_bond=is_bond, fillet='200um', is_mesh=True)
     
 if flux_lines:
     PM.set_variable('approach', '40um')
@@ -193,7 +190,7 @@ if drive_mem:
     chip1.set_current_coor([con5, PM.y_I - 0.5*PM.cutout_depth - 0.5*PM.len_capa_drive], [0,1])
     chip1.draw_capa_inline('capa_drive', PM.track, PM.gap, PM.len_capa_drive, 0.5*(PM.track - 3*PM.track_mem), n_pad=3)
     
-    chip1.draw_cable('chip1in_flux_topiOut', 'chip1in_memiOut', 'capa_drive_outPort2', is_bond=is_bond)
+#    chip1.draw_cable('chip1in_flux_topiOut', 'chip1in_memiOut', 'capa_drive_outPort2', is_bond=is_bond)
 
 if not(readout):
     PM.set_variable('gap_capa_readout', '8um')
@@ -207,9 +204,13 @@ if not(readout):
 #    chip1.draw_cable('readout', 'trm_portOut2','constrain_readout1_front', 'constrain_readout1_back','constrain_readout2_front', 'constrain_readout2_back', 'capa_readout_outPort1', is_bond=is_bond, fillet=PM.fillet)
     chip1.draw_cable('bef_capa', 'capa_readout_outPort2', chip1.name+'in_readoutiOut', is_bond=is_bond, fillet=PM.fillet)
 #
+#gdspy.write_gds('test.gds', unit=1.0, precision=1e-9)
+    
+#gdspy.write_gds('test.gds', unit=1.0, precision=1e-9)
+PM.interface.generate_gds('test_parity.gds')
 
 #%%
-PM.interface.generate_gds("test_parity.gds")
+
 #### Test junctions
 #
 #if litho and 1:

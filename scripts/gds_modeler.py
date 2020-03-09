@@ -55,8 +55,9 @@ class GdsModeler():
         self.gds_object_instances[name] = new_polygon
     
     def generate_gds(self,name_file):
-        writer = gdspy.GdsWriter(name_file)
-        writer.write_cell(self.cell)
+        gdspy.write_gds(name_file, unit=1.0, precision=1e-9)
+#        writer = 
+#        writer.write_cell(self.cell)
 
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
