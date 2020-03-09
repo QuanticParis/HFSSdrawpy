@@ -1074,7 +1074,7 @@ class Body(PythonMdlr):
                 connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = layer_Default)
                 self._fillets(fillet-eps, connection_gap)
 #                self.set_current_coor([0,0], [0, -1])
-                track_starter = self.polyline_2D([[-ports[2*ii].track/2,0],[ports[2*ii].track/2,0]], closed=False, name = name+'start_gap', layer = layer_Default)
+                track_starter = self.polyline_2D(points[0]+[[-ports[2*ii].track/2,0],[ports[2*ii].track/2,0]], closed=False, name = name+'start_gap', layer = layer_Default)
                 gap_starter = self.polyline_2D([[-ports[2*ii].gap,0],[ports[2*ii].gap,0]], closed=False, name = name+'start_track', layer = layer_Default)
                 
                 if self.is_mask:
