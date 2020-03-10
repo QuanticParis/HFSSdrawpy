@@ -4723,12 +4723,6 @@ class KeyElt(Circuit):
             self.ports[self.name+'_pump_1'] = portOutpump1
             self.ports[self.name+'_pump_2'] = portOutpump2
             
-    def draw_snail_chain_essential(self, snail_param, Nsquid, dist2ground, Leq='1', draw='edge', litho=True, layer=None, is_pump=None, y_pump='20um'):
-
-        else:
-            portOutpump1 = [self.coor(pos_pump), self.coor_vec(ori_pump), iTrackPump, iGapPump]
-            self.ports[self.name+'_pump'] = portOutpump1
-
 
     def squid2chain(squid_param, Nsquid, dist2ground):
         
@@ -6163,48 +6157,25 @@ class KeyElt(Circuit):
             self.ports[self.name+'_pump'] = portOutpump1
             
             
-    def draw_T(self, iTrack, iGap, iTrack3=None, iGap3=None, is_fillet=False, layer=None):
+    def draw_T(self, iTrack, iGap, is_fillet=False):
         
-        iTrack, iGap, iTrack3, iGap3 = parse_entry((iTrack, iGap, iTrack3, iGap3))
-        if [iTrack3, iGap3] == [None, None]:
-            iTrack3, iGap3 = iTrack, iGap
-        else:
-            if self.get_variable_value(iTrack3) > self.get_variable_value(iTrack):
-                raise(ValueError('the 3rd leg should be thinner'))
-        antenna = max(iGap, iTrack3/2)
-        
-        points = self.append_absolute_points([(-iTrack/2, -iTrack/2),
-                                              ( iTrack/2, -iTrack/2),
-                                              ( iTrack/2,  iTrack/2),
-                                              ( iTrack3/2, iTrack/2),
-                                              ( iTrack3/2, iTrack/2+antenna),
-                                              (-iTrack3/2, iTrack/2+antenna),
-                                              (-iTrack3/2, iTrack/2),
-                                              (-iTrack/2, iTrack/2)])  
-        track = self.draw(self.name+'_track', points)
-        if is_fillet:
-            fillet = min([iTrack, iGap, iTrack3, iGap3])/2
-            track.fillet(fillet-eps,[4,7])
-        
-        points = self.append_absolute_points([(-iTrack/2, -iTrack/2-iGap),
-                                              ( iTrack/2, -iTrack/2-iGap),
-                                              ( iTrack/2,  iTrack/2+antenna),
-                                              (-iTrack/2, iTrack/2+antenna)]) 
-        cutout = self.draw(self.name+'_cutout', points)
-        
-        if layer is None:  
-            self.trackObjects.append(track)
+        if not self.is_overdev or self.val(self.overdev<0):
+            cutout = self.draw_rect_center(self.name+'_cutout', self.coor([0,self.overdev/2]), self.coor_vec([2*iGap+iTrack, 2*iGap+iTrack-self.overdev]))
             self.gapObjects.append(cutout)
         else:
-            self.layers[layer]['trackObjects'].append(track)
-            self.layers[layer]['gapObjects'].append(cutout)
+            points = self.append_points([(-(iGap+iTrack/2),-iTrack/2-iGap+self.overdev),
+                             (0, 2*iGap+iTrack-2*self.overdev),
+                             ((iGap+iTrack/2)*2, 0),
+                             (0, -(2*iGap+iTrack)+2*self.overdev),
+                             (-self.overdev, 0),
+                             (0, -self.overdev), 
+                             (-iTrack-2*iGap+2*self.overdev, 0),
+                             (0, self.overdev)])
+            cutout = self.draw(self.name+'_cutout', points)
+            self.gapObjects.append(cutout)
         
         if self.is_mask:
-            points = self.append_absolute_points([(-iTrack/2, -iTrack/2-2*iGap),
-                                              ( iTrack/2, -iTrack/2-2*iGap),
-                                              ( iTrack/2,  iTrack/2+2*antenna),
-                                              (-iTrack3/2, iTrack/2+2*antenna)]) 
-            mask = self.draw(self.name+'_mask', points)
+            mask = self.draw_rect(self.name+'_mask', self.coor([-iGap-iTrack/2,-iGap-iTrack/2]), self.coor_vec([2*iGap+iTrack, 2*iGap+iTrack+self.gap_mask]))
             self.maskObjects.append(mask)
             
         points = self.append_points([(-(iGap+iTrack/2),-iTrack/2-self.overdev),
@@ -6224,17 +6195,15 @@ class KeyElt(Circuit):
 	            fillet=iTrack
 	        track.fillet(fillet-eps-self.overdev,[4,7])
         
-        if layer is None:    
-            self.trackObjects.append(cutout)
-        else:
+        self.trackObjects.append(track)
         
-        
-        portOut1 = [self.coor([-iTrack/2, 0]), self.coor_vec([-1,0]), iTrack, iGap]
+        portOut1 = [self.coor([iTrack/2+iGap, 0]), self.coor_vec([1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name+'_1'] = portOut1
-        portOut2 = [self.coor([iTrack/2, 0]), self.coor_vec([1, 0]), iTrack, iGap]
+        portOut2 = [self.coor([-(iTrack/2+iGap), 0]), self.coor_vec([-1,0]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name+'_2'] = portOut2
-        portOut3 = [self.coor([0, iTrack/2+antenna]), self.coor_vec([0,1]), iTrack3, iGap3]
+        portOut3 = [self.coor([0, -(iTrack/2+iGap)]), self.coor_vec([0,-1]), iTrack+2*self.overdev, iGap-2*self.overdev]
         self.ports[self.name+'_3'] = portOut3
+
         
 
 
@@ -6884,7 +6853,7 @@ class KeyElt(Circuit):
                 iTrack + 2*self.overdev, iGap - 2*self.overdev]
         self.ports[self.name] = port  
     
-    def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None):
+    def draw_end_cable(self, iTrack, iGap, typeEnd = 'open', fillet=None, layer=None):
         iTrack, iGap = parse_entry((iTrack, iGap))
         if typeEnd=='open' or typeEnd=='Open':
             cutout = self.draw_rect(self.name+'_cutout', self.coor([iGap,-(iTrack+2*iGap)/2+self.overdev]), self.coor_vec([-iGap+self.overdev, iTrack+2*iGap-2*self.overdev]))
