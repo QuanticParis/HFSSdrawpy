@@ -7162,7 +7162,6 @@ class KeyElt(Circuit):
 #        self.ports_dc[self.name+'_2'] = portOut2
         
         
-<<<<<<< HEAD
     def draw_dc_pad(self, iTrack, iGap, xlength='250um', ylength='250um', hfss=False, layer=None, double=False):
         
         iTrack, iGap, xlength, ylength = parse_entry((iTrack, iGap, xlength, ylength))
@@ -7173,16 +7172,6 @@ class KeyElt(Circuit):
             name = self.name
         else:
             name = layer+'_'+self.name
-=======
-    def draw_dc_pad(self, layer_name, iTrack, iGap, xlength='250um', ylength='250um', layer_type='unique'):
-        
-        iTrack, iGap, xlength, ylength = parse_entry((iTrack, iGap, xlength, ylength))
-        
-        if layer_type is 'multiple':
-            name = layer_name+'_'+self.name
-        elif layer_type is 'unique':
-            name = self.name
->>>>>>> 435ba38... designer_modified renamed designer
             
         pad = self.draw_rect('pad',\
                              self.coor([-xlength/2, -ylength/2]),\
@@ -7395,9 +7384,6 @@ class KeyElt(Circuit):
 
         portOut = [self.coor([xlength/2+4*gaps[ii], 0]), self.ori, cutout_list, rel_pos, track_list, mult]
         self.ports_dc[self.name] = portOut
-<<<<<<< HEAD
-      
-    def draw_dc_alignment_marks(self, layer_name, layer63=None):
         
     def draw_ATS_open_lumped(self,iTrack_wire,iGap, buffer_ind_length,ind_T_length,ind_to_ground_length,L_eq_buffer,premesh=True):
         '''
