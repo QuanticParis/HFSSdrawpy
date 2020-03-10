@@ -857,7 +857,7 @@ class KeyElt(Circuit):
 
     pcb_track = parse_entry('300um')
     pcb_gap = parse_entry('200um')
-    is_mask = True
+    is_mask = False
     gap_mask = parse_entry('20um')
     overdev = parse_entry('0um')
     is_overdev = False
@@ -7865,7 +7865,6 @@ class KeyElt(Circuit):
     def draw_highZ_ring(self, iTrack, iGap,GapFlux, width, height,Lj, Lsuper, Lshunt, lchain,lsquid, is_pump,Lc=None, is_junction=False, is_top_con=False, is_bot_con=True, is_shunt_to_ground=True, is_squid=True, mode='litho',fillet=None, fine_mesh=False): #for now assume left and right tracks are the same width
         '''
         --------top of cutout is at y_ring -track/2 
-
         '''
 
         iTrack, iGap,GapFlux, width, height,lchain,lsquid, Lj, Lsuper, Lc = parse_entry((iTrack, iGap,GapFlux, width, height, lchain,lsquid, Lj, Lsuper, Lc))
