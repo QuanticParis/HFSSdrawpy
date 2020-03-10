@@ -857,7 +857,7 @@ class KeyElt(Circuit):
 
     pcb_track = parse_entry('300um')
     pcb_gap = parse_entry('200um')
-    is_mask = False
+    is_mask = True
     gap_mask = parse_entry('20um')
     overdev = parse_entry('0um')
     is_overdev = False
@@ -7426,6 +7426,37 @@ class KeyElt(Circuit):
             #do something
 
     def draw_alignment_marks(self, layer_name, isLayer63=True):
+        
+        w_thin, l_thin, w_large, l_large, square = '0.1um', '4um', '1um', '3um', '12um'
+        w_thin, l_thin, w_large, l_large, square = parse_entry((w_thin, l_thin, w_large, l_large, square))
+        marks = []
+        if layer63 is not None:
+#            self.new_layer('layer63')
+            squares = []
+        count = -1
+        for x0 in ['-42um', '42um']:
+            count += 1
+            for y0 in ['-42um', '42um']:
+                count += 1
+                mark = []
+                x0, y0 = parse_entry((x0, y0))
+                mark.append(self.draw_rect('thin_x', self.coor([x0-l_thin/2, y0-w_thin/2]), self.coor_vec([l_thin, w_thin])))
+                mark.append(self.draw_rect('thin_y', self.coor([x0-w_thin/2, y0-l_thin/2]), self.coor_vec([w_thin, l_thin])))
+                mark.append(self.draw_rect('large_right', self.coor([x0+l_thin/2, y0-w_large/2]), self.coor_vec([l_large, w_large])))
+                mark.append(self.draw_rect('large_left', self.coor([x0-l_thin/2, y0-w_large/2]), self.coor_vec([-l_large, w_large])))
+                mark.append(self.draw_rect('large_top', self.coor([x0-w_large/2, y0+l_thin/2]), self.coor_vec([w_large, l_large])))
+                mark.append(self.draw_rect('large_bot', self.coor([x0-w_large/2, y0-l_thin/2]), self.coor_vec([w_large, -l_large])))
+                mark = self.unite(mark, name=layer_name+'_'+self.name+'_alignement_mark_'+str(count))
+                marks.append(mark)
+                if layer63 is not None:
+                    squares.append(self.draw_rect_center(layer63, self.coor([x0, y0]), self.coor_vec([square, square])))
+                    
+        marks = self.unite(marks, name=layer_name+'_'+self.name+'_alignement_mark')
+        self.layers[layer_name]['trackObjects'].append(marks)
+        if layer63 is not None:
+            squares = self.unite(squares, name=layer63+'_'+self.name)
+            
+    def draw_dc_alignment_marks(self, layer_name, layer63=None):
         
         w_thin, l_thin, w_large, l_large, square = '0.1um', '4um', '1um', '3um', '12um'
         w_thin, l_thin, w_large, l_large, square = parse_entry((w_thin, l_thin, w_large, l_large, square))
