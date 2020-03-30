@@ -699,6 +699,15 @@ class HfssDesign(COMWrapper):
         os.remove(filename)
         return Qs
     
+    def get_source_number(self):
+        return self._solutions.GetEditSourcesCount()
+    
+    def set_source(self, source_id):
+        self._solutions.EditSources([["FieldType:=", "EigenPeakElectricField"],
+                                     ["Name:=", "Modes",
+                                      "Magnitudes:=", ["0" if (i+1)!=source_id else "1" for i in range(self.get_source_number())],
+                                      "Phases:=", ["0deg" for i in range(self.get_source_number())]]])
+    
     
 
 class HfssSetup(HfssPropertyObject):
