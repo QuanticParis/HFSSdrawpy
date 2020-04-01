@@ -1,4 +1,6 @@
 '''
+ASCII: http://asciiflow.com/
+
 TODO
 
 - debug comments
@@ -3933,8 +3935,77 @@ class KeyElt(Circuit):
             portOutpump2 = [self.coor([ref_x+length_chain+x_shift_pump-iGapPump-iTrackPump/2, y_shift_pump+ori_pump*(iTrackPump+dist2ground)]), self.coor_vec(ori_pump_vec), iTrackPump, iGapPump]
             self.ports[self.name+'_pump_1'] = portOutpump1
             self.ports[self.name+'_pump_2'] = portOutpump2             
+     
         
-    def draw_snails(self, iTrack, iGap, array_room, array_offset, iTrackPump,
+    def draw_snails(self, pad_size, pad_spacing,
+                             loop_width, loop_length,
+                             N, length_island,
+                             width_bridge_left, width_bridge_right,
+                             width_jct_left, width_jct_right,
+                             n_left=1, n_right=1,
+                             spacing_bridge_left=None, spacing_bridge_right=None,
+                             yoffset=0, litho='elec', rotspace=None):
+        # rotspace permits a 90 degree rotated version
+        # Width is for different widths on either side of the junction
+        
+        ''' 
+                +----+
+pad_size[1] |   |    | - pas_size[0]
+                +----+
+                  ||
+                 +-|
+                 |-|
+_connect_snails  |-|      | pad_spacing
+                 +-|
+                  ||
+                +----+
+                |    |
+                +----+
+
+        '''
+        
+        pad_size, pad_spacing = parse_entry((pad_size, pad_spacing))
+        loop_width, loop_length, length_island = parse_entry((loop_width, loop_length, length_island))
+        width_bridge_left, width_bridge_right = parse_entry((width_bridge_left, width_bridge_right))
+        width_jct_left, width_jct_right = parse_entry((width_jct_left, width_jct_right))
+        spacing_bridge_left, spacing_bridge_right = parse_entry((spacing_bridge_left, spacing_bridge_right))
+        rotspace = parse_entry((rotspace))
+        pad_size = Vector(pad_size)
+        width = 1.5e-6
+        
+        pads = []
+        if rotspace is None:
+            pads.append(self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2 + pad_size[0]/2, -pad_size[1]/2]), self.coor_vec([-pad_size[0], pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2 - pad_size[0]/2, pad_size[1]/2]), self.coor_vec([pad_size[0], -pad_size[1]])))
+            portOut1 = [self.coor([pad_spacing/2 - pad_size[0]/2, 0]), -self.ori, width, 0]
+            portOut2 = [self.coor([-pad_spacing/2 + pad_size[0]/2, 0]), self.ori, width, 0]
+        else:
+            pads.append(self.draw_rect(self.name+'_left1', self.coor([-pad_size[0]/2, pad_spacing/2]), self.coor_vec([pad_size[0], pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_right1', self.coor([-pad_size[0]/2, -pad_spacing/2]), self.coor_vec([pad_size[0], -pad_size[1]])))
+            pads.append(self.draw_rect(self.name+'_left3', self.coor([-pad_size[0]/2 - width - rotspace, 0.5*pad_spacing]), self.coor_vec([rotspace + width, width])))
+            pads.append(self.draw_rect(self.name+'_left2', self.coor([-pad_size[0]/2 - width - rotspace, 0.5*pad_spacing]), self.coor_vec([width, -0.5*pad_spacing - 0.5*width])))
+            pads.append(self.draw_rect(self.name+'_right2', self.coor([-pad_size[0]/2, -0.5*pad_spacing]), self.coor_vec([width, 0.5*pad_spacing + 0.5*width])))
+            portOut1 = [self.coor([-pad_size[0]/2, 0]), -self.ori, width, 0]
+            portOut2 = [self.coor([-rotspace - pad_size[0]/2, 0]), self.ori, width, 0]
+        
+        self.ports[self.name+'_1'] = portOut1
+        self.ports[self.name+'_2'] = portOut2
+
+        jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
+        
+        jcts._connect_snails(loop_width, loop_length,
+                             N, length_island,
+                             width_bridge_left, width_bridge_right,
+                             width_jct_left, width_jct_right,
+                             n_left=n_left, n_right=n_right,
+                             spacing_bridge_left=spacing_bridge_left,
+                             spacing_bridge_right=spacing_bridge_right,
+                             yoffset=yoffset, litho=litho)
+    
+        return pads
+    
+
+    def draw_snails_flux_line(self, iTrack, iGap, array_room, array_offset, iTrackPump,
                     iGapPump, iTrackSnail=None, fillet=None, N_snails=1,
                     snail_dict={'loop_width':20e-6, 'loop_length':20e-6,
                                 'length_big_junction':10e-6,
@@ -3987,7 +4058,7 @@ class KeyElt(Circuit):
             in_array = [self.coor([array_room/2, array_offset]), -self.ori, iTrackSnail, 0]
             out_array = [self.coor([-array_room/2, array_offset]), self.ori, iTrackSnail, 0]      
             snail_array = self.connect_elt(self.name+'_array', in_array, out_array)
-            snail_track = snail_array._connect_snails_Zaki([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])
+            snail_track = snail_array._connect_snails([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])
         
         if L_eq is not None:
             array_eq = self.draw_rect_center(self.name+"_array_eq", self.coor([0,array_offset]), self.coor_vec([array_room, iTrackSnail]))
@@ -7764,6 +7835,7 @@ class ConnectElt(KeyElt, Circuit):
         self.gapObjects.append(cutout)
         return pads
     
+    # ZL remove
     def _connect_JJ_modified(self, iTrackJ, Jlength, Jwidth, iInduct='1nH', fillet=None):
         '''
         Draws a Josephson Junction.
@@ -7840,147 +7912,113 @@ class ConnectElt(KeyElt, Circuit):
 
         return pads
             
-    def _connect_snails(self, squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge, spacing_bridge, litho='opt'):
+    
+    def _connect_snails(self, loop_width, loop_length,
+                             N, length_island,
+                             width_bridge_left, width_bridge_right,
+                             width_jct_left, width_jct_right,
+                             n_left=1, n_right=1,
+                             spacing_bridge_left=None, spacing_bridge_right=None,
+                             yoffset=0, litho='elec'):
         
-        width_track = self.inTrack # assume both are equal
-        print(width_track)
-        spacing = (self.posOut-self.pos).norm()
-        print(spacing)
-        
-        self.pos = (self.pos+self.posOut)/2
-        
-        width_snail = squid_size[0]+1*width_track #ZL
-        
-        tot_width = width_snail*N
-        if np.abs(self.val(tot_width))>np.abs(self.val(spacing)):
-            raise ValueError("cannot put all snails in given space")
-        
-        overlap=0
-        if litho=='elec':
-            overlap = 5e-6
-        snails = []
-        snails.append(self.draw_rect(self.name+'_pad_left', self.coor([-tot_width/2-width_track/2, -width_track/2]), self.coor_vec([-(spacing-tot_width)/2-overlap+width_track/2,width_track])))
-        snails.append(self.draw_rect(self.name+'_pad_right', self.coor([tot_width/2+width_track/2, -width_track/2]), self.coor_vec([(spacing-tot_width)/2+overlap-width_track/2,width_track])))
-        if N%2==1:
-            x_pos=-(N//2)*width_snail
-        else:
-            x_pos=-(N//2-1/2)*width_snail
-
-        for jj in range(int(N)):
-            snail=[]
-            snail.append(self.draw_rect(self.name+'_left',  self.coor([x_pos-squid_size[0]/2, -width_track/2]), self.coor_vec([-2*width_track/2, squid_size[1]+width_top+width_bot+2*0.1e-6]))) #ZL
-            for width, n, way in [[width_top, n_top, 1], [width_bot, n_bot, -1]]:
-                if n==1:
-                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, -width_track/2]), self.coor_vec([(squid_size[0]-width_bridge)/2, width+2*0.1e-6])))
-                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, -width_track/2+0.1e-6]), self.coor_vec([-(squid_size[0]-width_bridge)/2, width])))
-                    #self.draw_rect(self.name+'_Lj_'+str(jj))
-                if n==3: #TODO
-                    snail.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2, squid_size[1]+width_top+width_bot-width_track/2+2*0.1e-6]), self.coor_vec([(squid_size[0]-2*width_bridge-spacing_bridge)/2, -(squid_size[1]+width_top)])))
-                    snail.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2, squid_size[1]+width_top+width_bot-width_track/2+2*0.1e-6]), self.coor_vec([-(squid_size[0]-2*width_bridge-spacing_bridge)/2, -(squid_size[1]+width_top)-1*0.1e-6])))
-                    snail.append(self.draw_rect(self.name+'_island_middle_', self.coor([x_pos-spacing_bridge/2, squid_size[1]+width_top+width_bot-width_track/2+0.1e-6]), self.coor_vec([spacing_bridge, -width])))
-            #snail.append(self.draw_rect(self.name+'_connect_left', self.coor([x_pos-squid_size[0]/2-1*width_track/2, -width_track/2]), self.coor_vec([-1.5*width_track, width_track]))) #ZL
-            #snail.append(self.draw_rect(self.name+'_connect_right', self.coor([x_pos+squid_size[0]/2+1*width_track/2, -width_track/2]), self.coor_vec([1.5*width_track, width_track])))
-
-            #self.unite(snail, name=self.name+'_snail_'+str(jj))
-            x_pos = x_pos+width_snail
-        x_pos = x_pos-width_snail
-        snail.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -width_track/2]), self.coor_vec([2*width_track/2, squid_size[1]+width_top+width_bot+2*0.1e-6]))) #ZL
-
-    def _connect_squids(self, squid_size, width_top, width_bot, N, width_bridge, spacing_bridge):
-        
-        width_track = self.inTrack # assume both are equal
-        spacing = (self.posOut-self.pos).norm()
-        
-        self.pos = (self.pos+self.posOut)/2
-        
-        width_snail = squid_size[0]
-        
-        tot_width = width_snail*N
-        if np.abs(self.val(tot_width))>np.abs(self.val(spacing)):
-            raise ValueError("cannot put all snails in given space")
-        offset = 0.5*(squid_size[1] + width_track)
-
-        squids = []
-        squids.append(self.draw_rect(self.name+'_pad_left', self.coor([-tot_width/2, -width_track/2]), self.coor_vec([-(spacing-tot_width)/2, width_track])))
-        squids.append(self.draw_rect(self.name+'_pad_right', self.coor([tot_width/2, -width_track/2]), self.coor_vec([(spacing-tot_width)/2, width_track])))
-        if N%2==1:
-            x_pos = -(N//2)*width_snail - width_track/2
-        else:
-            x_pos = -(N//2-1/2)*width_snail - width_track/2
-
-        for jj in range(int(N)):
-            if jj == 0:
-                squids.append(self.draw_rect(self.name+'_left', self.coor([x_pos-squid_size[0]/2, -width_track/2-offset]), self.coor_vec([width_track, squid_size[1]+width_top+width_bot])))
-            squids.append(self.draw_rect(self.name+'_right', self.coor([x_pos+squid_size[0]/2, -width_track/2-offset]), self.coor_vec([width_track, squid_size[1]+width_top+width_bot])))
-            for width, way in [[width_top, 1], [width_bot, -1]]:
-                squids.append(self.draw_rect(self.name+'_islandtop_left', self.coor([x_pos-squid_size[0]/2+width_track/2, (1+way)*squid_size[1]/2+width_bot-width_track/2-offset]), self.coor_vec([(squid_size[0]-width_bridge)/2, way*width])))
-                squids.append(self.draw_rect(self.name+'_islandtop_right', self.coor([x_pos+squid_size[0]/2+width_track/2, (1+way)*squid_size[1]/2+width_bot-width_track/2-offset]), self.coor_vec([-(squid_size[0]-width_bridge)/2, way*width])))
-            x_pos = x_pos+width_snail
-        self.unite(squids, name=self.name+'_squids')
-
-    def _connect_jct(self, width_bridge, width_jct, width_Jct=None,
-                     iInduct='0nH', iCapa='0pF',
-                     assymetry=0.1e-6, overlap=None):
-        # asymmetry changes the relative widths of the two arms
-        # overlap extends the arms beyond the spacing
-        # width_jct = None designates junctions without pads
-        # width_Jct is for different widths on either side of the junction
-        '''        
-                    +      +
-                    |      |
-                    |      |
-                    |      |  - self.inTrack + 2*assymetry
-                    +-+--+-+
-            margin|   |  |    - width_Jct
-                      +--+  
-     width_bridge |                 
-                       ++
-                       ||     - width_jct
-                    +------+
-                    |      |  - self.inTrack 
-                    |      |
-                    |      |
-                    |      |
-                    +      +
         '''
-        width = self.inTrack # assume both are equal
-        spacing = (self.posOut - self.pos).norm()
-        self.pos = (self.pos + self.posOut)/2
+        N       : int  
+                  number of snail cells
+                  
+        yoffset : float in [-1, 1] 
+                  offset loop w.r.t to lead. Align left (-1), center (0), right (1)
+                  
+                  e.g n_left=3, n_right=1, yoffset=1
+                            +---+
+    self.intrack      -     |   |     
+                            |   +--------------------+
+    length_island     |     |                        |
+                            |     +----------------- |
+    width_jct_left    -     +-----+  loop_width    | |
+                            +-----+      |length   | |
+    width_bridge_left |                            | |
+                            +-----+                +-+
+    bridge_spacing    |     |-----|                   
+                            +-----+                +-+
+                                                   | |
+                            +-----+                | |
+                            +-----+                | |
+                            |     |----------------| |
+                            |                        |
+                            |   ---------------------+
+                            |   |
+                            +---+
         
-        if width_jct is not None:
-            margin = 2e-6
-        if overlap is None:
-            overlap = 0.0
-            
-        if width_bridge > spacing:
-            raise ValueError('Junction larger than given space')
+        '''
+
+        width_track = self.inTrack # assume both are equal
+        width_track_left = max(width_track, width_jct_left)
+        width_track_right = max(width_track, width_jct_right)
         
-        pads = []
-        if width_jct is not None:
-            pads.append(self.draw_rect(self.name+'_left', self.coor([-width_bridge/2 - margin, -width/2 - assymetry]), self.coor_vec([-(spacing - width_bridge)/2 - overlap + margin, width + 2*assymetry])))
-            pads.append(self.draw_rect(self.name+'_right', self.coor([width_bridge/2 + margin, -width/2]), self.coor_vec([(spacing - width_bridge)/2 + overlap - margin, width])))
-            
-        if not self.is_hfss:
-            if width_jct is not None:
-                if width_Jct is None:
-                    self.draw_rect(self.name+'_left1', self.coor([-width_bridge/2, -width_jct/2]), self.coor_vec([-margin, width_jct]))
-                else:
-                    self.draw_rect(self.name+'_left2', self.coor([-width_bridge/2, -width_Jct/2 - assymetry]), self.coor_vec([-margin, width_Jct + 2*assymetry]))
-                    
-                self.draw_rect(self.name+'_right1', self.coor([width_bridge/2, -width_jct/2]), self.coor_vec([margin, width_jct]))
-            
-            else:
-                self.draw_rect(self.name+'_left3', self.coor([-width_bridge/2, -width/2 - assymetry]), self.coor_vec([-(spacing - width_bridge)/2, width + 2*assymetry])) 
-                self.draw_rect(self.name+'_right2', self.coor([width_bridge/2, -width/2]), self.coor_vec([(spacing - width_bridge)/2, width]))
-            
-        else:
-            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([width_bridge + 2*margin, width]))
-            self.modeler.assign_mesh_length(mesh, 0.5*width)
+        spacing = (self.posOut-self.pos).norm()
+        
+        self.pos = (self.pos+self.posOut)/2
+        
+        length_snail = loop_length+2*length_island
+        
+        tot_length = length_snail*N
+        if np.abs(self.val(tot_length))>np.abs(self.val(spacing)):
+            raise ValueError("cannot put all snails in given space")
+
+        overlap=0
+
+        snails = []
+        
+        
+        
+        snails.append(self.draw_rect(self.name+'_pad_top', self.coor([-spacing/2, -width_track/2]),
+                                     self.coor_vec([(spacing-tot_length)/2,width_track])))
     
-            JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([width_bridge + 2*margin, width]))
-            self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, iCapa))
-    
-        return pads
+        #yoffset = width_track + (loop_width-width_track)/2
+        Dy = loop_width + width_track_left + width_track_right
+        width_track_mean = (width_track_left + width_track_right)/2
+        yoffset = yoffset * (Dy - width_track)/2
+        
+        Dx = (loop_length + length_island)
+        
+        for ii in np.arange(N): # array cell
+            x = -tot_length/2 + ii * (loop_length+2*length_island)
+            for jj in [0,1]: # in / out
+                xj = x + jj*Dx
+                snails.append(self.draw_rect(self.name+'_pad_top_1', 
+                                             self.coor([xj, -loop_width/2-width_track_mean+yoffset]),
+                                             self.coor_vec([length_island, Dy])))  
+            
+                # left
+                self.ports[self.name+'_left_'+str(ii)+'_'+str(jj)] = [self.coor([xj+length_island-jj*length_island, 
+                                       -loop_width/2-width_track_mean + width_track_left/2+yoffset]),
+                                       -self.ori*(-1)**jj, width_track_left, 0]
+            
+                # right
+                self.ports[self.name+'_right_'+str(ii)+'_'+str(jj)] = [self.coor([xj+length_island-jj*length_island, 
+                                       +loop_width/2+width_track_mean-width_track_right/2+yoffset]),
+                                       -self.ori*(-1)**jj, width_track_right, 0]
+
+            jcts_right = self.connect_elt(self.name+'_right_'+str(ii),
+                                    self.name+'_right_'+str(ii)+'_0',
+                                    self.name+'_right_'+str(ii)+'_1')
+            
+            jcts_right._connect_jct_array(width_bridge_right, width_jct_right,
+                                     width_bridge_right,
+                                     n=n_right, overlap=overlap, assymetry=0.0)
+            
+            jcts_left = self.connect_elt(self.name+'_left_'+str(ii),
+                                    self.name+'_left_'+str(ii)+'_0',
+                                    self.name+'_left_'+str(ii)+'_1')
+            
+            jcts_left._connect_jct_array(width_bridge_left, width_jct_left,
+                                    spacing_bridge_left,
+                                    n=n_left, assymetry=0.0)
+            
+            snails.append(self.draw_rect(self.name+'_pad_bottom',
+                                         self.coor([tot_length/2, -width_track/2]),
+                                         self.coor_vec([(spacing-tot_length)/2, width_track])))
+            
     
     def _connect_jct_cross(self, width_bridge, width_jct, iInduct='0nH', assymetry=0.1e-6, overlap=None, way=1):
         # asymmetry changes the relative widths of the two arms
@@ -8039,8 +8077,69 @@ class ConnectElt(KeyElt, Circuit):
     
         return pads
     
-    def _connect_jct_array(self, width_bridge, width_jct, spacing_bridge, n,
-                           iInduct='0nH', assymetry=0.1e-6, overlap=None):
+    
+    def _connect_jct(self, width_bridge, width_jct, width_Jct=None,
+                     iInduct='0nH', iCapa='0pF',
+                     assymetry=0.1e-6, overlap=None):
+        # asymmetry changes the relative widths of the two arms
+        # overlap extends the arms beyond the spacing
+        # width_jct = None designates junctions without pads
+        # width_Jct is for different widths on either side of the junction
+        '''        
+                    +      +
+                    |      |  - self.inTrack + 2*assymetry
+                    +-+--+-+
+            margin|   |  |    - width_Jct
+                      +--+  
+     width_bridge |                 
+                       ++
+                       ||     - width_jct
+                    +------+
+                    |      |  - self.inTrack 
+                    +      +
+        '''
+        width = self.inTrack # assume both are equal
+        spacing = (self.posOut - self.pos).norm()
+        self.pos = (self.pos + self.posOut)/2
+        
+        if width_jct is not None:
+            margin = 2e-6
+        if overlap is None:
+            overlap = 0.0
+            
+        if width_bridge > spacing:
+            raise ValueError('Junction larger than given space')
+        
+        pads = []
+        if width_jct is not None:
+            pads.append(self.draw_rect(self.name+'_left', self.coor([-width_bridge/2 - margin, -width/2 - assymetry]), self.coor_vec([-(spacing - width_bridge)/2 - overlap + margin, width + 2*assymetry])))
+            pads.append(self.draw_rect(self.name+'_right', self.coor([width_bridge/2 + margin, -width/2]), self.coor_vec([(spacing - width_bridge)/2 + overlap - margin, width])))
+            
+        if not self.is_hfss:
+            if width_jct is not None:
+                if width_Jct is None:
+                    self.draw_rect(self.name+'_left1', self.coor([-width_bridge/2, -width_jct/2]), self.coor_vec([-margin, width_jct]))
+                else:
+                    self.draw_rect(self.name+'_left2', self.coor([-width_bridge/2, -width_Jct/2 - assymetry]), self.coor_vec([-margin, width_Jct + 2*assymetry]))
+                    
+                self.draw_rect(self.name+'_right1', self.coor([width_bridge/2, -width_jct/2]), self.coor_vec([margin, width_jct]))
+            
+            else:
+                self.draw_rect(self.name+'_left3', self.coor([-width_bridge/2, -width/2 - assymetry]), self.coor_vec([-(spacing - width_bridge)/2, width + 2*assymetry])) 
+                self.draw_rect(self.name+'_right2', self.coor([width_bridge/2, -width/2]), self.coor_vec([(spacing - width_bridge)/2, width]))
+            
+        else:
+            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0,0]), self.coor_vec([width_bridge + 2*margin, width]))
+            self.modeler.assign_mesh_length(mesh, 0.5*width)
+    
+            JJ = self.draw_rect_center(self.name, self.coor([0,0]), self.coor_vec([width_bridge + 2*margin, width]))
+            self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, iCapa))
+    
+        return pads
+    
+    
+    def _connect_jct_array(self, width_bridge, width_jct, spacing_bridge=0, n=1,
+                      iInduct='0nH', assymetry=0.1e-6, overlap=None):
         # asymmetry changes the relative widths of the two arms
         # overlap extends the arms beyond the spacing
         '''
@@ -8104,8 +8203,6 @@ class ConnectElt(KeyElt, Circuit):
     
             JJ = self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec([tot_width + spacing_bridge, width]))
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
+            
         return pads
-        
-        
-        
         
