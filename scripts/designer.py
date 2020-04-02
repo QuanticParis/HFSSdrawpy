@@ -8108,7 +8108,7 @@ class ConnectElt(KeyElt, Circuit):
             overlap = 0.0
             
         if width_bridge > spacing:
-            raise ValueError('Junction larger than given space')
+            raise ValueError('Junctions larger than given space')
         
         pads = []
         if width_jct is not None:
