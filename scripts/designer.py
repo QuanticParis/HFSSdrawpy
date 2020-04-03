@@ -5314,7 +5314,7 @@ _connect_snails  |-|      | pad_spacing
         snail_track = snail_array._connect_snails([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
     def draw_jcts(self, pad_size, pad_spacing, width_bridge, width, Width=None,
-                  spacing_bridge=None, n_bridge=1,
+                  spacing_bridge=0, n_bridge=1,
                   iInduct='0nH', iCapa='0pF', overlap=None, rotspace=None):
         # rotspace permits a 90 degree rotated version
         # Width is for different widths on either side of the junction        
