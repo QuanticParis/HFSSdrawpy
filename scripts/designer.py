@@ -7928,7 +7928,7 @@ class ConnectElt(KeyElt, Circuit):
         yoffset : float in [-1, 1] 
                   offset loop w.r.t to lead. Align left (-1), center (0), right (1)
                   
-                  e.g n_left=3, n_right=1, yoffset=1
+                  e.g. n_left=3, n_right=1, yoffset=1
                             +---+
     self.intrack      -     |   |     
                             |   +--------------------+
@@ -7948,7 +7948,6 @@ class ConnectElt(KeyElt, Circuit):
                             |   ---------------------+
                             |   |
                             +---+
-        
         '''
 
         width_track = self.inTrack # assume both are equal
@@ -7968,8 +7967,6 @@ class ConnectElt(KeyElt, Circuit):
         overlap=0
 
         snails = []
-        
-        
         
         snails.append(self.draw_rect(self.name+'_pad_top', self.coor([-spacing/2, -width_track/2]),
                                      self.coor_vec([(spacing-tot_length)/2,width_track])))
@@ -8020,30 +8017,27 @@ class ConnectElt(KeyElt, Circuit):
                                          self.coor_vec([(spacing-tot_length)/2, width_track])))
             
     
-    def _connect_jct_cross(self, width_bridge, width_jct, iInduct='0nH', assymetry=0.1e-6, overlap=None, way=1):
-        # asymmetry changes the relative widths of the two arms
+    def _connect_jct_cross(self, width_bridge, width_jct, iInduct='0nH', overlap=None, way=1):
         # overlap extends the arms beyond the spacing
         # way specifies the direction of the cross
-        '''
-        
-                       +    +
-                       |    |   - self.inTrack
-                       |    |
-                       |    |
-                 +-----+    |
-                 |          |
-                 + +---+----+
-                 | |
-      margin |   | |
-                 | |
-                 +-+            - width_jct
- width_bridge |   
-                +------------+
- width_jct    | +-------+    |
-                   -    |    |
-                 margin |    |
-                        +    +  - self.inTrack
-
+        '''    
+                             +    +
+                             |    |   - self.inTrack
+                             |    |
+                             |    |
+                       +-----+    |
+                       |          |
+                       + +---+----+
+                       | |
+            margin |   | |
+                       | |
+                       +-+            - width_jct
+       width_bridge |   
+                      +------------+
+       width_jct    | +-------+    |
+                         -    |    |
+                      margin  |    |
+                              +    +  - self.inTrack
         '''
         width = self.inTrack # assume both are equal
         spacing = (self.posOut - self.pos).norm()
@@ -8060,12 +8054,12 @@ class ConnectElt(KeyElt, Circuit):
             raise ValueError('Junction larger than given space')
         
         pads = []
-        pads.append(self.draw_rect(self.name+'_left', self.coor([-tot_width/2, -width/2 - assymetry]), self.coor_vec([-(spacing - tot_width)/2 - overlap, width + 2*assymetry])))
+        pads.append(self.draw_rect(self.name+'_left', self.coor([-tot_width/2, -width/2]), self.coor_vec([-(spacing - tot_width)/2 - overlap, width])))
         pads.append(self.draw_rect(self.name+'_right', self.coor([tot_width/2 - 0.5*margin, -width/2]), self.coor_vec([(spacing - tot_width)/2 + overlap + 0.5*margin, width])))
         
         if not self.is_hfss:
-            self.draw_rect(self.name+'_detour1', self.coor([-tot_width/2, -way*(margin - width_bridge + 0.5*width_jct + width/2) - assymetry]), self.coor_vec([-width, way*(margin - width_bridge + 0.5*width_jct)]))
-            self.draw_rect(self.name+'_detour2', self.coor([-tot_width/2, -way*(margin - width_bridge + 0.5*width_jct + width/2) - assymetry]), self.coor_vec([margin, way*width_jct]))
+            self.draw_rect(self.name+'_detour1', self.coor([-tot_width/2, -way*(margin - width_bridge + 0.5*width_jct + width/2)]), self.coor_vec([-width, way*(margin - width_bridge + 0.5*width_jct)]))
+            self.draw_rect(self.name+'_detour2', self.coor([-tot_width/2, -way*(margin - width_bridge + 0.5*width_jct + width/2)]), self.coor_vec([margin, way*width_jct]))
             self.draw_rect(self.name+'_detour3', self.coor([tot_width/2 - 0.5*margin - width_jct, way*(width/2)]), self.coor_vec([width_jct, -way*(margin + width)]))
                         
         else:
@@ -8079,24 +8073,22 @@ class ConnectElt(KeyElt, Circuit):
     
     
     def _connect_jct(self, width_bridge, width_jct, width_Jct=None,
-                     iInduct='0nH', iCapa='0pF',
-                     assymetry=0.1e-6, overlap=None):
-        # asymmetry changes the relative widths of the two arms
+                     iInduct='0nH', iCapa='0pF', overlap=None):
         # overlap extends the arms beyond the spacing
         # width_jct = None designates junctions without pads
         # width_Jct is for different widths on either side of the junction
         '''        
-                    +      +
-                    |      |  - self.inTrack + 2*assymetry
-                    +-+--+-+
-            margin|   |  |    - width_Jct
-                      +--+  
-     width_bridge |                 
-                       ++
-                       ||     - width_jct
-                    +------+
-                    |      |  - self.inTrack 
-                    +      +
+                      +      +
+                      |      |  - self.inTrack
+                      +-+--+-+
+             margin |   |  |    - width_Jct
+                        +--+  
+       width_bridge |                 
+                         ++
+                         ||     - width_jct
+                      +------+
+                      |      |  - self.inTrack 
+                      +      +
         '''
         width = self.inTrack # assume both are equal
         spacing = (self.posOut - self.pos).norm()
@@ -8108,11 +8100,11 @@ class ConnectElt(KeyElt, Circuit):
             overlap = 0.0
             
         if width_bridge > spacing:
-            raise ValueError('Junctions larger than given space')
+            raise ValueError('Junction larger than given space')
         
         pads = []
         if width_jct is not None:
-            pads.append(self.draw_rect(self.name+'_left', self.coor([-width_bridge/2 - margin, -width/2 - assymetry]), self.coor_vec([-(spacing - width_bridge)/2 - overlap + margin, width + 2*assymetry])))
+            pads.append(self.draw_rect(self.name+'_left', self.coor([-width_bridge/2 - margin, -width/2]), self.coor_vec([-(spacing - width_bridge)/2 - overlap + margin, width])))
             pads.append(self.draw_rect(self.name+'_right', self.coor([width_bridge/2 + margin, -width/2]), self.coor_vec([(spacing - width_bridge)/2 + overlap - margin, width])))
             
         if not self.is_hfss:
@@ -8120,12 +8112,12 @@ class ConnectElt(KeyElt, Circuit):
                 if width_Jct is None:
                     self.draw_rect(self.name+'_left1', self.coor([-width_bridge/2, -width_jct/2]), self.coor_vec([-margin, width_jct]))
                 else:
-                    self.draw_rect(self.name+'_left2', self.coor([-width_bridge/2, -width_Jct/2 - assymetry]), self.coor_vec([-margin, width_Jct + 2*assymetry]))
+                    self.draw_rect(self.name+'_left2', self.coor([-width_bridge/2, -width_Jct/2]), self.coor_vec([-margin, width_Jct]))
                     
                 self.draw_rect(self.name+'_right1', self.coor([width_bridge/2, -width_jct/2]), self.coor_vec([margin, width_jct]))
             
             else:
-                self.draw_rect(self.name+'_left3', self.coor([-width_bridge/2, -width/2 - assymetry]), self.coor_vec([-(spacing - width_bridge)/2, width + 2*assymetry])) 
+                self.draw_rect(self.name+'_left3', self.coor([-width_bridge/2, -width/2]), self.coor_vec([-(spacing - width_bridge)/2, width])) 
                 self.draw_rect(self.name+'_right2', self.coor([width_bridge/2, -width/2]), self.coor_vec([(spacing - width_bridge)/2, width]))
             
         else:
@@ -8138,62 +8130,73 @@ class ConnectElt(KeyElt, Circuit):
         return pads
     
     
-    def _connect_jct_array(self, width_bridge, width_jct, spacing_bridge=0, n=1,
-                      iInduct='0nH', assymetry=0.1e-6, overlap=None):
-        # asymmetry changes the relative widths of the two arms
+    def _connect_jcts(self, width_bridge, width_jct, width_Jct=None, 
+                           spacing_bridge=None, n=1,
+                           iInduct='0nH', iCapa='0pF', overlap=None):
         # overlap extends the arms beyond the spacing
+        # width_Jct is for different widths on either side of the junction
         '''
-                |              |
-                |              |   - self.inTrack
-                +--+--------+--+
-                   |        |      - width_jct
-                   +--------+
-    width_bridge |
-                   +--------+
-                   |        |      - width_jct + 2*assymetry
-   bridge_spacing| +--------+
-                   |        |
-                   +--------+
-                
-                   +--------+
-                   |        |
-                +--+--------+--+
-                |              |    - self.inTrack + 2*assymetry
-                |              |
+                    +            +
+                    |            |   - self.inTrack
+                    +--+------+--+
+                       |      |      - width_Jct
+                       +------+
+       width_bridge |
+                        +----+
+                        |    |       - width_jct
+                       +------+
+     spacing_bridge |  |      |
+                       +------+
+                   
+                        +----+
+                        |    |
+                    +---+----+---+
+                    |            |   - self.inTrack
+                    +            +
         '''
         width = self.inTrack # assume both are equal
         spacing = (self.posOut - self.pos).norm()
         self.pos = (self.pos + self.posOut)/2
         
+        if spacing_bridge is None:
+            margin = 2e-6 # n=1 case
+        else:
+            margin = spacing_bridge/2
         if overlap is None:
             overlap = 0.0
             
         tot_width = n*width_bridge + (n-1)*spacing_bridge
         
         if tot_width > spacing:
-            raise ValueError('Array larger than given space')
-        
-        if n%2==0:
-            _width_right = width + 2*assymetry
-        else:
-            _width_right = width
+            raise ValueError('Junction(s) larger than given space')
+            
+        def _bridge(self):
+            # individual bridge
+            self.pos = (self.pos + self.posOut)/2
+            
+            if width_Jct is None:
+                self.draw_rect(self.name+'_left1', self.coor([-width_bridge/2, -width_jct/2]), self.coor_vec([-margin, width_jct]))
+            else:
+                self.draw_rect(self.name+'_left2', self.coor([-width_bridge/2, -width_Jct/2]), self.coor_vec([-margin, width_Jct]))
+                    
+            self.draw_rect(self.name+'_right1', self.coor([width_bridge/2, -width_jct/2]), self.coor_vec([margin, width_jct]))
         
         pads = []
-        pads.append(self.draw_rect(self.name+'_left', self.coor([-tot_width/2 - spacing_bridge/2, -width/2]), self.coor_vec([-(spacing - tot_width)/2 - overlap + spacing_bridge/2, width])))
-        pads.append(self.draw_rect(self.name+'_right', self.coor([tot_width/2 + spacing_bridge/2, -_width_right/2]), self.coor_vec([(spacing - tot_width)/2 + overlap - spacing_bridge/2, _width_right])))
+        pads.append(self.draw_rect(self.name+'_left', self.coor([-tot_width/2 - margin, -width/2]), self.coor_vec([-(spacing - tot_width)/2 - overlap + margin, width])))
+        pads.append(self.draw_rect(self.name+'_right', self.coor([tot_width/2 + margin, -width/2]), self.coor_vec([(spacing - tot_width)/2 + overlap - margin, width])))
         
         x_pos = -(tot_width)/2 + width_bridge/2
         
         if not self.is_hfss:
             for ii in range(n):
-                portOut1 = [self.coor([x_pos - 0.5*spacing_bridge - 0.5*width_bridge, 0]), -self.ori, width_jct, 0]
-                portOut2 = [self.coor([x_pos + 0.5*spacing_bridge + 0.5*width_bridge, 0]), self.ori, width_jct, 0]
+                portOut1 = [self.coor([x_pos - 0.5*spacing_bridge - 0.5*width_bridge, 0]), -self.ori, 0, 0]
+                portOut2 = [self.coor([x_pos + 0.5*spacing_bridge + 0.5*width_bridge, 0]), self.ori, 0, 0]
                 
                 self.ports[self.name+'_1'] = portOut1
                 self.ports[self.name+'_2'] = portOut2
         
                 jct = self.connect_elt(self.name+'_middle', self.name+'_1', self.name+'_2')
-                jct._connect_jct(width_bridge, None, assymetry=assymetry)
+                jct._bridge()
                 
                 x_pos += spacing_bridge + width_bridge
             
