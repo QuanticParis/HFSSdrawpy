@@ -8132,17 +8132,7 @@ class ConnectElt(KeyElt, Circuit):
         
         if tot_width > spacing:
             raise ValueError('Junction(s) larger than given space')
-            
-        def _bridge(self):
-            # individual bridge
-            self.pos = (self.pos + self.posOut)/2
-            
-            if width_Jct is None:
-                self.draw_rect(self.name+'_left1', self.coor([-width_bridge/2, -width_jct/2]), self.coor_vec([-margin, width_jct]))
-            else:
-                self.draw_rect(self.name+'_left2', self.coor([-width_bridge/2, -width_Jct/2]), self.coor_vec([-margin, width_Jct]))
-                    
-            self.draw_rect(self.name+'_right1', self.coor([width_bridge/2, -width_jct/2]), self.coor_vec([margin, width_jct]))
+
         
         pads = []
         pads.append(self.draw_rect(self.name+'_left', self.coor([-tot_width/2 - margin, -width/2]), self.coor_vec([-(spacing - tot_width)/2 - overlap + margin, width])))
@@ -8152,14 +8142,13 @@ class ConnectElt(KeyElt, Circuit):
         
         if not self.is_hfss:
             for ii in range(n):
-                portOut1 = [self.coor([x_pos - 0.5*spacing_bridge - 0.5*width_bridge, 0]), -self.ori, 0, 0]
-                portOut2 = [self.coor([x_pos + 0.5*spacing_bridge + 0.5*width_bridge, 0]), self.ori, 0, 0]
                 
-                self.ports[self.name+'_1'] = portOut1
-                self.ports[self.name+'_2'] = portOut2
-        
-                jct = self.connect_elt(self.name+'_middle', self.name+'_1', self.name+'_2')
-                jct._bridge()
+                if width_Jct is None:
+                    self.draw_rect(self.name+'_left1', self.coor([x_pos - width_bridge/2, -width_jct/2]), self.coor_vec([-margin, width_jct]))
+                else:
+                    self.draw_rect(self.name+'_left2', self.coor([x_pos - width_bridge/2, -width_Jct/2]), self.coor_vec([-margin, width_Jct]))
+                    
+                self.draw_rect(self.name+'_right1', self.coor([x_pos + width_bridge/2, -width_jct/2]), self.coor_vec([margin, width_jct]))
                 
                 x_pos += spacing_bridge + width_bridge
             
