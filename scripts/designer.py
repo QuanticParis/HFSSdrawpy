@@ -5313,19 +5313,16 @@ _connect_snails  |-|      | pad_spacing
         snail_array = self.connect_elt(self.name+'_junction', in_array, out_array)
         snail_track = snail_array._connect_snails([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
-    def draw_jct(self, pad_size, pad_spacing, width_bridge, width, Width=None,
-                 iInduct='0nH', iCapa='0pF', assymetry=0, overlap=None,
-                 rotspace=None):
+    def draw_jcts(self, pad_size, pad_spacing, width_bridge, width, Width=None,
+                  spacing_bridge=None, n_bridge=1,
+                  iInduct='0nH', iCapa='0pF', overlap=None, rotspace=None):
         # rotspace permits a 90 degree rotated version
-        # Width is for different widths on either side of the junction
-        
+        # Width is for different widths on either side of the junction        
         '''
-
                     +--------------+
                     |              |
                     |              | 
     pad_size[1] -   |              |  | pad_size[0]
-                    |              |
                     |              |
                     +---+------+---+
                         |      |
@@ -5334,16 +5331,15 @@ _connect_snails  |-|      | pad_spacing
                           +--+
                     
                            ++
+                           ||
                         +------+
                         |      |
-                    +---+------+----+
-                    |               |
-                    |               |
-                    |               |
-                    |               |
-                    |               |
-                    +---------------+
-
+                    +---+------+---+
+                    |              |
+                    |              |
+                    |              |
+                    |              |
+                    +--------------+
         '''
         pad_size, pad_spacing, width_bridge, width, Width, rotspace = parse_entry((pad_size, pad_spacing, width_bridge, width, Width, rotspace))
         pad_size = Vector(pad_size)
@@ -5372,12 +5368,12 @@ _connect_snails  |-|      | pad_spacing
         self.ports[self.name+'_2'] = portOut2
 
         jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
-        jcts._connect_jct(width_bridge, width_jct, width_Jct=Width, iInduct=iInduct, assymetry=assymetry, overlap=overlap)
+        jcts._connect_jct(width_bridge, width_jct, width_Jct=Width, spacing_bridge=spacing_bridge, n=n_bridge, iInduct=iInduct, overlap=overlap)
         
         return pads
 
     def draw_jct_cross(self, pad_size, pad_spacing, width_bridge, width, 
-                       iInduct='0nH', assymetry=0, overlap=None, way=1, rotspace=None):
+                       iInduct='0nH', overlap=None, way=1, rotspace=None):
         # rotspace permits a 90 degree rotated version
 
         pad_size, pad_spacing, width_bridge, width, rotspace = parse_entry((pad_size, pad_spacing, width_bridge, width, rotspace))
@@ -5407,40 +5403,7 @@ _connect_snails  |-|      | pad_spacing
         self.ports[self.name+'_2'] = portOut2
 
         jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')        
-        jcts._connect_jct_cross(width_bridge, width_jct, iInduct=iInduct, assymetry=assymetry, overlap=overlap, way=way)
-        
-        return pads
-    
-    def draw_jct_array(self, pad_size, pad_spacing, width_bridge, width, 
-                       spacing_bridge, n_bridge, iInduct='0nH', assymetry=0, 
-                       overlap=None, rotspace=None):
-        # rotspace permits a 90 degree rotated version
-        
-        pad_size, pad_spacing, width_bridge, width, spacing_bridge, rotspace = parse_entry((pad_size, pad_spacing, width_bridge, width, spacing_bridge, rotspace))
-        pad_size = Vector(pad_size)
-        width_jct = width
-        width = max(self.val(width), 1.5e-6)
-        
-        pads = []
-        if rotspace is None:
-            pads.append(self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2 + pad_size[0]/2, -pad_size[1]/2]), self.coor_vec([-pad_size[0], pad_size[1]])))
-            pads.append(self.draw_rect(self.name+'_right', self.coor([pad_spacing/2 - pad_size[0]/2, pad_size[1]/2]), self.coor_vec([pad_size[0], -pad_size[1]])))
-            portOut1 = [self.coor([pad_spacing/2 - pad_size[0]/2, 0]), -self.ori, width, 0]
-            portOut2 = [self.coor([-pad_spacing/2 + pad_size[0]/2, 0]), self.ori, width, 0]
-        else:
-            pads.append(self.draw_rect(self.name+'_left1', self.coor([-pad_size[0]/2, pad_spacing/2]), self.coor_vec([pad_size[0], pad_size[1]])))
-            pads.append(self.draw_rect(self.name+'_right1', self.coor([-pad_size[0]/2, -pad_spacing/2]), self.coor_vec([pad_size[0], -pad_size[1]])))
-            pads.append(self.draw_rect(self.name+'_left3', self.coor([-pad_size[0]/2 - width - rotspace, 0.5*pad_spacing]), self.coor_vec([rotspace + width, width])))
-            pads.append(self.draw_rect(self.name+'_left2', self.coor([-pad_size[0]/2 - width - rotspace, 0.5*pad_spacing]), self.coor_vec([width, -0.5*pad_spacing - 0.5*width])))
-            pads.append(self.draw_rect(self.name+'_right2', self.coor([-pad_size[0]/2, -0.5*pad_spacing]), self.coor_vec([width, 0.5*pad_spacing + 0.5*width])))
-            portOut1 = [self.coor([-pad_size[0]/2, 0]), -self.ori, width, 0]
-            portOut2 = [self.coor([-rotspace - pad_size[0]/2, 0]), self.ori, width, 0]
-        
-        self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
-
-        jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
-        jcts._connect_jct_array(width_bridge, width_jct, spacing_bridge, n_bridge, iInduct=iInduct, assymetry=assymetry, overlap=overlap)
+        jcts._connect_jct_cross(width_bridge, width_jct, iInduct=iInduct, overlap=overlap, way=way)
         
         return pads
         
@@ -8183,7 +8146,7 @@ class ConnectElt(KeyElt, Circuit):
         
         pads = []
         pads.append(self.draw_rect(self.name+'_left', self.coor([-tot_width/2 - margin, -width/2]), self.coor_vec([-(spacing - tot_width)/2 - overlap + margin, width])))
-        pads.append(self.draw_rect(self.name+'_right', self.coor([tot_width/2 + margin, -width/2]), self.coor_vec([(spacing - tot_width)/2 + overlap - margin, width])))
+        pads.append(self.draw_rect(self.name+'_right', self.coor([tot_width/2 + margin, -width/2]), self.coor_vec([(spacing - tot_width)/2 + overlap - margin, width])))    
         
         x_pos = -(tot_width)/2 + width_bridge/2
         
