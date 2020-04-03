@@ -8094,7 +8094,7 @@ class ConnectElt(KeyElt, Circuit):
     
     
     def _connect_jcts(self, width_bridge, width_jct, width_Jct=None, 
-                           spacing_bridge=None, n=1,
+                           spacing_bridge=0, n=1,
                            iInduct='0nH', iCapa='0pF', overlap=None):
         # overlap extends the arms beyond the spacing
         # width_Jct is for different widths on either side of the junction
@@ -8121,7 +8121,7 @@ class ConnectElt(KeyElt, Circuit):
         spacing = (self.posOut - self.pos).norm()
         self.pos = (self.pos + self.posOut)/2
         
-        if spacing_bridge is None:
+        if spacing_bridge==0:
             margin = 2e-6 # n=1 case
         else:
             margin = spacing_bridge/2
