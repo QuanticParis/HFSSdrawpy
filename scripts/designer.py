@@ -8121,7 +8121,10 @@ class ConnectElt(KeyElt, Circuit):
         spacing = (self.posOut - self.pos).norm()
         self.pos = (self.pos + self.posOut)/2
         
-        margin = 2e-6
+        if spacing_bridge==0:
+            margin = 2e-6
+        else:
+            margin = spacing_bridge/2
         if overlap is None:
             overlap = 0.0
             
