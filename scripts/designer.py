@@ -5314,7 +5314,7 @@ _connect_snails  |-|      | pad_spacing
         snail_track = snail_array._connect_snails([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
         
     def draw_jcts(self, pad_size, pad_spacing, width_bridge, width, Width=None,
-                  spacing_bridge='0um', n_bridge=1,
+                  spacing_bridge=0, n_bridge=1,
                   iInduct='0nH', iCapa='0pF', overlap=None, rotspace=None):
         # rotspace permits a 90 degree rotated version
         # Width is for different widths on either side of the junction        
@@ -5341,7 +5341,7 @@ _connect_snails  |-|      | pad_spacing
                     |              |
                     +--------------+
         '''
-        pad_size, pad_spacing, width_bridge, width, Width, rotspace = parse_entry((pad_size, pad_spacing, width_bridge, width, Width, rotspace))
+        pad_size, pad_spacing, width_bridge, width, Width, spacing_bridge, rotspace = parse_entry((pad_size, pad_spacing, width_bridge, width, Width, spacing_bridge, rotspace))
         pad_size = Vector(pad_size)
         width_jct = width
         if Width is not None:
@@ -8094,7 +8094,7 @@ class ConnectElt(KeyElt, Circuit):
     
     
     def _connect_jcts(self, width_bridge, width_jct, width_Jct=None, 
-                           spacing_bridge='0um', n=1,
+                           spacing_bridge=0, n=1,
                            iInduct='0nH', iCapa='0pF', overlap=None):
         # overlap extends the arms beyond the spacing
         # width_Jct is for different widths on either side of the junction
