@@ -5368,7 +5368,7 @@ _connect_snails  |-|      | pad_spacing
         self.ports[self.name+'_2'] = portOut2
 
         jcts = self.connect_elt(self.name+'_junction', self.name+'_2', self.name+'_1')
-        jcts._connect_jct(width_bridge, width_jct, width_Jct=Width, spacing_bridge=spacing_bridge, n=n_bridge, iInduct=iInduct, overlap=overlap)
+        jcts._connect_jcts(width_bridge, width_jct, width_Jct=Width, spacing_bridge=spacing_bridge, n=n_bridge, iInduct=iInduct, overlap=overlap)
         
         return pads
 
