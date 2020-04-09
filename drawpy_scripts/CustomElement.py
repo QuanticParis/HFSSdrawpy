@@ -5,14 +5,14 @@ Created on Mon Oct 28 16:27:24 2019
 @author: Zaki
 """
 
-from Vector import Vector
-
 import numpy as np
-from hfss import parse_entry
-#from PythonModeler import PythonModeler
-from KeyElement import move
 from functools import wraps
-import Lib
+
+from . import Lib
+from .vector import Vector
+from .variable_string import parse_entry
+#from PythonModeler import PythonModeler
+from .KeyElement import move
 
 __methods__ = []
 register_method = Lib.register_method(__methods__)
@@ -48,10 +48,10 @@ def draw_JJ(self, name, iInPort, iOutPort, iInduct='1nH', fillet=None):
     --------
 
     '''
-#    iTrack, iGap, iTrackJ, iLength = parse_entry((iTrack, iGap, iTrackJ, iLength))
+#    iTrack, iGap, iTrackJ, iLength = parse_entry(iTrack, iGap, iTrackJ, iLength)
 #    portOut1 = self.port(name+'_1',[iLength/2,0], [1,0], iTrack, iGap)
 #    portOut2 = self.port(name+'_2',[-iLength/2,0], [-1,0], iTrack, iGap)
-    
+
     pads = self.network._connect_JJ(name+'JJ', name+'_1', name+'_2', iInduct)
 #    self.trackObjects.append(pads)
     gap = self.rect_center_2D([0,0], [iLength, iTrack+2*iGap], name=name+'_gap', layer=layer_GAP)
@@ -60,7 +60,7 @@ def draw_JJ(self, name, iInPort, iOutPort, iInduct='1nH', fillet=None):
 @register_method
 @move
 def draw_IBM_transmon(self,
-                   name, 
+                   name,
                    cutout_size,
                    pad_spacing,
                    pad_size,
@@ -70,11 +70,11 @@ def draw_IBM_transmon(self,
                    Jinduc,
                    nport=1,
                    fillet=None):
-    
-    cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
+
+    cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, track, gap)
     cutout_size = Vector(cutout_size)
     pad_size = Vector(pad_size)
-    
+
     cutout = self.rect_center_2D([0,0], cutout_size-Vector([2*self.overdev, 2*self.overdev]), name=name+"_cutout", layer=layer_GAP)
 
     if self.is_mask:
@@ -86,7 +86,7 @@ def draw_IBM_transmon(self,
 
     right_pad = self.rect_center_2D(Vector(pad_spacing+pad_size[0],0)/2, pad_size+Vector([2*self.overdev, 2*self.overdev]), name=name+"_pad1", layer=layer_TRACK)
     left_pad = self.rect_center_2D(-Vector(pad_spacing+pad_size[0],0)/2, pad_size+Vector([2*self.overdev, 2*self.overdev]), name=name+"_pad2", layer=layer_TRACK)
-    
+
 
     track_J=Jwidth*4.
     in_junction = self.port(name+'_in_jct', [-pad_spacing/2+self.overdev, 0], [1,0], track_J+2*self.overdev, 0)
@@ -104,13 +104,13 @@ def draw_IBM_transmon(self,
         self._fillet(fillet+self.overdev,0, pads)
     if nport==1:
         self.port(name+'_1',cutout_size.px()/2, self.ori, track, gap)
-        
+
     return pads, cutout, in_junction, out_junction
 
 @register_method
 @move
 def draw_cylinder_transmon(self,
-                   name, 
+                   name,
                    cutout_size,
                    pad_spacing,
                    pad_size,
@@ -122,15 +122,15 @@ def draw_cylinder_transmon(self,
                    thickness,
                    Jinduc,
                    fillet=None):
-    cutout_size, pad_spacing, pad_size, Jwidth, space, thickness = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, space, thickness))
+    cutout_size, pad_spacing, pad_size, Jwidth, space, thickness = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, space, thickness)
     insert_radius = 1.2/2*cutout_size[1]
     length = cutout_size[0]
     cylinder_side = self.cylinder([0,0,0], insert_radius, length, "X", name=name+"_cylinder", layer=layer_Default)
-    
+
     sapphire_chip = self.box_corner([0,-cutout_size[1]/2-self.overdev/2,0], [cutout_size[0],cutout_size[1]+self.overdev, thickness], "3D", name=name+"_sapphire_chip")
-    
+
     self.set_current_coor([0,0,thickness], [1,0])
-    simple_transmon = self.draw_simple_transmon(name, 
+    simple_transmon = self.draw_simple_transmon(name,
                                                cutout_size,
                                                pad_spacing,
                                                pad_size,
@@ -146,7 +146,7 @@ def draw_cylinder_transmon(self,
 @register_method
 @move
 def draw_simple_transmon(self,
-                   name, 
+                   name,
                    cutout_size,
                    pad_spacing,
                    pad_size,
@@ -158,13 +158,13 @@ def draw_simple_transmon(self,
                    Jinduc,
                    fillet=None):
 
-    cutout_size, pad_spacing, pad_size, Jwidth, space = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, space))
+    cutout_size, pad_spacing, pad_size, Jwidth, space = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, space)
     cutout_size = Vector(cutout_size)
     pad_size = Vector(pad_size)
     capa_plasma=0
     iTrackJ=Jinduc
 
-    
+
     cutout = self.rect_corner_2D([0,-cutout_size[1]/2+self.overdev], cutout_size-Vector([2*self.overdev, 2*self.overdev]), name=name+"_cutout", layer=layer_GAP)
     transmission_line = self.rect_center_2D(Vector(space+pad_size[0]+pad_spacing+spacing2+tline_l/2, 0), Vector([tline_l,tline_w]), name= name+"_transmission_line", layer=layer_GAP)
     self.assign_perfect_E(transmission_line)
@@ -190,7 +190,7 @@ def draw_simple_transmon(self,
     pads = self.unite([right_pad, left_pad], name=name+'_pads')
 #    self.make_material(pads, "\"aluminum\"")
     self.assign_perfect_E(pads)
-    
+
     if fillet is not None:
         self._fillet(fillet+self.overdev,[19], pads)
         self._fillet(0.75*fillet-self.overdev,[18,17,14,13], pads)
@@ -200,9 +200,9 @@ def draw_simple_transmon(self,
 
     return [0,0], [pad_spacing, 10*iTrackJ], "x", 0, Jinduc, capa_plasma,
 
-    
 
-        
+
+
 @register_method
 @move
 def draw_ZR_transmon(self,
@@ -225,27 +225,27 @@ def draw_ZR_transmon(self,
                     spacing_left=None,
                     short_left=None,
                     fillet=None):
-    
+
     # Short should be 0 for no short
 
-    parsed = parse_entry((cutout_size,
-                          pad_spacing,
-                          pad_size_right,
-                          track_right,
-                          gap_right,
-                          length_right,
-                          spacing_right,
-                          short_right,
-                          Jwidth,
-                          Jlength,
-                          Jinduc,
-                          pad_size_left,
-                          track_left,
-                          gap_left,
-                          length_left, 
-                          spacing_left, 
-                          short_left))
-                    
+    parsed = parse_entry(cutout_size,
+                         pad_spacing,
+                         pad_size_right,
+                         track_right,
+                         gap_right,
+                         length_right,
+                         spacing_right,
+                         short_right,
+                         Jwidth,
+                         Jlength,
+                         Jinduc,
+                         pad_size_left,
+                         track_left,
+                         gap_left,
+                         length_left,
+                         spacing_left,
+                         short_left)
+
     (cutout_size,
      pad_spacing,
      pad_size_right,
@@ -254,7 +254,7 @@ def draw_ZR_transmon(self,
      length_right,
      spacing_right,
      short_right,
-     Jwidth, 
+     Jwidth,
      Jlength,
      Jinduc,
      pad_size_left,
@@ -263,7 +263,7 @@ def draw_ZR_transmon(self,
      length_left,
      spacing_left,
      short_left) = parsed
-     
+
     if pad_size_left is None:
         pad_size_left=pad_size_right
     if track_left is None:
@@ -276,7 +276,7 @@ def draw_ZR_transmon(self,
         spacing_left=spacing_right
     if short_left is None:
         short_left=short_right
-    
+
     cutout_size = Vector(cutout_size)
     pad_size_left = Vector(pad_size_left)
     pad_size_right = Vector(pad_size_right)
@@ -286,16 +286,16 @@ def draw_ZR_transmon(self,
         mesh = self.rect_center_2D([0,0], cutout_size, name=name+"_mesh", layer=layer_MESH)
     if self.is_mask:
         mask = self.rect_center_2D([0,0], cutout_size+Vector([self.gap_mask,self.gap_mask])*2, name=name+"_mask", layer=layer_MASK)
-    
+
     track_J=Jwidth*4.
     in_junction = self.port(name+'_in_jct', [-pad_spacing/2+self.overdev, 0], [1,0], track_J+2*self.overdev, 0)
     out_junction = self.port(name+'_out_jct', [+pad_spacing/2-self.overdev, 0], [-1,0], track_J+2*self.overdev, 0)
-    
+
 #        self.ports[name+'_in_jct'] = in_junction
 #        self.ports[name+'_out_jct'] = out_junction
 #        junction = self.connect_elt(name+'_junction', name+'_in_jct', name+'_out_jct')
     junction_pads = self._connect_JJ(name+'JJ', name+'_in_jct', name+'_out_jct', Jwidth+2*self.overdev, iLengthJ=Jlength, iInduct=Jinduc, fillet=None)
-    
+
     raw_points_right = [(pad_spacing/2-self.overdev, -pad_size_right[1]/2-self.overdev),
                   (pad_size_right[0]+2*self.overdev, 0),
                   (0, pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2+2*self.overdev),
@@ -306,7 +306,7 @@ def draw_ZR_transmon(self,
                   (-pad_size_right[0]-2*self.overdev, 0)]
     points_right = self.append_points(raw_points_right)
     right_pad = self.polyline_2D(points_right, name=name+"_pad1", layer=layer_TRACK)
-    
+
     raw_points_left = [(-pad_spacing/2+self.overdev, -pad_size_left[1]/2-self.overdev),
                   (-pad_size_left[0]-2*self.overdev, 0),
                   (0, pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2+2*self.overdev),
@@ -316,22 +316,22 @@ def draw_ZR_transmon(self,
                   (0, pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2+2*self.overdev),
                   (pad_size_left[0]+2*self.overdev, 0)]
     points_left = self.append_points(raw_points_left)
-    left_pad = self.polyline_2D(points_left, name=name+"_pad2", layer=layer_TRACK) 
-    
+    left_pad = self.polyline_2D(points_left, name=name+"_pad2", layer=layer_TRACK)
+
     right_track_raw_points = [(cutout_size[0]/2-self.overdev,-track_right/2-self.overdev),
                              (-(cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), 0),
                              (0, track_right+2*self.overdev),
                              ((cutout_size[0]/2-pad_spacing/2-length_right-gap_right-short_right-spacing_right), 0)]
     right_track_points = self.append_points(right_track_raw_points)
-    right_track = self.polyline_2D(right_track_points, name=name+"_track1", layer=layer_TRACK) 
-    
+    right_track = self.polyline_2D(right_track_points, name=name+"_track1", layer=layer_TRACK)
+
     left_track_raw_points = [(-cutout_size[0]/2+self.overdev,-track_left/2-self.overdev),
                              ((cutout_size[0]/2-pad_spacing/2-length_left-gap_left-short_left-spacing_left), 0),
                              (0, track_left+2*self.overdev),
                              (-(cutout_size[0]/2-pad_spacing/2-length_left-gap_left-short_left-spacing_left), 0)]
     left_track_points = self.append_points(left_track_raw_points)
-    left_track = self.polyline_2D(left_track_points, name=name+"_track2", layer=layer_TRACK) 
-    
+    left_track = self.polyline_2D(left_track_points, name=name+"_track2", layer=layer_TRACK)
+
     if short_right!=0:
         raw_points = [(cutout_size[0]/2-self.overdev,-track_right/2-gap_right+self.overdev),
                       (-(cutout_size[0]/2-pad_spacing/2-length_right-short_right-spacing_right)+2*self.overdev, 0),
@@ -342,8 +342,8 @@ def draw_ZR_transmon(self,
                       (0, -(2*gap_right+track_right+2*short_right)-2*self.overdev),
                       ((cutout_size[0]/2-pad_spacing/2-length_right-spacing_right), 0)]
         points = self.append_points(raw_points)
-        right_short = self.polyline_2D(points, name=name+"_short1", layer=layer_TRACK) 
-        
+        right_short = self.polyline_2D(points, name=name+"_short1", layer=layer_TRACK)
+
     if short_left!=0:
         raw_points = [(-cutout_size[0]/2+self.overdev,-track_left/2-gap_left+self.overdev),
                       ((cutout_size[0]/2-pad_spacing/2-length_left-short_left-spacing_left)-2*self.overdev, 0),
@@ -354,22 +354,22 @@ def draw_ZR_transmon(self,
                       (0, -(2*gap_left+track_left+2*short_left)-2*self.overdev),
                       (-(cutout_size[0]/2-pad_spacing/2-length_left-spacing_left), 0)]
         points = self.append_points(raw_points)
-        left_short = self.polyline_2D(points, name=name+"_short2", layer=layer_TRACK) 
-        
+        left_short = self.polyline_2D(points, name=name+"_short2", layer=layer_TRACK)
+
     if fillet is not None:
         self._fillet(track_right/2-eps+self.overdev,[2,1], right_track)
         self._fillet(track_left/2-eps+self.overdev,[2,1], left_track)
         self._fillet(cutout_size[1]/6-self.overdev,[0,1,2,3], cutout)
         if not self.is_litho:
             self._fillet(cutout_size[1]/6,[0,1,2,3], mesh)
-        
+
         if self.is_mask:
             self._fillet(cutout_size[1]/6+self.gap_mask,[0,1,2,3], mask)
-        
+
         if short_right!=0:
             self._fillet(track_right/2+gap_right+short_right-eps+self.overdev,[6,5], right_short)
             self._fillet(track_right/2+gap_right-eps-self.overdev,[2,1], right_short)
-            
+
             fillet_right1 = (pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4-self.overdev
             self.set_current_coor([cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [1,0])
             right_quarter_up1 = self.draw_quarter_circle(name+'right_quarter_up1', layer_TRACK, fillet_right1)
@@ -383,11 +383,11 @@ def draw_ZR_transmon(self,
             self.set_current_coor([cutout_size[0]/2-self.overdev, -(track_right/2+gap_right)+self.overdev], [0,-1])
             right_quarter_down2 = self.draw_quarter_circle(name+'right_quarter_down2', layer_TRACK , fillet_right2)
             cutout = self.unite([cutout, right_quarter_up2, right_quarter_down2], name+'nom1')
-            
+
         if short_left!=0:
             self._fillet(track_left/2+gap_left+short_left-eps+self.overdev,[6,5], left_short)
             self._fillet(track_left/2+gap_left-eps-self.overdev,[2,1], left_short)
-            
+
             fillet_left1= (pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4-self.overdev
             self.set_current_coor( [-cutout_size[0]/2+self.overdev,track_left/2+gap_left+short_left+self.overdev], [0,1])
             left_quarter_up1 = self.draw_quarter_circle(name+'left_quarter_up1', layer_TRACK, fillet_left1)
@@ -401,7 +401,7 @@ def draw_ZR_transmon(self,
             self.set_current_coor([-cutout_size[0]/2+self.overdev,-(track_left/2+gap_left)+self.overdev], [-1,0])
             left_quarter_down2 = self.draw_quarter_circle(name+'left_quarter_down2', layer_TRACK, fillet_left2)
             cutout = self.unite([cutout, left_quarter_up2, left_quarter_down2], name+'nom2')
-            
+
 #        self._fillet(pad_size_right[0]/4+self.overdev,[7,0], right_pad)
 #        self._fillet((pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4+self.overdev,[1,2,5,6], right_pad)
 #        self._fillet(track_right/2+gap_right+short_right+spacing_right-eps-self.overdev,[5,6], right_pad)
@@ -409,16 +409,16 @@ def draw_ZR_transmon(self,
 #        self._fillet(pad_size_left[0]/4+self.overdev,[7,0], left_pad)
 #        self._fillet((pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4+self.overdev,[1,2,5,6], left_pad)
 #        self._fillet(track_left/2+gap_left+short_left+spacing_left-eps-self.overdev,[5,6], left_pad)
-    
+
     if not self.is_litho:
         self.mesh_zone(mesh, 4*Jwidth)
-    
+
     to_unite = [left_pad, right_pad, right_track, left_track, junction_pads]
     if short_right!=0:
         to_unite.append(right_short)
     if short_left!=0:
         to_unite.append(left_short)
-    
+
     if self.is_overdev:
         added_gap_left = self.rect_center_2D([-cutout_size[0]/2, -(track_left+2*gap_left)/2+self.overdev], [self.overdev, (track_left+2*gap_left)-2*self.overdev], name=name+'_added_gap_left', layer=layer_GAP)
         added_gap_right = self.rect_center_2D([cutout_size[0]/2, -(track_right+2*gap_right)/2+self.overdev], [-self.overdev, (track_right+2*gap_right)-2*self.overdev], name=name+'_added_gap_right', layer=layer_GAP )
@@ -426,31 +426,31 @@ def draw_ZR_transmon(self,
         added_track_left = self.rect_center_2D([-cutout_size[0]/2, -(track_left)/2-self.overdev], [self.overdev, (track_left)+2*self.overdev], name=name+'_added_track_left', layer=layer_TRACK)
         added_track_right = self.rect_center_2D([cutout_size[0]/2, -(track_right)/2-self.overdev], [-self.overdev, (track_right)+2*self.overdev], name=name+'_added_track_right', layer=layer_TRACK)
         to_unite = to_unite+[added_track_left, added_track_right]
-        
+
 #        cutout = self.unite([cutout, added_gap_left, added_gap_right], 'nom3')
-        
+
     pads = self.unite(to_unite, name=name+'_pads')
-    
-        
+
+
     portOut2 = self.port(name+'_portOut2', [cutout_size[0]/2,0], [1,0], track_right+2*self.overdev, gap_right-2*self.overdev)
     portOut1 = self.port(name+'_portOut1', [-cutout_size[0]/2,0], [-1,0], track_left+2*self.overdev, gap_left-2*self.overdev)
-    
+
     return [portOut1, portOut2, in_junction, out_junction]
-    
+
 @register_method
 @move
 def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1, iTrack_capa=None, iGap_capa=None, premesh=True, tight=False): #iGap_capa is added gap
-    
-    iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry((iTrack, iGap, capa_length, pad_spacing, n_pad))
+
+    iTrack, iGap, capa_length, pad_spacing, n_pad = parse_entry(iTrack, iGap, capa_length, pad_spacing, n_pad)
     if iTrack_capa is not None:
-        iTrack_capa = parse_entry((iTrack_capa))
+        iTrack_capa = parse_entry(iTrack_capa)
         usual=False
     else:
         iTrack_capa = iTrack
         usual=True
-        
+
     if iGap_capa is not None:
-        iGap_capa = parse_entry((iGap_capa))
+        iGap_capa = parse_entry(iGap_capa)
     else:
         iGap_capa=0
 
@@ -470,7 +470,7 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
             offset = 0
         curr_height = -iTrack_capa/2
         pad_size = Vector([pad_length, pad_width])
-        
+
         for ii in range(int(n_pad/2)):
             drawn_pads.append(self.rect_corner_2D([-capa_length/2+offset, curr_height-self.overdev], pad_size+Vector([self.overdev, 2*self.overdev]), name=name+"_pad"+str(ii), layer=layer_TRACK))
             drawn_pads.append(self.rect_corner_2D([-capa_length/2+offset+pad_spacing-self.overdev, curr_height+pad_width+pad_spacing-self.overdev], pad_size+Vector([self.overdev, 2*self.overdev]), name = name+"_pad"+str(ii)+'b', layer=layer_TRACK))
@@ -489,7 +489,7 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
 #                    drawn_pads.append(self.draw_rect(name+'_connect_right', self.coor([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev]), self.coor_vec([-iTrack-2*self.overdev, curr_height+iTrack_capa/2+pad_width+2*self.overdev])))
             #TODO
             #drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack_capa/2+pad_width+pad_spacing-self.overdev], [-iTrack-2*self.overdev, curr_height+iTrack_capa/2+pad_width+2*self.overdev], name=name+'_connect_right', layer=layer_TRACK ))
-#                    
+#
 #                    drawn_pads.append(self.draw_rect(name+'_connect_right_b', self.coor([capa_length/2+self.overdev, -iTrack/2-self.overdev]), self.coor_vec([-iTrack-2*self.overdev, (iTrack/2+iTrack_capa/2)+2*self.overdev])))
 #                    drawn_pads.append(self.draw_rect(name+'_connect_left_b', self.coor([-capa_length/2-self.overdev, iTrack/2+self.overdev]), self.coor_vec([iTrack+2*self.overdev, -(iTrack/2+iTrack_capa/2)-2*self.overdev])))
             #drawn_pads.append(self.rect_corner_2D([capa_length/2+self.overdev, -iTrack/2-self.overdev], [-iTrack-2*self.overdev, (iTrack/2+iTrack_capa/2)+2*self.overdev], name=name+'_connect_right_b', layer=layer_TRACK))
@@ -509,13 +509,13 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
         drawn_pads.append(self.rect_corner_2D([-capa_length/2, -iTrack/2], [self.overdev, iTrack], name=name+'_added_left', layer=layer_TRACK))
 
 #    pads = self.unite(drawn_pads, name=name+'_pads')
-    
+
 #    self.trackObjects.append(pads)
-    
+
     self.gapObjects.append(self.rect_center_2D([0,0], [capa_length, iTrack + 2*iGap+2*iGap_capa-2*self.overdev], name=name+"_gap", layer=layer_GAP))
     if self.is_mask:
         self.maskObjects.append(self.rect_center_2D([0,0], [capa_length, iTrack + 2*iGap+2*iGap_capa +2*self.gap_mask], name=name+"_mask", layer=layer_MASK))
-    
+
     if premesh:
         if not self.is_litho:
             mesh = self.rect_center_2D([0,0], [capa_length, iTrack_capa+2*self.overdev], name=name+"_mesh", layer=layer_MESH)
@@ -523,15 +523,15 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
 #
 #    self.ports[name+'_1'] = portOut1
 #    self.ports[name+'_2'] = portOut2
-            
+
     return portOut1, portOut2
 
 @register_method
-@move    
+@move
 def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_period, fillet):
     '''
     '''
-    iTrack, iGap = parse_entry((iTrack, iGap))
+    iTrack, iGap = parse_entry(iTrack, iGap)
     fillet = parse_entry(fillet)
     teeth_size=parse_entry(teeth_size)
     gap_size=parse_entry(gap_size)
@@ -540,7 +540,7 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
     portOut2 = self.port(name+'_outPort1',[0,-teeth_size[0]+iTrack+iGap], [0,-1], iTrack+2*self.overdev, iGap-2*self.overdev)
 
 
-    N_teeth=2*N_period+1    
+    N_teeth=2*N_period+1
     raw_points = [(teeth_size[0], -N_teeth*teeth_size[1]-self.overdev)]
     raw_points.append((teeth_size[0], (-N_teeth+1)*teeth_size[1]))
     for i in range(-N_teeth+1,N_teeth-1,4):
@@ -553,17 +553,17 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
     #TODO Find append_absolute_point and append_points difference
     points = self.append_points(raw_points)
     connection = self.polyline_2D(points, closed=False, name=name+"_capagap", layer=layer_TRACK)
-    
-    
+
+
     self._fillet(connection, fillet)
     raw_points=[(-gap_size-teeth_size[0]+self.overdev,N_teeth*teeth_size[1]+self.overdev),(gap_size-teeth_size[0]-self.overdev,N_teeth*teeth_size[1]+self.overdev)]
     points=self.append_absolute_points(raw_points)
     capagap_starter = self.polyline2D(points, closed=False, name=name+'_width', layer=layer_GAP)
-    
+
     capagap = connection.sweep_along_path(capagap_starter)
-    
-   
-    
+
+
+
     raw_points = [(-teeth_size[0]-iTrack-self.overdev, -N_teeth*teeth_size[1]-self.overdev),
                   (-teeth_size[0]-iTrack-self.overdev,-iTrack/2-self.overdev),
                   (-teeth_size[0]-iTrack-iGap,-iTrack/2-self.overdev),
@@ -580,9 +580,9 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
     pads = self.polyline_2D(points, name+"_pads")
     #####Filets on edges of the capa
     self.fillet(fillet+self.overdev,[11,6,5,0], pads)
-    
+
     pads_sub = self.subtract(pads, [capagap])
-    
+
     #####Filets on edge
     self.fillet(fillet-self.overdev,[73,70], pads)
 
@@ -618,7 +618,7 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
         self.gapObjects.append(self.polyline_2D(points, name+"_gap"))
 #    if self.is_mask:
 
-        
+
     if not self.is_litho:
         mesh=self.polyline_2D(points, name=name+"_mesh")
         self.modeler.assign_mesh_length(mesh, iTrack)
@@ -634,23 +634,23 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
 @register_method
 @move
 def draw_dose_test_Nb(self, name, pad_size, pad_spacing, array, correction='0um', alum=False, rot=False):
-        pad_size, pad_spacing = parse_entry((pad_size, pad_spacing))
+        pad_size, pad_spacing = parse_entry(pad_size, pad_spacing)
         pad_size = Vector(pad_size)
         pads = []
-        
+
         width = 2*array[0]*pad_size[0] + 3*array[0]*pad_spacing - correction
         height = array[1]*pad_size[1] + (1 + array[1])*pad_spacing
-        
+
         if not rot:
             tot_x = width
-            tot_y = height  
+            tot_y = height
         else:
             tot_x = height
             tot_y = width
-            
+
         pos_x = pad_spacing - 0.5*width
         pos_y = pad_spacing - 0.5*height
-        
+
         for jj in range(array[1]):
             for ii in range(array[0]):
                 print((pos_x, pos_y))
@@ -675,7 +675,7 @@ def draw_dose_test_Nb(self, name, pad_size, pad_spacing, array, correction='0um'
                     pos_x -= pad_spacing - 0.5*tot_x
                 else:
                     pos_x -= pad_spacing - 0.5*tot_y
-        
+
         if not alum:
             cutout = self.rect_center_2D([0, 0],[tot_x, tot_y], name=name+'_cutout', layer=layer_GAP)
             pads2 = self.unite(pads, "pads2")
@@ -683,16 +683,16 @@ def draw_dose_test_Nb(self, name, pad_size, pad_spacing, array, correction='0um'
         if self.is_mask:
             mask = self.rect_center_2D([0, 0],[tot_x+ 2*self.gap_mask, tot_y+ 2*self.gap_mask], name=name+'_cutout', layer=layer_GAP)
         return [pos_x, pos_y]
-    
+
 def draw_dose_test_junction_corrected(self, name, pad_size, pad_spacing, width, width_bridge, iInduct='0nH', n_bridge=1, spacing_bridge=0, alternate_width=True, version=0, override=False, dose=False, rot=False, rotspace=None):
-        pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry((pad_size, pad_spacing, width, spacing_bridge, width_bridge))
+        pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry(pad_size, pad_spacing, width, spacing_bridge, width_bridge)
         pad_size = Vector(pad_size)
         if self.val(width) < 1.5e-6 and n_bridge==1:
             width_jct = width
             width = 1.5e-6
-        else: 
+        else:
             width_jct=None
-        
+
         pads = []
         if not rot:
             pads.append(self.rect_corner_2D(self.name+'_left', self.coor([-pad_spacing/2+pad_size[0], -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]])))
@@ -704,7 +704,7 @@ def draw_dose_test_junction_corrected(self, name, pad_size, pad_spacing, width, 
             pads.append(self.rect_corner_2D(self.name+'_leftie', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([pad_spacing - 2*pad_size[0] + width, width])))
             pads.append(self.rect_corner_2D(self.name+'_lefty', self.coor([pad_spacing/2-pad_size[0]-0.5*pad_spacing-width, fac*pad_spacing]), self.coor_vec([width,pad_size[1] - fac*pad_spacing - pad_size[1] - 0.5*width])))
             pads.append(self.rect_corner_2D(self.name+'_righty', self.coor([pad_spacing/2-pad_size[0], -fac*pad_spacing]), self.coor_vec([width,-pad_size[1] + fac*pad_spacing + pad_size[1] + 0.5*width])))
-        
+
         portOut1 = [self.coor([pad_spacing/2-pad_size[0], 0]), -self.ori, width, 0]
         portOut2 = [self.coor([-pad_spacing/2+pad_size[0], 0]), self.ori, width, 0]
         self.ports[self.name+'_1'] = portOut1
@@ -721,9 +721,9 @@ def draw_dose_test_junction_corrected(self, name, pad_size, pad_spacing, width, 
                 jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, override=override, dose=dose)
             elif version==1:
                 jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True, override=override, dose=dose)
-        
+
         if version==2:
             jcts._connect_jct_corrected(width_bridge, iInduct=iInduct, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, cross=True, override=override, dose=dose)
-        
+
         return pads
 

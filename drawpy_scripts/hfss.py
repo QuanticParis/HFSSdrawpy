@@ -3,22 +3,25 @@ import atexit
 from copy import copy
 import os
 
-import dis
-import inspect
 import tempfile
 import types
 import numpy
 import signal
 import pythoncom
 import time
-import numpy as np
 from functools import wraps
-from collections import OrderedDict
-
-
 from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 from win32com.client import Dispatch, CDispatch
+
+from variable_string import VariableString, \
+                            parse_entry, \
+                            var
+                            #simplify_arith_expr, \
+                            #extract_value_unit, \
+                            #extract_value_dim, \
+                            #rem_unit, \
+
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -32,15 +35,6 @@ BASIS_ORDER = {"Zero Order": 0,
 
 layer_Default = 10
 
-def simplify_arith_expr(expr):
-    try:
-        out = repr(sympy_parser.parse_expr(str(expr)))
-        return out
-    except Exception:
-        print("Couldn't parse", expr)
-        raise
-
-
 def increment_name(base, existing):
     if base not in existing:
         return base
@@ -50,114 +44,7 @@ def increment_name(base, existing):
         n += 1
     return make_name()
 
-
-def extract_value_unit(expr, units):
-    """
-    :type expr: str
-    :type units: str
-    :return: float
-    """
-    try:
-        return Q(expr).to(units).magnitude
-    except Exception:
-        try:
-            return float(expr)
-        except Exception:
-            return expr
-        
-def extract_value_dim(expr):
-    """
-    type expr: str
-    """
-    return str(Q(expr).dimensionality)
-
-def parse_entry(entry):
-    #should take a list of tuple of list... of int, float or str...
-    if not isinstance(entry, list) and not isinstance(entry, tuple):
-        return extract_value_unit(entry, LENGTH_UNIT)
-    else:
-        entries = entry
-        _entry = []
-        for entry in entries:
-            _entry.append(parse_entry(entry))
-        return _entry
-    
-def rem_unit(other):
-    try:
-        value = extract_value_unit(other, LENGTH_UNIT)
-        return value
-    except Exception:
-        return other
-
-class VariableString(str):
-    # TODO: What happen with a list (Vector in our case)
-    def __add__(self, other):
-        other = rem_unit(other)
-        if other=="'":
-            return super(VariableString, self, other).__add__()
-        return var("(%s) + (%s)" % (self, other))
-
-    def __radd__(self, other):
-        other = rem_unit(other)
-        if other=="'":
-            return super(VariableString, self, other).__radd__()
-        return var("(%s) + (%s)" % (other, self))
-
-    def __sub__(self, other):
-        other = rem_unit(other)
-        return var("(%s) - (%s)" % (self, other))
-
-    def __rsub__(self, other):
-        other = rem_unit(other)
-        return var("(%s) - (%s)" % (other, self))
-
-    def __mul__(self, other):
-        other = rem_unit(other)
-        return var("(%s) * (%s)" % (self, other))
-
-    def __rmul__(self, other):
-        other = rem_unit(other)
-        return var("(%s) * (%s)" % (other, self))
-
-    def __div__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (self, other))
-
-    def __rdiv__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (other, self))
-
-    def __truediv__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (self, other))
-
-    def __rtruediv__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (other, self))
-
-    def __pow__(self, other):
-        other = rem_unit(other)
-        return var("(%s) ** (%s)" % (self, other))
-
-#    def __rpow__(self, other):
-#        other = self.rem_unit(other)
-#        return var("(%s) ** (%s)" % (other, self))
-
-    def __neg__(self):
-        return var("-(%s)" % self)
-
-    def __abs__(self):
-        return var("abs(%s)" % self)
-
-
-def var(x):
-    if isinstance(x, str):
-        return VariableString(simplify_arith_expr(x))
-    return x
-
-
 _release_fns = []
-
 
 def _add_release_fn(fn):
     global _release_fns
@@ -1473,105 +1360,105 @@ class HfssModeler(COMWrapper):
         return new_name        
 
 
-class ModelEntity():
-    instances_layered = {}
-    dict_instances = {}
-    instances_to_move = []
-    def __init__(self, name, dimension, coor_sys, model = 'True', layer=layer_Default):# model,
-        self.name = name
-        self.dimension = dimension
-        self.coor_sys = coor_sys
-        self.history = []    
-        self.model = model
-        self.layer = layer
+# class ModelEntity():
+#     instances_layered = {}
+#     dict_instances = {}
+#     instances_to_move = []
+#     def __init__(self, name, dimension, coor_sys, model = 'True', layer=layer_Default):# model,
+#         self.name = name
+#         self.dimension = dimension
+#         self.coor_sys = coor_sys
+#         self.history = []    
+#         self.model = model
+#         self.layer = layer
 
-        ModelEntity.dict_instances[name] = self
-        ModelEntity.find_last_list(ModelEntity.instances_to_move).append(self)
-        if layer in self.instances_layered.keys():
-            ModelEntity.instances_layered[layer].append(self)
-        else:
-            ModelEntity.instances_layered[layer]=[self]
+#         ModelEntity.dict_instances[name] = self
+#         ModelEntity.find_last_list(ModelEntity.instances_to_move).append(self)
+#         if layer in self.instances_layered.keys():
+#             ModelEntity.instances_layered[layer].append(self)
+#         else:
+#             ModelEntity.instances_layered[layer]=[self]
      
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
      
-    def check_name(self, name):
-        i = 0
-        new_name = name
-        while(new_name in self.dict_instances.keys()):
-            i+=1
-            new_name = name+'_'+str(i)
-        return new_name
+#     def check_name(self, name):
+#         i = 0
+#         new_name = name
+#         while(new_name in self.dict_instances.keys()):
+#             i+=1
+#             new_name = name+'_'+str(i)
+#         return new_name
     
-    @classmethod
-    def printInstances(cls):
-        for instance in cls.instances:
-            print(instance)
+#     @classmethod
+#     def printInstances(cls):
+#         for instance in cls.instances:
+#             print(instance)
             
-    @staticmethod
-    def find_last_list(list_entities=instances_to_move):
-#        print(list_entities)
-#        if isinstance(list_entities, Port) :
-#            return None
-        if isinstance(list_entities, list):
-            if len(list_entities)==0:
-                return list_entities
-            else:
-                if isinstance(list_entities[-1], list):
-                    return ModelEntity.find_last_list(list_entities[-1])
-                else:
-                    return list_entities
-        else:
-            return list_entities
+#     @staticmethod
+#     def find_last_list(list_entities=instances_to_move):
+# #        print(list_entities)
+# #        if isinstance(list_entities, Port) :
+# #            return None
+#         if isinstance(list_entities, list):
+#             if len(list_entities)==0:
+#                 return list_entities
+#             else:
+#                 if isinstance(list_entities[-1], list):
+#                     return ModelEntity.find_last_list(list_entities[-1])
+#                 else:
+#                     return list_entities
+#         else:
+#             return list_entities
         
                     
-#    @staticmethod
-#    def merge(n):
-#        key_list = []
-#        for idx, key in enumerate(ModelEntity.instances_to_move):
-#            if idx>=n:
-#                key_list.append(key)
-#        for key in key_list:
-#            entity = ModelEntity.instances_to_move.pop(key, None)
-#            ModelEntity.instances_moved[key]=entity
+# #    @staticmethod
+# #    def merge(n):
+# #        key_list = []
+# #        for idx, key in enumerate(ModelEntity.instances_to_move):
+# #            if idx>=n:
+# #                key_list.append(key)
+# #        for key in key_list:
+# #            entity = ModelEntity.instances_to_move.pop(key, None)
+# #            ModelEntity.instances_moved[key]=entity
 
-    @staticmethod
-    def reset():
-        ModelEntity.instances_layered = {}
-        ModelEntity.dict_instances = {}
-        ModelEntity.instances_to_move = []
+#     @staticmethod
+#     def reset():
+#         ModelEntity.instances_layered = {}
+#         ModelEntity.dict_instances = {}
+#         ModelEntity.instances_to_move = []
         
-    def append_history(self, entity):
-        self.history.append(entity)
+#     def append_history(self, entity):
+#         self.history.append(entity)
         
-    def delete(self):
-        del self
+#     def delete(self):
+#         del self
     
-    def copy(self, dimension=None):
-        #TODO complete
-        if dimension==None:
-            dimension = self.dimension
-        return ModelEntity(self.name, dimension, self.coor_sys)
+#     def copy(self, dimension=None):
+#         #TODO complete
+#         if dimension==None:
+#             dimension = self.dimension
+#         return ModelEntity(self.name, dimension, self.coor_sys)
     
-    def rename_entity(self, name):
-        self.name = name
+#     def rename_entity(self, name):
+#         self.name = name
         
-    def modify_dimension(self, dimension):
-        self.dimension = dimension
+#     def modify_dimension(self, dimension):
+#         self.dimension = dimension
         
-    def _sweep_along_path(self, path_obj):
-        self.dimension = 2
-        self.append_history(path_obj)
-        return self
+#     def _sweep_along_path(self, path_obj):
+#         self.dimension = 2
+#         self.append_history(path_obj)
+#         return self
         
-    def sweep_along_vector(self, vect):
-        "Duplicate the line and create a surface with the copy"
-        self.dimension = 2
-        return self
+#     def sweep_along_vector(self, vect):
+#         "Duplicate the line and create a surface with the copy"
+#         self.dimension = 2
+#         return self
 
-    def thicken_sheet(self, thickness, bothsides=False):
-        self.dimension = 3
-        return self
+#     def thicken_sheet(self, thickness, bothsides=False):
+#         self.dimension = 3
+#         return self
 
 class HfssFieldsCalc(COMWrapper):
     def __init__(self, setup):

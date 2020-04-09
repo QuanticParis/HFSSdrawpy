@@ -4,18 +4,21 @@ Created on Thu Nov 14 13:46:42 2019
 
 @author: Zaki
 """
-from hfss import parse_entry, VariableString
+import numpy
+import variable_string
+# from .variable_string import VariableString, parse_entry
+
 class Vector(list):
     def __init__(self, vec, vec_y=None):
         if vec_y is not None:
             vec = [vec, vec_y]
-        super().__init__(parse_entry(vec))
+        super().__init__(variable_string.parse_entry(vec))
 
     def check(self, elt):
-        return isinstance(elt, list) or isinstance(elt, tuple)
+        return isinstance(elt, (list, tuple, numpy.ndarray))
 
     def check_nb(self, nb):
-        return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, VariableString)
+        return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, variable_string.VariableString)
 
     def __add__(self, other):
         if self.check(other):
@@ -101,7 +104,7 @@ class Vector(list):
         vector: rotation around z of self by an angle given by other w.r.t to x
         '''
         if self.check(other):
-            unitOther = other.unit()
+            unitOther = Vector(other).unit()
             return Vector([self.dot(unitOther.refx()), self.dot(unitOther.orth().refy())])
         else:
             raise TypeError('Could not perform rdiv operation')

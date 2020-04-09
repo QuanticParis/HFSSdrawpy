@@ -1,6 +1,6 @@
 # Compiled
 *.pyc
-
+.DS_Store
 # Subdirectories
 /recorded_scripts
 /archive
