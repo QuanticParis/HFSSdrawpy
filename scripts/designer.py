@@ -3937,7 +3937,7 @@ class KeyElt(Circuit):
             self.ports[self.name+'_pump_2'] = portOutpump2             
      
         
-    def draw_snails(self, pad_size, pad_spacing,
+    def draw_test_snails(self, pad_size, pad_spacing,
                              loop_width, loop_length,
                              N, length_island,
                              width_bridge_left, width_bridge_right,
@@ -5292,27 +5292,7 @@ _connect_snails  |-|      | pad_spacing
         
         return [pos_x, pos_y]
 
-    def draw_test_snails(self, pad_size, pad_spacing, iTrack, N_snails=1,
-                                  snail_dict={'loop_width':20e-6, 'loop_length':20e-6,
-                                                'length_big_junction':10e-6,
-                                                'length_small_junction':2e-6, 'bridge':1e-6,
-                                                'bridge_spacing':1e-6}):
-        pad_size, pad_spacing, iTrack = parse_entry((pad_size, pad_spacing, iTrack))
-        pad_size = Vector(pad_size)
-        
-        self.draw_rect(self.name+'_left', self.coor([-pad_spacing/2, -pad_size[1]/2]), self.coor_vec([-pad_size[0],pad_size[1]]))
-        self.draw_rect(self.name+'_right', self.coor([pad_spacing/2, pad_size[1]/2]), self.coor_vec([pad_size[0],-pad_size[1]]))
-        
-        portOut1 = [self.coor([pad_spacing/2, 0]), -self.ori, iTrack, 0]
-        portOut2 = [self.coor([-pad_spacing/2, 0]), self.ori, iTrack, 0]
-        self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
-        
-        in_array = portOut2
-        out_array = portOut1
-        snail_array = self.connect_elt(self.name+'_junction', in_array, out_array)
-        snail_track = snail_array._connect_snails([snail_dict['loop_width'], snail_dict['loop_length']], snail_dict['length_big_junction'], 3, snail_dict['length_small_junction'], 1, N_snails, snail_dict['bridge'], snail_dict['bridge_spacing'])#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
-        
+
     def draw_test_jcts(self, pad_size, pad_spacing, width_bridge, width, Width=None,
                   spacing_bridge=0, n_bridge=1,
                   iInduct='0nH', iCapa='0pF', overlap=None, rotspace=None):
@@ -7808,7 +7788,7 @@ class ConnectElt(KeyElt, Circuit):
                              width_jct_left, width_jct_right,
                              n_left=1, n_right=1,
                              spacing_bridge_left=None, spacing_bridge_right=None,
-                             yoffset=0, litho='elec'):
+                             yoffset=0, litho='elec', iInduct='0nH'):
         '''
         N       : int  
                   number of snail cells
@@ -7863,41 +7843,55 @@ class ConnectElt(KeyElt, Circuit):
         
         Dx = (loop_length + length_island)
         
-        for ii in np.arange(N): # array cell
-            x = -tot_length/2 + ii * (loop_length+2*length_island)
-            for jj in [0,1]: # in / out
-                xj = x + jj*Dx
-                snails.append(self.draw_rect(self.name+'_pad_top_1', 
-                                             self.coor([xj, -loop_width/2-width_track_mean+yoffset]),
-                                             self.coor_vec([length_island, Dy])))  
+        if not self.is_hfss:
+            for ii in np.arange(N): # array cell
+                x = -tot_length/2 + ii * (loop_length+2*length_island)
+                for jj in [0,1]: # in / out
+                    xj = x + jj*Dx
+                    snails.append(self.draw_rect(self.name+'_pad_top_1', 
+                                                 self.coor([xj, -loop_width/2-width_track_mean+yoffset]),
+                                                 self.coor_vec([length_island, Dy])))  
+                
+                    # left
+                    self.ports[self.name+'_left_'+str(ii)+'_'+str(jj)] = [self.coor([xj+length_island-jj*length_island, 
+                                           -loop_width/2-width_track_mean + width_track_left/2+yoffset]),
+                                           -self.ori*(-1)**jj, width_track_left, 0]
+                
+                    # right
+                    self.ports[self.name+'_right_'+str(ii)+'_'+str(jj)] = [self.coor([xj+length_island-jj*length_island, 
+                                           +loop_width/2+width_track_mean-width_track_right/2+yoffset]),
+                                           -self.ori*(-1)**jj, width_track_right, 0]
+    
+                jcts_right = self.connect_elt(self.name+'_right_'+str(ii),
+                                        self.name+'_right_'+str(ii)+'_0',
+                                        self.name+'_right_'+str(ii)+'_1')
+                
+                jcts_right._connect_jcts(width_bridge_right, width_jct_right,
+                                         spacing_bridge=spacing_bridge_right,
+                                         n=n_right)
+                
+                jcts_left = self.connect_elt(self.name+'_left_'+str(ii),
+                                        self.name+'_left_'+str(ii)+'_0',
+                                        self.name+'_left_'+str(ii)+'_1')
+                
+                jcts_left._connect_jcts(width_bridge_left, width_jct_left,
+                                        spacing_bridge=spacing_bridge_left,
+                                        n=n_left)
             
-                # left
-                self.ports[self.name+'_left_'+str(ii)+'_'+str(jj)] = [self.coor([xj+length_island-jj*length_island, 
-                                       -loop_width/2-width_track_mean + width_track_left/2+yoffset]),
-                                       -self.ori*(-1)**jj, width_track_left, 0]
+        else:
+#            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0, 0]), self.coor_vec([tot_width + spacing_bridge, width]))
+#            self.modeler.assign_mesh_length(mesh, 0.5*width)
+    
+            JJ = self.draw_rect(self.name+'_LJ',
+                                self.coor([-tot_length/2, -width_track/2]),
+                                self.coor_vec([tot_length, width_track]))
+            mesh = self.draw_rect(self.name+'_mesh',
+                                self.coor([-tot_length/2, -width_track/2]),
+                                self.coor_vec([tot_length, width_track]))
+            self.modeler.assign_mesh_length(mesh, 0.5*width_track)
+            self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
             
-                # right
-                self.ports[self.name+'_right_'+str(ii)+'_'+str(jj)] = [self.coor([xj+length_island-jj*length_island, 
-                                       +loop_width/2+width_track_mean-width_track_right/2+yoffset]),
-                                       -self.ori*(-1)**jj, width_track_right, 0]
-
-            jcts_right = self.connect_elt(self.name+'_right_'+str(ii),
-                                    self.name+'_right_'+str(ii)+'_0',
-                                    self.name+'_right_'+str(ii)+'_1')
-            
-            jcts_right._connect_jcts(width_bridge_right, width_jct_right,
-                                     spacing_bridge=spacing_bridge_right,
-                                     n=n_right)
-            
-            jcts_left = self.connect_elt(self.name+'_left_'+str(ii),
-                                    self.name+'_left_'+str(ii)+'_0',
-                                    self.name+'_left_'+str(ii)+'_1')
-            
-            jcts_left._connect_jcts(width_bridge_left, width_jct_left,
-                                    spacing_bridge=spacing_bridge_left,
-                                    n=n_left)
-            
-            snails.append(self.draw_rect(self.name+'_pad_bottom',
-                                         self.coor([tot_length/2, -width_track/2]),
-                                         self.coor_vec([(spacing-tot_length)/2, width_track])))
+        snails.append(self.draw_rect(self.name+'_pad_bottom',
+                                     self.coor([tot_length/2, -width_track/2]),
+                                     self.coor_vec([(spacing-tot_length)/2, width_track])))
         
