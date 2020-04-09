@@ -1146,55 +1146,27 @@ class KeyElt(Circuit):
         self.ports[self.name] = portOut
 
 
-
-    def draw_JJ(self, iTrack, iGap, iTrackJ, iLength, iInduct='1nH', fillet=None):
-        '''
-        Draws a Joseph's Son Junction.
-
-        Draws a rectangle, here called "junction",
-        with Bondary condition :lumped RLC, C=R=0, L=iInduct in nH
-        Draws needed adaptors on each side
-
-        Inputs:
-        -------
-        name:
-        iIn: (tuple) input port
-        iOut: (tuple) output port - None, ignored and recalculated
-        iSize: (float) length of junction
-        iWidth: (float) width of junction
-        iLength: (float) distance between iIn and iOut, including
-                 the adaptor length
-        iInduct: (float in nH)
-
-        Outputs:
-        --------
+    def draw_IBM_tansmon(self, cutout_size, pad_spacing, pad_size, Jwidth, 
+                         track, gap, Jinduc, nport=1, fillet=None):
 
         '''
-        iTrack, iGap, iTrackJ, iLength = parse_entry((iTrack, iGap, iTrackJ, iLength))
+                                cutout_size[0]
+                       +---------------------------------+
+                       |                                 |
+                       |    pad_size[0|1]                |
+                       |     +-------+     +-------+     |
+                       |     |       +-+ +-+       |     |
+     cutout_size[1] |  |     |          +          |     |
+                       |     |       +-+ +-+       |     |
+                       |     +-------+     +-------+     |
+                       |           pad_spacing           |
+                       |                                 |
+                       +---------------------------------+
 
-        portOut1 = [self.coor([iLength/2,0]), self.coor_vec([1,0]), iTrack, iGap]
-        portOut2 = [self.coor([-iLength/2,0]), self.coor_vec([-1,0]), iTrack, iGap]
-        self.ports[self.name+'_1'] = portOut1
-        self.ports[self.name+'_2'] = portOut2
-
-        junction = self.connect_elt(self.name, self.name+'_1', self.name+'_2')
-        pads = junction._connect_JJ(iTrackJ, iInduct=iInduct, fillet=None)
-        self.trackObjects.append(pads)
-        
-        self.gapObjects.append(self.draw_rect_center(self.name+"_cutout", self.coor([0,0]), self.coor_vec([iLength, iTrack+2*iGap])))
-
-    def draw_IBM_tansmon(self,
-                       cutout_size,
-                       pad_spacing,
-                       pad_size,
-                       Jwidth,
-                       track,
-                       gap,
-                       Jinduc,
-                       nport=1,
-                       fillet=None):
+        '''
 
         cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
+        fillet = parse_entry(fillet)
         cutout_size = Vector(cutout_size)
         pad_size = Vector(pad_size)
 
@@ -1213,20 +1185,28 @@ class KeyElt(Circuit):
         self.ports[self.name+'_in_jct'] = in_junction
         self.ports[self.name+'_out_jct'] = out_junction
         junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
+        junction_pads = junction._connect_jcts(Jwidth+2*self.overdev,
+                                               track_J,
+                                               iInduct=Jinduc)
+
 
         right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
         left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
-        
 
-        pads = right_pad.unite([left_pad, junction_pads], name=self.name+'_pads')
+        pads = right_pad.unite([left_pad, junction_pads[0], junction_pads[1]], name=self.name+'_pads')
         
         if fillet is not None:
+            pads.fillet(0.75*fillet-self.overdev, [1, 4, 11, 14])
+            pads.fillet(fillet+self.overdev, [0, 7, 8, 9, 10, 11, 12, 19])
+            
+
+            ''' ZL: this doesn't work anymore ...
             pads.fillet(fillet+self.overdev,[19])
             pads.fillet(0.75*fillet-self.overdev,[18,17,14,13])
             pads.fillet(fillet+self.overdev,[12,11,10,9,8,7])
             pads.fillet(0.75*fillet-self.overdev,[6,5,2,1])
             pads.fillet(fillet+self.overdev,0)
+            '''
       
         self.trackObjects.append(pads)
 
@@ -1262,10 +1242,6 @@ class KeyElt(Circuit):
             cutout = self.unite([cutout, sub_1, sub_2, sub_3a])
             
         self.gapObjects.append(cutout)
-        
-#        self.draw_rect_center(self.name+"check1", self.coor(cutout_size.px()/2)+self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
-#        self.draw_rect_center(self.name+"check2", self.coor(-cutout_size.px()/2)-self.ori*pad_size[0]/20, self.rot(*pad_size)/10)
-#        self.draw_rect_center(self.name+"check3", self.coor(Vector(pad_spacing/2+pad_size[0],cutout_size[1]/2))+self.ori.orth()*pad_size[1]/20, self.rot(*pad_size)/10)
 
 
     def draw_half_tansmon(self,
@@ -7723,7 +7699,7 @@ class ConnectElt(KeyElt, Circuit):
     
             JJ = self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec([tot_width + spacing_bridge, width]))
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
-            
+
         return pads
         
         
