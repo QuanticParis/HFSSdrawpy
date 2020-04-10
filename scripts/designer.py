@@ -1147,7 +1147,7 @@ class KeyElt(Circuit):
 
 
     def draw_IBM_tansmon(self, cutout_size, pad_spacing, pad_size, Jwidth, 
-                         track, gap, Jinduc, nport=1, fillet=None):
+                         Jlength, track, gap, Jinduc, nport=1, fillet=None):
 
         '''
                                 cutout_size[0]
@@ -1165,7 +1165,7 @@ class KeyElt(Circuit):
 
         '''
 
-        cutout_size, pad_spacing, pad_size, Jwidth, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, track, gap))
+        cutout_size, pad_spacing, pad_size, Jwidth, Jlength, track, gap = parse_entry((cutout_size, pad_spacing, pad_size, Jwidth, Jlength, track, gap))
         fillet = parse_entry(fillet)
         cutout_size = Vector(cutout_size)
         pad_size = Vector(pad_size)
@@ -1185,10 +1185,7 @@ class KeyElt(Circuit):
         self.ports[self.name+'_in_jct'] = in_junction
         self.ports[self.name+'_out_jct'] = out_junction
         junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-        junction_pads = junction._connect_jcts(Jwidth+2*self.overdev,
-                                               track_J,
-                                               iInduct=Jinduc)
-
+        junction_pads = junction._connect_jcts(Jlength, Jwidth, iInduct=Jinduc)
 
         right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
         left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
@@ -1198,15 +1195,6 @@ class KeyElt(Circuit):
         if fillet is not None:
             pads.fillet(0.75*fillet-self.overdev, [1, 4, 11, 14])
             pads.fillet(fillet+self.overdev, [0, 7, 8, 9, 10, 11, 12, 19])
-            
-
-            ''' ZL: this doesn't work anymore ...
-            pads.fillet(fillet+self.overdev,[19])
-            pads.fillet(0.75*fillet-self.overdev,[18,17,14,13])
-            pads.fillet(fillet+self.overdev,[12,11,10,9,8,7])
-            pads.fillet(0.75*fillet-self.overdev,[6,5,2,1])
-            pads.fillet(fillet+self.overdev,0)
-            '''
       
         self.trackObjects.append(pads)
 
@@ -1244,12 +1232,21 @@ class KeyElt(Circuit):
         self.gapObjects.append(cutout)
 
 
-    def draw_half_tansmon(self,
-                           track,
-                           gap,
-                           length,
-                           width_J,
-                           Jinduc):
+    def draw_half_transmon(self, track, gap, length, width_J, Jinduc):
+        
+        '''
+        
+        +-----------------+
+        |     length      |
+        |   +---------+   |
+        |   |         |   |
+        |gap| |track  |   | 
+        |   +---------+   |
+        |      | x |      |
+        +------+-+-+------+
+              width_J
+        
+        '''
 
         track, gap, length, width_J, = parse_entry((track, gap, length, width_J,))
 
@@ -1264,126 +1261,55 @@ class KeyElt(Circuit):
 
         self.trackObjects.append(track_poly)
         self.gapObjects.append(cutout)
-#        
-#        if not self.is_litho:
-#            mesh = self.draw_rect_center(self.name+"_mesh", self.coor([0,0]), self.coor_vec(cutout_size))
-#            self.modeler.assign_mesh_length(mesh, 2*track)
-#
-#        track_J=Jwidth*4.
-#        in_junction = [self.coor([-pad_spacing/2+self.overdev, 0]), self.coor_vec([1,0]), track_J+2*self.overdev, 0]
-#        out_junction = [self.coor([pad_spacing/2-self.overdev, 0]), self.coor_vec([-1,0]), track_J+2*self.overdev, 0]
-#        self.ports[self.name+'_in_jct'] = in_junction
-#        self.ports[self.name+'_out_jct'] = out_junction
-#        junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-#        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)#Jlength, 
-#        
-#        
-#        right_pad = self.draw_rect_center(self.name+"_pad1", self.coor(Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
-#        left_pad = self.draw_rect_center(self.name+"_pad2", self.coor(-Vector(pad_spacing+pad_size[0],0)/2), self.coor_vec(pad_size+Vector([2*self.overdev, 2*self.overdev])))
-#        
-#
-#        pads = right_pad.unite([left_pad, junction_pads], name=self.name+'_pads')
-#        
-##        if fillet is not None:
-##            pads.fillet(fillet+self.overdev,[19])
-##            pads.fillet(0.75*fillet-self.overdev,[18,17,14,13])
-##            pads.fillet(fillet+self.overdev,[12,11,10,9,8,7])
-##            pads.fillet(0.75*fillet-self.overdev,[6,5,2,1])
-##            pads.fillet(fillet+self.overdev,0)
-#      
-#        self.trackObjects.append(pads)
-#
-#        if nport==1:
-#            self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track, gap]
-#        elif nport==2:
-#            self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track, gap]
-#            self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track, gap]
-#        elif nport==3:
-#            self.ports[self.name+'_1a'] = [self.coor(cutout_size.px()/2+pad_size.py()/2), self.ori, track, gap]
-#            self.ports[self.name+'_1b'] = [self.coor(cutout_size.px()/2-pad_size.py()/2), self.ori, track, gap]
-#            self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track, gap]
-#
-#        elif nport==4:
-#            self.ports[self.name+'_1a'] = [self.coor(cutout_size.px()/2+pad_size.py()/2), self.ori, track, gap]
-#            self.ports[self.name+'_1b'] = [self.coor(cutout_size.px()/2-pad_size.py()/2), self.ori, track, gap]
-#            self.ports[self.name+'_2a'] = [self.coor(-cutout_size.px()/2+pad_size.py()/2), -self.ori, track, gap]
-#            self.ports[self.name+'_2b'] = [self.coor(-cutout_size.px()/2-pad_size.py()/2), -self.ori, track, gap]
-#        elif nport==5:
-#            self.ports[self.name+'_1'] = [self.coor(cutout_size.px()/2), self.ori, track+2*self.overdev, gap-2*self.overdev]
-#            self.ports[self.name+'_2'] = [self.coor(-cutout_size.px()/2), -self.ori, track+2*self.overdev, gap-2*self.overdev]
-#            self.ports[self.name+'_3a'] = [self.coor(Vector(pad_spacing/2+pad_size[0],-cutout_size[1]/2)), -self.ori.orth() ,track/2+2*self.overdev,gap/2-2*self.overdev]
-#            if self.is_overdev:
-#                sub_1 = self.draw_rect(self.name + '_sub_1', self.coor([cutout_size[0]/2, -track/2-gap+self.overdev]), self.coor_vec([-self.overdev, track+2*gap-2*self.overdev]))
-#                sub_2 = self.draw_rect(self.name + '_sub_2', self.coor([-cutout_size[0]/2, -track/2-gap+self.overdev]), self.coor_vec([self.overdev, track+2*gap-2*self.overdev]))
-#                sub_3a = self.draw_rect(self.name + '_sub_3a', self.coor([-track/2-gap+self.overdev+pad_spacing/2+pad_size[0],-cutout_size[1]/2]), self.coor_vec([track+2*gap-2*self.overdev, self.overdev]))
-#
-#        if self.is_overdev:
-#            cutout = self.unite([cutout, sub_1, sub_2, sub_3a])
 
 
-
-    def draw_ZR_transmon(self,
-                        cutout_size,
-                        pad_spacing,
-                        pad_size_right,
-                        track_right,
-                        gap_right,
-                        length_right,
-                        spacing_right,
-                        short_right,
-                        Jwidth,
-                        Jlength,
-                        Jinduc,
-                        pad_size_left=None,
-                        track_left=None,
-                        gap_left=None,
-                        length_left=None,
-                        spacing_left=None,
-                        short_left=None,
-                        fillet=None):
+    def draw_ZR_transmon(self, cutout_size, pad_spacing, pad_size_right,
+                         track_right, gap_right, length_right, spacing_right,
+                         short_right, Jwidth, Jlength, Jinduc,
+                         pad_size_left=None, track_left=None, gap_left=None,
+                         length_left=None, spacing_left=None, short_left=None,
+                         fillet=None):
         
+        '''
+                                      cutout_size[0|1]
+        +-----------------------------------------------------------------------------+
+        |                                                                             |
+        |                                                 pad_size_right[0|1]         |
+        |     +-------------------------+ pad_spacing +-------------------------+     |
+        |     |                         |             |                         |     |
+        |     |                         |             |                         |     |
+        |     +----------------+        |   Jlength   |length_r+----------------+     |
+                               |        +------ ------+        |spacing_r+gap_r       |
+        +-------------------+  |              |X| Jwidth       |  +-------------------+ | track_right
+                               |        +------ ------+        |                      |
+        |     +----------------+        |             |        +----------------+     |
+        |     |                         |             |                         |     |
+        |     |                         |             |                         |     |
+        |     +-------------------------+             +-------------------------+     |
+        |                                                                             |
+        |                                                                             |
+        +-----------------------------------------------------------------------------+
+        
+        
+        '''
         # Short should be 0 for no short
 
-        parsed = parse_entry((cutout_size,
-                              pad_spacing,
-                              pad_size_right,
-                              track_right,
-                              gap_right,
-                              length_right,
-                              spacing_right,
-                              short_right,
-                              Jwidth,
-                              Jlength,
-                              Jinduc,
-                              pad_size_left,
-                              track_left,
-                              gap_left,
-                              length_left, 
-                              spacing_left, 
-                              short_left))
+        parsed = parse_entry((cutout_size, pad_spacing, pad_size_right, 
+                              track_right, gap_right, length_right,
+                              spacing_right, short_right, Jwidth, Jlength, 
+                              Jinduc, pad_size_left, track_left, gap_left,
+                              length_left, spacing_left, short_left))
                         
-        (cutout_size,
-         pad_spacing,
-         pad_size_right,
-         track_right,
-         gap_right,
-         length_right,
-         spacing_right,
-         short_right,
-         Jwidth,
-         Jlength,
-         Jinduc,
-         pad_size_left,
-         track_left,
-         gap_left,
-         length_left,
-         spacing_left,
-         short_left) = parsed
+        (cutout_size, pad_spacing, pad_size_right, 
+                              track_right, gap_right, length_right,
+                              spacing_right, short_right, Jwidth, Jlength, 
+                              Jinduc, pad_size_left, track_left, gap_left,
+                              length_left, spacing_left, short_left) = parsed
          
         if pad_size_left is None:
             pad_size_left=pad_size_right
-        #if track_left is None:
-        #    track_left=track_right
+        if track_left is None:
+            track_left=track_right
         if gap_left is None:
             gap_left=gap_right
         if length_left is None:
@@ -1410,7 +1336,8 @@ class KeyElt(Circuit):
         self.ports[self.name+'_in_jct'] = in_junction
         self.ports[self.name+'_out_jct'] = out_junction
         junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iLengthJ=Jlength, iInduct=Jinduc, fillet=None)
+        
+        junction_pads = junction._connect_jcts(Jlength, Jwidth, iInduct=Jinduc)
 
         raw_points = [(pad_spacing/2-self.overdev, -pad_size_right[1]/2-self.overdev),
                       (pad_size_right[0]+2*self.overdev, 0),
@@ -1522,7 +1449,7 @@ class KeyElt(Circuit):
         if not self.is_litho:
             self.modeler.assign_mesh_length(mesh, 4*Jwidth)
         
-        to_unite = [right_pad, left_pad, junction_pads]
+        to_unite = [right_pad, left_pad, junction_pads[0], junction_pads[1]]
         if right_track is not None:
             to_unite.append(right_track)
         if left_track is not None:
@@ -1555,9 +1482,7 @@ class KeyElt(Circuit):
         portOut2 = [self.coor([-cutout_size[0]/2,0]), self.coor_vec([-1,0]), track_left+2*self.overdev, gap_left-2*self.overdev]
         self.ports[self.name+'_2'] = portOut2
         
-    def draw_cutout(self,
-                    cutout_size,
-                    fillet=None):
+    def draw_cutout(self, cutout_size, fillet=None):
 
         parsed = parse_entry((cutout_size))
         (cutout_size) = parsed
@@ -1581,12 +1506,38 @@ class KeyElt(Circuit):
         
 
     def draw_Xmon(self, gap_trm, track_trm, length, gap_cpl, gnd_cpl, 
-                  gap, track, Jwidth, Jinduc):
+                  gap, track, Jwidth, Jlength, Jinduc):
+        
+        '''
+        
+                        +---------+
+                        |         |
+                        |  +---+  |
+                        |  |   |  |
+                        |  |   |  |
+                        |  |   |  |
+                        |  |   |  |
+        +---------------+  |   |  +---------------+
+        |                  |   |                  |
+        |   +--------------+   +--------------+   |
+        |   |                                 |   |
+        |   +--------------+   +--------------+   |
+        |                  |   |                  |
+        +---------------+  |   |  +---------------+
+                        |  |   |  |
+                        |  |   |  |
+                        |  |   |  |
+                        |  |   |  |
+                        |  +---+  |
+                        |    X    |
+                        +---------+
+
+        '''
         
         parsed = parse_entry((gap_trm, track_trm, length, gap_cpl, gnd_cpl,
-                              gap, track, Jwidth, Jinduc))
+                              gap, track, Jwidth, Jlength, Jinduc))
         (gap_trm, track_trm, length, gap_cpl, gnd_cpl, 
-        gap, track, Jwidth, Jinduc) = parsed
+        gap, track, Jwidth, Jlength, Jinduc) = parsed
 
         # Area of the qubit 
         X_size = 2 * gap_trm + track_trm + 2 * length
@@ -1618,8 +1569,7 @@ class KeyElt(Circuit):
         # Draw the JJ
         junction = self.connect_elt(self.name+'_junction', 
                                     self.name+'_jct_cap', self.name+'_jct_gnd')
-        junction_pads = junction._connect_JJ(Jwidth + 2 * self.overdev, 
-                                             iInduct=Jinduc, fillet=None)
+        junction_pads = junction._connect_jcts(Jlength, Jwidth, iInduct=Jinduc)
 
         # X capacitance
         raw_points = [(X0[0] + 0.5*track_trm + self.overdev, 
@@ -1686,7 +1636,7 @@ class KeyElt(Circuit):
                              self.coor_vec([track_trm + 2 * gap_trm
                                             - 2*self.overdev, self.overdev])))
         
-        to_unite = [Xcapa, Gnd_capa, junction_pads] + extra_pad
+        to_unite = [Xcapa, Gnd_capa, *junction_pads] + extra_pad
         pads = self.unite(to_unite, name=self.name+'_pads')
         
         self.trackObjects.append(pads)

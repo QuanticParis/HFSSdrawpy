@@ -39,21 +39,9 @@ def pos(i, j):
 
 
 cutout_size = ['200um', '100um']
-pad_spacing = '20um'
-pad_size = ['50um', '50um']
-Jwidth = '1um'
-Jlength = '0.5um'
-track = '1um'
-gap = '1um'
-Jinduc = '1nH'
 
 c.key_elt('temp', pos(0, 0), [0, 1])
-c.temp.draw_IBM_tansmon(cutout_size=cutout_size,
-                        pad_spacing=pad_spacing,
-                        pad_size=pad_size,
-                        Jwidth=Jwidth, Jlength=Jlength,
-                        track=track,
-                        gap=gap,
-                        Jinduc=Jinduc,
-                        nport=2, fillet='2um')
+
+c.temp.draw_cutout(cutout_size, fillet=None)
+
 release()

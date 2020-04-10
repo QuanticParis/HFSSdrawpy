@@ -35,25 +35,12 @@ c.set_variable('yy', '50um')  # horizontal spacing
 def pos(i, j):
     return [(i + 0.5)*c.xx, (j + 0.5)*c.yy]
 
-# Finger junctions
 
-
-cutout_size = ['200um', '100um']
-pad_spacing = '20um'
-pad_size = ['50um', '50um']
+length = '20um'
 Jwidth = '1um'
-Jlength = '0.5um'
-track = '1um'
-gap = '1um'
+track = '2um'
+gap = '3um'
 Jinduc = '1nH'
-
 c.key_elt('temp', pos(0, 0), [0, 1])
-c.temp.draw_IBM_tansmon(cutout_size=cutout_size,
-                        pad_spacing=pad_spacing,
-                        pad_size=pad_size,
-                        Jwidth=Jwidth, Jlength=Jlength,
-                        track=track,
-                        gap=gap,
-                        Jinduc=Jinduc,
-                        nport=2, fillet='2um')
+c.temp.draw_half_transmon(track, gap, length, Jwidth, Jinduc)
 release()

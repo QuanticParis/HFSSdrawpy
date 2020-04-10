@@ -38,22 +38,19 @@ def pos(i, j):
 # Finger junctions
 
 
-cutout_size = ['200um', '100um']
-pad_spacing = '20um'
-pad_size = ['50um', '50um']
+gap_trm = '6um'
+track_trm = '5um'
+length = '20um'
+gap_cpl = ['0.5um', '1um', '2um']
+gnd_cpl = ['2um', '3um', '4um']
+gap = ['1um', '2um', '3um']
+track = ['1um', '2um', '3um']
 Jwidth = '1um'
-Jlength = '0.5um'
-track = '1um'
-gap = '1um'
+Jlength = '0.8um'
 Jinduc = '1nH'
 
 c.key_elt('temp', pos(0, 0), [0, 1])
-c.temp.draw_IBM_tansmon(cutout_size=cutout_size,
-                        pad_spacing=pad_spacing,
-                        pad_size=pad_size,
-                        Jwidth=Jwidth, Jlength=Jlength,
-                        track=track,
-                        gap=gap,
-                        Jinduc=Jinduc,
-                        nport=2, fillet='2um')
+
+c.temp.draw_Xmon(gap_trm, track_trm, length, gap_cpl, gnd_cpl,
+                 gap, track, Jwidth, Jlength, Jinduc)
 release()

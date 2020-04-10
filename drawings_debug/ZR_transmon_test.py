@@ -40,20 +40,22 @@ def pos(i, j):
 
 cutout_size = ['200um', '100um']
 pad_spacing = '20um'
-pad_size = ['50um', '50um']
+pad_size_left = ['70um', '50um']
 Jwidth = '1um'
-Jlength = '0.5um'
-track = '1um'
-gap = '1um'
+track_right = '3um'
+gap_right = '2um'
 Jinduc = '1nH'
+length_right = '12um'
+spacing_right = '0um'
+Jlength = '0.8um'
+short_right = '0um'
 
 c.key_elt('temp', pos(0, 0), [0, 1])
-c.temp.draw_IBM_tansmon(cutout_size=cutout_size,
-                        pad_spacing=pad_spacing,
-                        pad_size=pad_size,
-                        Jwidth=Jwidth, Jlength=Jlength,
-                        track=track,
-                        gap=gap,
-                        Jinduc=Jinduc,
-                        nport=2, fillet='2um')
+
+c.temp.draw_ZR_transmon(cutout_size, pad_spacing, pad_size_left,
+                        track_right, gap_right, length_right, spacing_right,
+                        short_right, Jwidth, Jlength, Jinduc,
+                        pad_size_left=None, track_left=None, gap_left=None,
+                        length_left=None, spacing_left=None, short_left=None,
+                        fillet=None)
 release()
