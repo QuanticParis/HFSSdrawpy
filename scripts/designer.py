@@ -7694,10 +7694,10 @@ class ConnectElt(KeyElt, Circuit):
                 x_pos += spacing_bridge + width_bridge
             
         else:
-            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0, 0]), self.coor_vec([tot_width + spacing_bridge, width]))
+            mesh = self.draw_rect_center(self.name+'_mesh', self.coor([0, 0]), self.coor_vec([tot_width + 2*margin, width]))
             self.modeler.assign_mesh_length(mesh, 0.5*width)
     
-            JJ = self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec([tot_width + spacing_bridge, width]))
+            JJ = self.draw_rect_center(self.name, self.coor([0, 0]), self.coor_vec([tot_width + 2*margin, width]))
             self.assign_lumped_RLC(JJ, self.ori, (0, iInduct, 0))
 
         return pads
