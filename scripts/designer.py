@@ -1654,8 +1654,8 @@ class KeyElt(Circuit):
         self.ports[self.name+'_2'] = port2
         self.ports[self.name+'_j'] = portj
  
-    def draw_pHmon(self, track, gap, left, right, down,
-                   up_left, dn_left, up_right, dn_right, Jwidth, Jinduc):
+    def draw_pHmon(self, track, gap, left, right, down, up_left, dn_left,
+                   up_right, dn_right, Jwidth, Jlength, Jinduc):
         '''
                  gap track
                   | |   |
@@ -1673,9 +1673,9 @@ class KeyElt(Circuit):
         '''
         
         parsed = parse_entry((track, gap, left, right, down, up_left, dn_left, 
-                              up_right, dn_right, Jwidth, Jinduc))
+                              up_right, dn_right, Jwidth, Jlength, Jinduc))
         (track, gap, left, right, down, up_left, dn_left, 
-         up_right, dn_right, Jwidth, Jinduc) = parsed
+         up_right, dn_right, Jwidth, Jlength, Jinduc) = parsed
        
         # Function to calculate track and gap points at once
         def add_pt(trackObj, gapObj, vec, curvature, direction):
@@ -1723,13 +1723,12 @@ class KeyElt(Circuit):
         # Draw the JJ
         junction = self.connect_elt(self.name+'_junction', 
                                     self.name+'_jct_cap', self.name+'_jct_gnd')
-        junction_pads = junction._connect_JJ(Jwidth + 2 * self.overdev, 
-                                             iInduct=Jinduc, fillet=None)
+        junction_pads = junction._connect_jcts(Jlength, Jwidth, iInduct=Jinduc)
   
         # Set Drawpy objects
         
         self.trackObjects.append(capa)
-        self.trackObjects.append(junction_pads)
+        self.trackObjects += junction_pads
         
         self.gapObjects.append(ground) 
         
@@ -1746,8 +1745,8 @@ class KeyElt(Circuit):
                                          self.coor_vec(mask_size))
             self.maskObjects.append(mask)
             
-    def draw_sHmon(self, track, gap, left, right,
-                   up_left, dn_left, up_right, dn_right, Jwidth, Jinduc):
+    def draw_sHmon(self, track, gap, left, right, up_left, dn_left, up_right,
+                   dn_right, Jwidth, Jlength, Jinduc):
         '''
                  gap track
                   | |   |
@@ -1765,9 +1764,9 @@ class KeyElt(Circuit):
         '''
         
         parsed = parse_entry((track, gap, left, right, up_left, dn_left, 
-                              up_right, dn_right, Jwidth, Jinduc))
+                              up_right, dn_right, Jwidth, Jlength, Jinduc))
         (track, gap, left, right, up_left, dn_left, 
-         up_right, dn_right, Jwidth, Jinduc) = parsed
+         up_right, dn_right, Jwidth, Jlength, Jinduc) = parsed
        
         # Function to calculate track and gap points at once
         def add_pt(trackObj, gapObj, vec, curvature, direction):
@@ -1818,14 +1817,13 @@ class KeyElt(Circuit):
         # Draw the JJ
         junction = self.connect_elt(self.name+'_junction', 
                                     self.name+'_jct_left', self.name+'_jct_right')
-        junction_pads = junction._connect_JJ(Jwidth + 2 * self.overdev, 
-                                             iInduct=Jinduc, fillet=None)
+        junction_pads = junction._connect_jcts(Jlength, Jwidth, iInduct=Jinduc)
   
         # Set Drawpy objects
         
         capa = self.unite([capa_l, capa_r], name=self.name+'_capa')
         self.trackObjects.append(capa)
-        self.trackObjects.append(junction_pads)
+        self.trackObjects += junction_pads
         
         self.gapObjects.append(ground) 
         
@@ -1842,23 +1840,11 @@ class KeyElt(Circuit):
                                          self.coor_vec(mask_size))
             self.maskObjects.append(mask)
        
-    def draw_TP_transmon(self,
-                        gap_tr,
-                        big_capa_width,
-                        big_capa_length,
-                        small_capa_width,
-                        small_capa_length,                        
-                        track_big,
-                        gap_big,
-                        length_big,
-                        short_big,
-                        short_small,
-                        track_small,
-                        gap_small,
-                        capa_add_small,
-                        Jwidth,
-                        Jinduc,
-                        small_type='Left'):# can be Left, Right or Up
+    def draw_TP_transmon(self, gap_tr, big_capa_width, big_capa_length,
+                        small_capa_width, small_capa_length, track_big, 
+                        gap_big, length_big, short_big, short_small, 
+                        track_small, gap_small, capa_add_small, Jwidth, Jlength,
+                        Jinduc, small_type='Left'):# can be Left, Right or Up
         
         # Short should be 0 for no short
 
@@ -1875,7 +1861,7 @@ class KeyElt(Circuit):
                                 track_small,
                                 gap_small,
                                 capa_add_small,
-                                Jwidth,
+                                Jwidth, Jlength,
                                 Jinduc)) 
                         
         (gap_tr,
@@ -1891,7 +1877,7 @@ class KeyElt(Circuit):
         track_small,
         gap_small,
         capa_add_small,
-        Jwidth,
+        Jwidth, Jlength,
         Jinduc) = parsed
 
         #area of the qubit 
@@ -1913,7 +1899,7 @@ class KeyElt(Circuit):
         self.ports[self.name+'_out_jct'] = out_junction
         # draw the JJ
         junction = self.connect_elt(self.name+'_junction', self.name+'_in_jct', self.name+'_out_jct')
-        junction_pads = junction._connect_JJ(Jwidth+2*self.overdev, iInduct=Jinduc, fillet=None)
+        junction_pads = junction._connect_jcts(Jlength, Jwidth, iInduct=Jinduc)
         
         #small pad
         raw_points = [(gap_tr/2-self.overdev, -small_capa_width/2-self.overdev),
@@ -2065,7 +2051,7 @@ class KeyElt(Circuit):
         if not self.is_litho:
             self.modeler.assign_mesh_length(mesh, 4*Jwidth)
         
-        to_unite = [small_pad, big_pad, small_track, big_track, junction_pads]
+        to_unite = [small_pad, big_pad, small_track, big_track, *junction_pads]
         if short_big!=0:
             to_unite.append(big_short)
         if short_small!=0:
@@ -2403,8 +2389,6 @@ class KeyElt(Circuit):
     def draw_capa_interdigitated_rectangle(self, cool, iTrack, iGap, teeth_size, gap_size, N_period, wire_gap_size, wire_size, 
                                            inductance_wire, pad_height, gap_height, gap_width, chip_width, chip_length):
 
-        print(self)
-        print(cool)
         #parse entry converts text values like '0.01 mm' to numerical values
         iTrack, iGap = parse_entry((iTrack, iGap))
         teeth_size=parse_entry(teeth_size)
@@ -2592,13 +2576,6 @@ class KeyElt(Circuit):
         
         self.trackObjects.append(capagap)
         self.gapObjects.append(cutout)
-        
-        
-            
-
-
-
-
 
     
     def draw_Transmon_dual2(self, iTrack, iGap, teeth_size,gap_size, N_period, fillet, inductance_wire, capacitance):

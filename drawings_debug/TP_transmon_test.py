@@ -24,7 +24,7 @@ modeler.delete_all_objects()
 c = Circuit(design, modeler)
 
 KeyElt.is_litho = False
-KeyElt.is_hfss = True
+KeyElt.is_hfss = False
 
 # Drawing
 
@@ -38,22 +38,32 @@ def pos(i, j):
 # Finger junctions
 
 
-cutout_size = ['200um', '100um']
-pad_spacing = '20um'
-pad_size = ['50um', '50um']
+gap_tr = '20um'
+big_capa_width = '100um'
+big_capa_length = '100um'
+small_capa_width = '100um'
+small_capa_length = '100um'
+track_big = '3um'
+gap_big = '5um'
+length_big = '1um'
+short_big = '0um'
+
+short_small = '0um'
+track_small = '3um'
+gap_small = '5um'
+capa_add_small = '0um'
+                        
 Jwidth = '1um'
-Jlength = '0.5um'
-track = '1um'
-gap = '1um'
+Jlength = '0.8um'
 Jinduc = '1nH'
 
+
 c.key_elt('temp', pos(0, 0), [0, 1])
-c.temp.draw_IBM_tansmon(cutout_size=cutout_size,
-                        pad_spacing=pad_spacing,
-                        pad_size=pad_size,
-                        Jwidth=Jwidth, Jlength=Jlength,
-                        track=track,
-                        gap=gap,
-                        Jinduc=Jinduc,
-                        nport=2, fillet='2um')
+
+c.temp.draw_TP_transmon(gap_tr, big_capa_width, big_capa_length,
+                        small_capa_width, small_capa_length, track_big, 
+                        gap_big, length_big, short_big, short_small, 
+                        track_small, gap_small, capa_add_small, Jwidth, Jlength,
+                        Jinduc, small_type='Left')
+
 release()

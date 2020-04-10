@@ -38,22 +38,21 @@ def pos(i, j):
 # Finger junctions
 
 
-cutout_size = ['200um', '100um']
-pad_spacing = '20um'
-pad_size = ['50um', '50um']
+gap = '20um'
+track = '15um'
 Jwidth = '1um'
-Jlength = '0.5um'
-track = '1um'
-gap = '1um'
+Jlength = '0.8um'
 Jinduc = '1nH'
+left = '100um'
+right = left
+down = '100um'
+up_left = '50um'
+dn_left = '50um'
+up_right = '50um'
+dn_right = '50um'
 
 c.key_elt('temp', pos(0, 0), [0, 1])
-c.temp.draw_IBM_tansmon(cutout_size=cutout_size,
-                        pad_spacing=pad_spacing,
-                        pad_size=pad_size,
-                        Jwidth=Jwidth, Jlength=Jlength,
-                        track=track,
-                        gap=gap,
-                        Jinduc=Jinduc,
-                        nport=2, fillet='2um')
+
+c.temp.draw_pHmon(track, gap, left, right, down, up_left, dn_left,
+                  up_right, dn_right, Jwidth, Jlength, Jinduc)
 release()
