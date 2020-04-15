@@ -8,10 +8,10 @@ Created on Mon Nov  4 11:13:09 2019
 import numpy as np
 import gdspy
 
-from .variable_string import parse_entry, var
-from .vector import Vector
+from .variable_string import parse_entry, var, Vector
 
 eps = 1e-7
+TOLERANCE = 1e-7
 print("gdspy_version : ",gdspy.__version__)
 
 # Create the geometry: a single rectangle.
@@ -136,19 +136,24 @@ class GdsModeler():
         print("ERROR : The function --cylinder_center_3D-- cannot be used for GDSmodeler")
         pass
 
-    def disk_2D(self, pos, radius, axis, **kwargs):
+    def disk_2D(self, pos, radius, axis, number_of_points=0, **kwargs):
         pos, radius = parse_entry(pos, radius)
         name = kwargs['name']
         layer = kwargs['layer']
         assert axis=='Z', "axis must be 'Z' for the gdsModeler"
-        round1 = gdspy.Round((pos[0],pos[1]), radius, layer)
-
+        round1 = gdspy.Round((pos[0],pos[1]), radius, layer=layer, tolerance=TOLERANCE, number_of_points=number_of_points)
         self.gds_object_instances[name] = round1
         self.cell.add(round1)
         return name
 
-    def wirebond_2D(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
-        pass
+    def wirebond_2D(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
+        bond_diam = '20um'
+        pos, ori, ymax, ymin, heigth, bond_diam = parse_entry((pos, ori, ymax, ymin, height, bond_diam))
+        bond1 = pos + ori.orth()*(ymax+2*bond_diam)
+        bond2 = pos + ori.orth()*(ymin-2*bond_diam)
+        name_a = self.disk_2D(bond1, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'a', number_of_points=6)
+        name_b = self.disk_2D(bond2, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'b', number_of_points=6)
+        return name_a, name_b
 
     def connect_faces(self, entity1, entity2):
         print("ERROR : The function --connect_faces-- cannot be used for GDSmodeler")
@@ -318,14 +323,27 @@ class GdsModeler():
     def path(self, points, port, fillet, **kwargs):
 
         name = kwargs['name']
+        # use dummy layers to recover the right elements
+        layers = [ii  for ii in range(len(port.widths))]
         cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
                                corners="circular bend",
-                               bend_radius=fillet, gdsii_path=True,
-                               tolerance = 1e-7) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
+                               bend_radius=fillet, gdsii_path=False,
+                               tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
 
         polygons = cable.get_polygons()
         names = []
-        for ii in range(port.N):
+        # print('cable.max_points')
+        # print(cable.max_points)
+        # print(port.N)
+        # print(len(polygons))
+        # print('enumerate dict keys')
+        # for key in cable._polygon_dict.keys():
+        #     print(key)
+        #     print(len(cable._polygon_dict[key]))
+        #     for elt in cable._polygon_dict[key]:
+        #         print(elt)
+
+        for ii in range(len(polygons)):
             poly = gdspy.Polygon(polygons[ii])
             poly.layers = [port.layers[ii]]
             current_name = name+'_'+port.subnames[ii]

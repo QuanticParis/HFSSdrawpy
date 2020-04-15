@@ -773,7 +773,7 @@ class HfssModeler(COMWrapper):
         self._modeler = modeler
         self._boundaries = boundaries
         self._mesh = mesh
-    
+
     def _attributes_array(self, name=None, nonmodel=False, color=None,
                           transparency=0.9, material=None, solve_inside = None,
                           coor_sys='Global'):
@@ -795,7 +795,7 @@ class HfssModeler(COMWrapper):
 
     def _selections_array(self, *names):
         return ["NAME:Selections", "Selections:=", ",".join(names)]
-    
+
     def assert_name(func):
         @wraps(func)
         def asserted_name(*args, **kwargs):
@@ -826,18 +826,18 @@ class HfssModeler(COMWrapper):
             "Mode:="		, "Axis/Position",
             "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
             "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
-            "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]], 
-                  
+            "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]],
+
             ["NAME:Attributes", "Name:=", name])
         else:
-            
+
             self._modeler.ChangeProperty(["NAME:AllTabs",
 		["NAME:Geometry3DCSTab",
 			["NAME:PropServers", name],
 			["NAME:ChangedProps", ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
                                 ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
                                 ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
-                
+
     def delete(self, entity):
         self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
 
@@ -846,7 +846,7 @@ class HfssModeler(COMWrapper):
         for ii in range(int(self._modeler.GetNumObjects())):
             objects.append(self._modeler.GetObjectName(str(ii)))
         self._modeler.Delete(self._selections_array(*objects))
-                
+
     @assert_name
     def box_corner_3D(self, pos, size, **kwargs):
         if len(pos)==2:
@@ -857,11 +857,11 @@ class HfssModeler(COMWrapper):
         size = parse_entry(size)
         name = self._modeler.CreateBox(
             ["NAME:BoxParameters",
-             "XPosition:=", pos[0], 
-             "YPosition:=", pos[1], 
-             "ZPosition:=", pos[2], 
-             "XSize:=", size[0], 
-             "YSize:=", size[1], 
+             "XPosition:=", pos[0],
+             "YPosition:=", pos[1],
+             "ZPosition:=", pos[2],
+             "XSize:=", size[0],
+             "YSize:=", size[1],
              "ZSize:=", size[2]],
             self._attributes_array(**kwargs))
         return name
@@ -871,7 +871,7 @@ class HfssModeler(COMWrapper):
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
         return self.box_corner_3D(corner_pos, size, **kwargs)
-    
+
     @assert_name
     def polyline_2D(self, points, closed=True, **kwargs):
         for i in range(len(points)):
@@ -879,7 +879,7 @@ class HfssModeler(COMWrapper):
                 points[i]+=(0,)
             elif isinstance(points[i], list) and len(points[i])==2:
                 points[i].append(0)
-        
+
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         points = parse_entry(points)
@@ -906,14 +906,14 @@ class HfssModeler(COMWrapper):
         del kwargs2
 
         return name
-    
+
     @assert_name
     def rect_corner_2D(self, pos, size, **kwargs):
         if len(pos)==2:
             pos.append(0)
         if len(size)==2:
             size.append(0)
-            
+
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         pos = parse_entry(pos)
@@ -941,7 +941,7 @@ class HfssModeler(COMWrapper):
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
         return self.rect_corner_2D(corner_pos, size, **kwargs)
-    
+
     @assert_name
     def cylinder_3D(self, pos, radius, height, axis, **kwargs):
         kwargs2 = kwargs.copy()
@@ -958,14 +958,14 @@ class HfssModeler(COMWrapper):
              "NumSides:=", 0],
             self._attributes_array(**kwargs2))
         return name
-    
+
     def cylinder_center_3D(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
         edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
         return self.cylinder_3D(edge_pos, radius, height, axis, **kwargs)
-    
+
     @assert_name
     def disk_2D(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
@@ -979,9 +979,10 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
              self._attributes_array(**kwargs))
         return name
-    
+
     @assert_name
     def wirebond_2D(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
+        raise NotImplementedError('HFSS wirebond not implemented')
         pos, ori, width, heigth = parse_entry((pos, ori, width, height))
         xpad = pos[0]-width/2.*ori[1]
         ypad = pos[1]+width/2.*ori[0]
@@ -1008,17 +1009,17 @@ class HfssModeler(COMWrapper):
 
     def duplicate_along_line(self, entity, vec, n=2):
         self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", entity.name,
-                                          "NewPartsModelFlag:="	, "Model"], 
+                                          "NewPartsModelFlag:="	, "Model"],
                                         	["NAME:DuplicateToAlongLineParameters",
                                     		"CreateNewObjects:="	, True,
                                     		"XComponent:="		, vec[0],
                                     		"YComponent:="		, vec[1],
                                     		"ZComponent:="		, vec[2],
-                                    		"NumClones:="		, str(n)], 
+                                    		"NumClones:="		, str(n)],
                                         	["NAME:Options",
-                                        	"DuplicateAssignments:=", False], 
+                                        	"DuplicateAssignments:=", False],
                                         	["CreateGroupsForNewObjects:=", False	])
-            
+
 
     def intersect(self, entities, keep_originals=False):
         names = []
@@ -1035,7 +1036,7 @@ class HfssModeler(COMWrapper):
 #        self._modeler.SeparateBody(["NAME:Selections",
 #                                		"Selections:=", name,
 #                                		"NewPartsModelFlag:="	, "Model"
-#                                	], 
+#                                	],
 #                                	[
 #                                		"CreateGroupsForNewObjects:=", False
 #                                	])
@@ -1046,7 +1047,7 @@ class HfssModeler(COMWrapper):
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", entity_names, "InfGroundPlane:=", False])
         else:
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [entities.name], "InfGroundPlane:=", False])
-            
+
     def assign_perfect_E_faces(self, entity):
         # this is very peculiar to cavity Si chips
         faces = list(self.get_face_ids(entity.name))
@@ -1061,7 +1062,7 @@ class HfssModeler(COMWrapper):
         		"Faces:="		, faces_perfE,
         		"InfGroundPlane:="	, False
         	])
-            
+
         self._boundaries.AssignFiniteCond([ "NAME:FiniteCond3",
                                         		"Faces:="		, faces_loss,
                                         		"UseMaterial:="		, True,
@@ -1077,7 +1078,7 @@ class HfssModeler(COMWrapper):
         params = ["NAME:"+name]
         if entity.dimension==3:
             params += ["RefineInside:=", True, "Enabled:=", True]
-        else : 
+        else :
             params += ["RefineInside:=", False, "Enabled:=", True]
         ######## RefineInside Should be False for planar object
         params += ["Objects:=", [name]]
@@ -1085,7 +1086,7 @@ class HfssModeler(COMWrapper):
 			         "RestrictLength:=",  True,
 			         "MaxLength:=", length]
         self._mesh.AssignLengthOp(params)
-        
+
     def create_object_from_face(self, entity):
         faces = list(self._modeler.GetFaceIDs(entity.name))
         faces.sort()
@@ -1093,7 +1094,7 @@ class HfssModeler(COMWrapper):
         self._modeler.CreateObjectFromFaces(["NAME:Selections",
                                             "Selections:="		, entity.name,
                                             "NewPartsModelFlag:="	, "Model"],
-            ["NAME:Parameters",["NAME:BodyFromFaceToParameters","FacesToDetach:="	, [int(face)]]], 
+            ["NAME:Parameters",["NAME:BodyFromFaceToParameters","FacesToDetach:="	, [int(face)]]],
             ["CreateGroupsForNewObjects:=", False])
         return entity.name+'_ObjectFromFace1'
 
@@ -1109,16 +1110,16 @@ class HfssModeler(COMWrapper):
             else:
                 return str(name)
         return self.parent.eval_var_str(name, unit=unit)
-    
+
     def _fillet(self, radius, vertex_index, entity):
         vertices = self._modeler.GetVertexIDsFromObject(entity.name)
         if isinstance(vertex_index, list):
             to_fillet = [int(vertices[v]) for v in vertex_index]
         elif isinstance(vertex_index, int):
-            to_fillet = [int(vertices[vertex_index])]  
+            to_fillet = [int(vertices[vertex_index])]
         else:
             to_fillet = vertex_index
-            
+
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                           ["NAME:Parameters",
                            ["NAME:FilletParameters",
@@ -1127,7 +1128,7 @@ class HfssModeler(COMWrapper):
                             "Radius:=", radius,
                             "Setback:=", "0mm"]])
         return None
-    
+
     def _fillet_edges(self, radius, edge_index, entity):
         edges = self.get_edge_ids(entity.name)
         if isinstance(edge_index, list):
@@ -1140,7 +1141,7 @@ class HfssModeler(COMWrapper):
                                 "Edges:=", to_fillet,
                                 "Vertices:=", [],
                                 "Radius:=", radius,
-                                "Setback:=", "0mm"]])   
+                                "Setback:=", "0mm"]])
 
     def _fillets(self, radius, vertices, entity):
         to_fillet = [int(vertice) for vertice in vertices]
@@ -1152,17 +1153,17 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
-            
+
     def get_faces(self, entity):
         '''
         Only for boxes
         Output :
-           x_back_face, 
-           x_front_face, 
-           y_back_face, 
-           y_front_face, 
-           z_back_face, 
-           z_front_face 
+           x_back_face,
+           x_front_face,
+           y_back_face,
+           y_front_face,
+           z_back_face,
+           z_front_face
         '''
         assert entity.dimension==3, 'This function is only callable for 3D objects'
         faces = self.get_face_ids(entity)
@@ -1170,28 +1171,28 @@ class HfssModeler(COMWrapper):
         y_back_face, y_front_face = faces[2], faces[4]
         x_back_face, x_front_face = faces[3], faces[5]
         return x_back_face, x_front_face, y_back_face, y_front_face, z_back_face, z_front_face
-    
+
     def get_face_ids(self, entity):
         return self._modeler.GetFaceIDs(entity.name)
 
     def get_vertex_ids(self, entity):
         return self._modeler.GetVertexIDsFromObject(entity.name)
-    
+
     def get_edge_ids(self, entity):
         return self._modeler.GetEdgeIDsFromObject(entity.name)
-            
+
     def get_matched_object_name(self, name):
-        return self._modeler.GetMatchedObjectName(name+'*')		
-    
+        return self._modeler.GetMatchedObjectName(name+'*')
+
     def get_coor_sys(self):
         return self._modeler.GetActiveCoordinateSystem()
-                
-           
+
+
     def mirrorZ(self, entity):
         self._modeler.Mirror([
                         		"NAME:Selections", "Selections:=", entity.name,
                         		"NewPartsModelFlag:="	, "Model"
-                        	  ], 
+                        	  ],
                         	  [
                         		"NAME:MirrorParameters",
                         		"MirrorBaseX:="		, "0mm",
@@ -1218,7 +1219,7 @@ class HfssModeler(COMWrapper):
         name = entity.name+'_'+name
         start, end = self.make_center_line(entity, axis)
         self.modeler._make_lumped_rlc(entity, r, l, c, start, end, name=name)
-        
+
     def _make_lumped_rlc(self, entity, r, l, c, start, end, name="LumpLRC"):
         name = increment_name(name, self._boundaries.GetBoundaries())
         params = ["NAME:"+name, "Objects:="]
@@ -1242,7 +1243,7 @@ class HfssModeler(COMWrapper):
                    "FullResistance:=", "50ohm", "FullReactance:=", "0ohm"]
 
         self._boundaries.AssignLumpedPort(params)
-        
+
     def make_material(self, entity, material):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                 		["NAME:Geometry3DAttributeTab",
@@ -1252,12 +1253,12 @@ class HfssModeler(COMWrapper):
                                 			]
                                 		]
                                 	])
-                       
 
 
-        
+
+
     def rotate(self, entities, angle):
-        names = [] 
+        names = []
         for entity in entities:
             if isinstance(entity, list):
                 self.rotate(entity, angle)
@@ -1265,20 +1266,20 @@ class HfssModeler(COMWrapper):
                 if entity!=None:
                     names.append(entity.name)
         if len(names)!=0:
-            self._modeler.Rotate(self._selections_array(*names), 
+            self._modeler.Rotate(self._selections_array(*names),
                 ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
-            
+
     def rename_entity(self, entity, name):
         new_name = self._modeler.ChangeProperty(["NAME:AllTabs",
                                     		["NAME:Geometry3DAttributeTab",
                                     			["NAME:PropServers", str(entity.name)],
                                     			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
-        return new_name    
+        return new_name
 
     def set_coor_sys(self, coor_sys):
         if coor_sys!= self.get_coor_sys():
             self._modeler.SetWCS(["NAME:SetWCS Parameter","Working Coordinate System:=", coor_sys , "RegionDepCSOk:="	, False])
-    
+
     def set_units(self, units='m'):
         self._modeler.SetModelUnits(["NAME:Units Parameter",
                                      "Units:=", units,"Rescale:=",False])
@@ -1288,7 +1289,7 @@ class HfssModeler(COMWrapper):
         for entity in tool_entities:
             if entity!=None:
                 tool_names.append(entity.name)
-                
+
         selection_array= ["NAME:Selections",
                           "Blank Parts:=", blank_entity.name,
                           "Tool Parts:=", ",".join(tool_names)]
@@ -1311,10 +1312,10 @@ class HfssModeler(COMWrapper):
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
         return name_temp
-    
+
     def sweep_along_vector(self, entities, vector):
         names = [entity.name for entity in entities]
-        self._modeler.SweepAlongVector(self._selections_array(*names), 
+        self._modeler.SweepAlongVector(self._selections_array(*names),
                                         	["NAME:VectorSweepParameters",
                                         		"DraftAngle:="		, "0deg",
                                         		"DraftType:="		, "Round",
@@ -1323,18 +1324,18 @@ class HfssModeler(COMWrapper):
                                         		"SweepVectorY:="	, vector[1],
                                         		"SweepVectorZ:="	, vector[2]
                                         	])
-                                        
-                                            
+
+
     def thicken_sheet(self, entity, thickness, bothsides=False):
         self._modeler.ThickenSheet([
                                 		"NAME:Selections", "Selections:=", entity.name,
                                 		"NewPartsModelFlag:="	, "Model"
-                                	], 
+                                	],
                                 	[
                                 		"NAME:SheetThickenParameters",
                                 		"Thickness:="		, thickness,
                                 		"BothSides:="		, bothsides
-                                	])    
+                                	])
     def translate(self, entities, vector):
         names = []
         for entity in entities:
@@ -1347,7 +1348,7 @@ class HfssModeler(COMWrapper):
                         		"TranslateVectorY:="	, vector[1],
                         		"TranslateVectorZ:="	, vector[2]]
                             )
-        
+
     def unite(self, entities, name=None, keep_originals=False):
         names = []
         for entity in entities:
@@ -1357,7 +1358,7 @@ class HfssModeler(COMWrapper):
             self._selections_array(*names),
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals])
         new_name = names[0] if names!=None else None
-        return new_name        
+        return new_name
 
 
 # class ModelEntity():
@@ -1368,7 +1369,7 @@ class HfssModeler(COMWrapper):
 #         self.name = name
 #         self.dimension = dimension
 #         self.coor_sys = coor_sys
-#         self.history = []    
+#         self.history = []
 #         self.model = model
 #         self.layer = layer
 
@@ -1378,10 +1379,10 @@ class HfssModeler(COMWrapper):
 #             ModelEntity.instances_layered[layer].append(self)
 #         else:
 #             ModelEntity.instances_layered[layer]=[self]
-     
+
 #     def __str__(self):
 #         return self.name
-     
+
 #     def check_name(self, name):
 #         i = 0
 #         new_name = name
@@ -1389,12 +1390,12 @@ class HfssModeler(COMWrapper):
 #             i+=1
 #             new_name = name+'_'+str(i)
 #         return new_name
-    
+
 #     @classmethod
 #     def printInstances(cls):
 #         for instance in cls.instances:
 #             print(instance)
-            
+
 #     @staticmethod
 #     def find_last_list(list_entities=instances_to_move):
 # #        print(list_entities)
@@ -1410,8 +1411,8 @@ class HfssModeler(COMWrapper):
 #                     return list_entities
 #         else:
 #             return list_entities
-        
-                    
+
+
 # #    @staticmethod
 # #    def merge(n):
 # #        key_list = []
@@ -1427,30 +1428,30 @@ class HfssModeler(COMWrapper):
 #         ModelEntity.instances_layered = {}
 #         ModelEntity.dict_instances = {}
 #         ModelEntity.instances_to_move = []
-        
+
 #     def append_history(self, entity):
 #         self.history.append(entity)
-        
+
 #     def delete(self):
 #         del self
-    
+
 #     def copy(self, dimension=None):
 #         #TODO complete
 #         if dimension==None:
 #             dimension = self.dimension
 #         return ModelEntity(self.name, dimension, self.coor_sys)
-    
+
 #     def rename_entity(self, name):
 #         self.name = name
-        
+
 #     def modify_dimension(self, dimension):
 #         self.dimension = dimension
-        
+
 #     def _sweep_along_path(self, path_obj):
 #         self.dimension = 2
 #         self.append_history(path_obj)
 #         return self
-        
+
 #     def sweep_along_vector(self, vect):
 #         "Duplicate the line and create a surface with the copy"
 #         self.dimension = 2

@@ -9,8 +9,7 @@ import numpy as np
 from functools import wraps
 
 from . import Lib
-from .vector import Vector
-from .variable_string import parse_entry
+from .variable_string import parse_entry, Vector
 #from PythonModeler import PythonModeler
 from .KeyElement import move
 

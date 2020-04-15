@@ -26,19 +26,29 @@ if 0:
 if 1:
     # Path created with automatic bends of radius 5
     points = [[0, 0], [0, 10], [10, 10], [10, 20]]
-    sp4 = gdspy.FlexPath(
-        points, [1, 1], offset=[-1, 1], corners="circular bend", bend_radius=[4, 4], gdsii_path=True
-    )
+    cable = gdspy.FlexPath(
+        points, [1, 2, 1], offset=[-1, 3, 2], corners="circular bend", bend_radius=[5, 5], gdsii_path=False,
+        layer=[0, 0, 0])
 
     # Same path, generated with natural corners, for comparison
     # sp5 = gdspy.FlexPath(points, 1, layer=1, gdsii_path=True)
 
     # cell.add(sp4)
     # cell.add(sp4)
-    for ii, poly in enumerate(sp4.get_polygons()):
+
+    polygons = cable.get_polygons()
+    print('enumerate dict keys')
+    for key in cable._polygon_dict.keys():
+        print(key)
+        print(len(cable._polygon_dict[key]))
+        for elt in cable._polygon_dict[key]:
+            print(elt)
+    for ii, poly in enumerate(polygons):
         poly = gdspy.Polygon(poly)
         poly.layers = [ii]
         cell.add(poly)
+    print('max_points')
+    print(cable.max_points)
 
 
 # Display all cells using the internal viewer.

@@ -6,8 +6,7 @@ Created on Tue Oct 29 14:05:00 2019
 """
 
 from drawpy_scripts.python_modeler import PythonModeler
-from drawpy_scripts.variable_string import parse_entry
-from drawpy_scripts.vector import Vector
+from drawpy_scripts.variable_string import parse_entry, Vector
 import os
 import gdspy
 
@@ -43,33 +42,37 @@ gap = PM.set_variable('10um')
 track_big = PM.set_variable('25um')
 gap_big = PM.set_variable('15um')
 
-offset = PM.set_variable('50um')
+track_middle = PM.set_variable('22.5um')
+gap_middle = PM.set_variable('12.5um')
+
+offset = PM.set_variable('-50um')
 
 CPW=0
 if CPW:
     chip1.set_current_coor(['0.1mm', '0.1mm'], [1, 0])
 
     # chip1.create_port(name, widths, subnames=None, layers=layer_Default, offsets=0)
-    chip1.create_port('in', [track_big, track_big+2*gap_big], subnames=['track', 'gap'])
+    in_port = chip1.create_port('in', [track_big, track_big+2*gap_big], subnames=['track', 'gap'])
 
     chip1.set_current_coor(['0.5mm', '0.5mm'], [0, 1])
-    chip1.create_port('middle', [track, track+2*gap], subnames=['track', 'gap'])
+    middle_port = chip1.create_port('middle', [track, track+2*gap], subnames=['track', 'gap'])
 
     chip1.set_current_coor(['0.7mm', '0.3mm'], [-1, 0])
-    chip1.create_port('out', [track, track+2*gap], subnames=['track', 'gap'])
+    out_port = chip1.create_port('out', [track, track+2*gap], subnames=['track', 'gap'])
 else:
+    port_design = {'widths':[track_big, track_big+2*gap_big, track_big], 'subnames':['track', 'gap', 'other'], 'offsets':[0, 0, offset], 'layers':[1, 3, 4]}
     chip1.set_current_coor(['0.1mm', '0.1mm'], [1, 0])
-    chip1.create_port('in', [track_big, track_big+2*gap_big, track_big], subnames=['track', 'gap', 'other'], offsets=[0, 0, offset])
+    in_port = chip1.create_port('in', **port_design)
 
-    chip1.set_current_coor(['0.5mm', '0.5mm'], [0, 1])
-    chip1.create_port('middle', [track, track+2*gap, track], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset])
+    chip1.set_current_coor(['0.5mm', '0.5mm'], [0, -1])
+    # middle_port = chip1.create_port('middle')#, [track_middle, track_middle+2*gap_middle, track_middle], subnames=['track', 'gap', 'other'], offsets=[0, 0, offset], layers=[1, 3, 4])
 
-    chip1.set_current_coor(['0.7mm', '0.3mm'], [-1, 0])
-    chip1.create_port('out', [track, track+2*gap, track], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset])
+    chip1.set_current_coor(['2mm', '2mm'], [-1, 0])
+    out_port = chip1.create_port('out', [track, track+2*gap, track], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
 
 
 if 1:
-    chip1.draw_cable('cable', 'in', 'middle', 'out', is_bond=False, fillet='100um')#, is_mesh=True)
+    chip1.draw_cable('cable', 'out', 'in', is_bond=True, fillet='100um', reverse_adaptor=True, to_meanders=[0, 1, 0])#, is_mesh=True)
 
 cwd  = os.getcwd()
 gdspy.write_gds(os.path.join(cwd, 'test.gds'), unit=1.0, precision=1e-9)

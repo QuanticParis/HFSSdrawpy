@@ -9,8 +9,7 @@ from functools import wraps
 import numpy as np
 
 from . import Lib
-from .variable_string import parse_entry
-from .vector import Vector
+from .variable_string import parse_entry, Vector
 
 eps = 1e-7
 layer_TRACK = 1
@@ -93,14 +92,15 @@ def move(func):
 
 @register_method
 @move
-def create_port(self, name, widths, subnames=None, layers=layer_Default, offsets=0):
+def create_port(self, name, widths=None, subnames=None, layers=layer_Default, offsets=0):
     """
     Creates and draws a port
 
     A port is a set of transmission line widths, offsets, and layers.
     A CPW-port would contain only a track and a gap that would be in layers
     perfE and cutout respectively.
-
+    If all arguments are None, the port is expected to serve as a constraint and hence
+    only the current coor is important
 
     Parameters
     ----------
@@ -121,30 +121,34 @@ def create_port(self, name, widths, subnames=None, layers=layer_Default, offsets
         A new port instance
 
     """
-    if not isinstance(widths, list):
-        widths = [widths]
+    if widths is None:
+        constraint_port = True
+    else:
+        constraint_port = False
+        if not isinstance(widths, list):
+            widths = [widths]
 
-    N = len(widths)
+        N = len(widths)
 
-    # default subnames
-    if subnames is None:
-        subnames = []
-        for ii in range(N):
-            subnames.append(str(ii))
-    elif not isinstance(subnames, list):
-        subnames = [subnames]
+        # default subnames
+        if subnames is None:
+            subnames = []
+            for ii in range(N):
+                subnames.append(str(ii))
+        elif not isinstance(subnames, list):
+            subnames = [subnames]
 
-    if not isinstance(layers, list):
-        layers = [layers]*N
+        if not isinstance(layers, list):
+            layers = [layers]*N
 
-    if not isinstance(offsets, list):
-        offsets = [offsets]*N
+        if not isinstance(offsets, list):
+            offsets = [offsets]*N
 
-    widths, offsets = parse_entry(widths, offsets)
+        widths, offsets = parse_entry(widths, offsets)
     pos = [0, 0]
     ori = [1, 0]
 
-    port = self.port(name, pos, ori, widths, subnames, layers, offsets)
+    port = self.port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
     return port
 
 @register_method
