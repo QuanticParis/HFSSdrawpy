@@ -145,6 +145,7 @@ def way(vec):
 class VariableString(str):
     # TODO: What happen with a list (Vector in our case)
     variables = {}
+    instances = {}
 
     def __new__(cls, name, *args, **kwargs):
         # explicitly only pass value to the str constructor
@@ -152,28 +153,37 @@ class VariableString(str):
 
     def __init__(self, name, value=None):
         # ... and don't even call the str initializer
-        if value is not None:
+        if value is not None: # do not result from a computation
             VariableString.store_variable(self, value)
+            VariableString.instances[self] = self
 
     @classmethod
     def store_variable(cls, name, value):  # put value in SI
         if not isinstance(value, VariableString):
-            if LENGTH == extract_value_dim(value):
-                cls.variables[name] = extract_value_unit(value,
-                                                          LENGTH_UNIT)
-            if INDUCTANCE == extract_value_dim(value):
-                cls.variables[name] = extract_value_unit(value,
-                                                          INDUCTANCE_UNIT)
-            if CAPACITANCE == extract_value_dim(value):
-                cls.variables[name] = extract_value_unit(value,
-                                                          CAPACITANCE_UNIT)
-            if RESISTANCE == extract_value_dim(value):
-                cls.variables[name] = extract_value_unit(value,
+            if isinstance(value, (float, int)):
+                cls.variables[name] = value
+            elif isinstance(value, str):
+                if LENGTH == extract_value_dim(value):
+                    cls.variables[name] = extract_value_unit(value,
+                                                              LENGTH_UNIT)
+                if INDUCTANCE == extract_value_dim(value):
+                    cls.variables[name] = extract_value_unit(value,
+                                                              INDUCTANCE_UNIT)
+                if CAPACITANCE == extract_value_dim(value):
+                    cls.variables[name] = extract_value_unit(value,
+                                                              CAPACITANCE_UNIT)
+                if RESISTANCE == extract_value_dim(value):
+                    cls.variables[name] = extract_value_unit(value,
                                                           RESISTANCE_UNIT)
+            else:
+                raise TypeError('Type is not expected')
         else:
             cls.variables[name] = value
 
     def value(self):
+        # print(self.variables)
+        # print(self.instances)
+        # print(self)
         try:
             _value = float(eval(str(sympy_parser.parse_expr(str(sympy_parser.parse_expr(self, self.variables)), self.variables))))
         except Exception:

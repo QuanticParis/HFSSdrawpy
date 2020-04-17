@@ -470,23 +470,30 @@ class PythonModeler():
     def set_current_coor(self, pos, ori):
         self.current_pos, self.current_ori = parse_entry(pos, ori)
 
-    def set_variable(self, value):
+    def set_variable(self, value, name=None):
         """
         name (str): name of the variable in HFSS e.g. 'chip_length'
         value (str, VarStr, float): value of the variable
                                     if str will try to analyse the unit
         """
-        f = currentframe().f_back#.f_back
-        filename = getfile(f)
-        code_line = open(filename).readlines()[f.f_lineno - 1]
-        name = code_line.split("=")[0].strip()
+        if name is None:
+            # this auto-parsing is clearly a hack and not robust
+            # but I find it convenient
+            f = currentframe().f_back#.f_back
+            filename = getfile(f)
+            code_line = open(filename).readlines()[f.f_lineno - 1]
+            name = code_line.split("=")[0].strip()
 
         # self.store_variable(name, value)  # for later parsing
         # self.__dict__[name] = VariableString(name)
         # for handy use by user / deprecated
         if self.mode == 'hfss':
             self.design.set_variable(name, value)  # for HFSS
-        return VariableString(name, value=value)
+        if not name in VariableString.variables.keys():
+            return VariableString(name, value=value)
+        else:
+            VariableString.variables[name]=value
+            return VariableString.instances[name]
 
     # def store_variable(self, name, value):  # put value in SI
     #     if not isinstance(value, VariableString):
@@ -769,9 +776,10 @@ class Port():
     #             offsets.append(-self.offsets[ii])
     #         self.offsets = offsets
 
-    def compare(self, other):
+    def compare(self, other, pm):
         points = []
-        adapt_dist = VariableString(self.name+'_adapt', value=1e-5)
+
+        adapt_dist = pm.set_variable(1e-5, name=self.name+'_adapt')
         max_diff = 0
         for ii in range(self.N):
             if self.layers[ii]!=other.layers[ii]:
@@ -792,7 +800,9 @@ class Port():
                                Vector(0, offset1-width1/2).rot(self.ori)+self.pos])
             max_diff = max(max_diff, abs(_val(offset1+width1/2-(offset2+width2/2))),
                            abs(_val(offset2-width2/2-(offset1-width1/2))))
-        VariableString.variables[self.name+'_adapt'] = 2*max_diff
+
+        adapt_dist = pm.set_variable(2*max_diff, name=self.name+'_adapt')
+
         if len(points) != 0:
             self.save = {'pos':self.pos, 'widths':self.widths,
                          'offsets':self.offsets}
@@ -1320,10 +1330,10 @@ class Body(PythonModeler):
 
         # find and plot adaptor geometry
         if reverse_adaptor:
-            points, length_adaptor = ports[-1].compare(ports[0])
+            points, length_adaptor = ports[-1].compare(ports[0], self)
             index_modified = -1
         else:
-            points, length_adaptor = ports[0].compare(ports[-1])
+            points, length_adaptor = ports[0].compare(ports[-1], self)
             index_modified = 0
 
         # plot adaptors
