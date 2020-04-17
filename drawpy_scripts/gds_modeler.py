@@ -332,17 +332,6 @@ class GdsModeler():
 
         polygons = cable.get_polygons()
         names = []
-        # print('cable.max_points')
-        # print(cable.max_points)
-        # print(port.N)
-        # print(len(polygons))
-        # print('enumerate dict keys')
-        # for key in cable._polygon_dict.keys():
-        #     print(key)
-        #     print(len(cable._polygon_dict[key]))
-        #     for elt in cable._polygon_dict[key]:
-        #         print(elt)
-
         for ii in range(len(polygons)):
             poly = gdspy.Polygon(polygons[ii])
             poly.layers = [port.layers[ii]]

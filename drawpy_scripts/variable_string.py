@@ -111,6 +111,37 @@ def val(*entries):
     else:
         return parsed
 
+def equal_float(float1, float2):
+    if float1!=0:
+        rel_diff = abs((float1-float2)/float1)
+        if rel_diff<1e-5:
+            return True
+        else:
+            return False
+
+    elif float2!=0:
+        rel_diff = abs((float1-float2)/float2)
+        if rel_diff<1e-5:
+            return True
+        else:
+            return False
+    else:
+        return True
+
+def way(vec):
+    if vec[1] != 0:
+        if abs(vec[0]/vec[1])<1e-2:
+            if vec[1]>0:
+                return Vector(0,1)
+            elif vec[1]<0:
+                return Vector(0,-1)
+    if vec[0] != 0 :
+        if abs(vec[1]/vec[0])<1e-2:
+            if vec[0]>0:
+                return Vector(1,0)
+            elif vec[0]<0:
+                return Vector(-1,0)
+
 class VariableString(str):
     # TODO: What happen with a list (Vector in our case)
     variables = {}
@@ -221,6 +252,10 @@ class Vector(list):
 
     def check_nb(self, nb):
         return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, VariableString)
+
+    def __eq__(self, other):
+        return (equal_float(val(self[0]), val(other[0])) and
+            equal_float(val(self[1]), val(other[1])))
 
     def __add__(self, other):
         if self.check(other):

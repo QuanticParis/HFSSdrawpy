@@ -61,18 +61,18 @@ if CPW:
     out_port = chip1.create_port('out', [track, track+2*gap], subnames=['track', 'gap'])
 else:
     port_design = {'widths':[track_big, track_big+2*gap_big, track_big], 'subnames':['track', 'gap', 'other'], 'offsets':[0, 0, offset], 'layers':[1, 3, 4]}
-    chip1.set_current_coor(['0.1mm', '0.1mm'], [1, 0])
+    chip1.set_current_coor(['0.0mm', '0.0mm'], [1, 0])
     in_port = chip1.create_port('in', **port_design)
 
-    chip1.set_current_coor(['0.5mm', '0.5mm'], [0, -1])
-    # middle_port = chip1.create_port('middle')#, [track_middle, track_middle+2*gap_middle, track_middle], subnames=['track', 'gap', 'other'], offsets=[0, 0, offset], layers=[1, 3, 4])
+    chip1.set_current_coor(['0.5mm', '-0.5mm'], [-1, 0])
+    middle_port = chip1.create_port('middle')#, [track_middle, track_middle+2*gap_middle, track_middle], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
 
     chip1.set_current_coor(['2mm', '2mm'], [-1, 0])
     out_port = chip1.create_port('out', [track, track+2*gap, track], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
 
 
 if 1:
-    chip1.draw_cable('cable', 'out', 'in', is_bond=True, fillet='100um', reverse_adaptor=True, to_meanders=[0, 1, 0])#, is_mesh=True)
+    chip1.draw_cable('cable', 'in', 'middle', 'out', is_bond=True, fillet='100um', reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
 
 cwd  = os.getcwd()
 gdspy.write_gds(os.path.join(cwd, 'test.gds'), unit=1.0, precision=1e-9)

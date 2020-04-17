@@ -20,8 +20,9 @@ from .variable_string import VariableString, \
                              extract_value_dim, \
                              parse_entry, \
                              _val, val, \
-                             var, \
+                             way, \
                              Vector
+from .path_finder import Path
 
 # ModelEntity should be defined here probably
 
@@ -53,20 +54,6 @@ INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
-def way(vec):
-    if vec[1] != 0:
-        if abs(vec[0]/vec[1])<1e-2:
-            if vec[1]>0:
-                return Vector(0,1)
-            elif vec[1]<0:
-                return Vector(0,-1)
-    if vec[0] != 0 :
-        if abs(vec[1]/vec[0])<1e-2:
-            if vec[0]>0:
-                return Vector(1,0)
-            elif vec[0]<0:
-                return Vector(-1,0)
-
 def equal_float(float1, float2):
     if float1!=0:
         rel_diff = abs((float1-float2)/float1)
@@ -83,54 +70,6 @@ def equal_float(float1, float2):
             return False
     else:
         return True
-
-# useful function to find cable path
-def next_point(point1, point2, vec):
-    choice1 = point1+vec*var((point2-point1).dot(vec))
-    choice2 = point1+vec.orth()*var((point2-point1).dot(vec.orth()))
-    return [[point1, choice1, point2], [point1, choice2, point2]]
-
-def check(points):
-    # points : series of points that represent the cable path
-    # returns : the cost (number of turns) and make sure each point is at a
-    # turn ie that there are no consecutive segments in the same direction.
-    length = 0
-    prev_point = Vector(points[0])
-    _points = [Vector(points[0])]
-    vecs = []
-    for point in points[1:]:
-        if not ( equal_float(point[0], prev_point[0]) and equal_float(point[1], prev_point[1])):
-           # TODO vec should already be a Vector
-           vec = point-prev_point
-           length += vec.norm()
-           vecs.append(way(vec))
-
-           prev_point = point
-           _points.append(point)
-    cost = 0
-
-    points = _points.copy()
-
-    new_points = [points[0]]
-    prev_vec = vecs[0]
-    for ii, vec in enumerate(vecs[1:]):
-        curr_vec = vec
-        if curr_vec.dot(prev_vec)==0:
-            new_points.append(points[ii+1])
-        added_cost = cost_f(prev_vec.dot(curr_vec))
-        cost += added_cost
-        prev_vec = curr_vec
-    new_points.append(points[-1])
-
-    return cost, new_points, length
-
-def cost_f(x):
-    if x==1:
-        return 0
-    elif x==0:
-        return 1
-    else:
-        return 100
 
 class PythonModeler():
     """
@@ -421,7 +360,6 @@ class PythonModeler():
         return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
 
     def path(self, points, port, fillet, **kwargs):
-
         if self.mode=='gds':
             points = val(points)
             fillet = val(fillet)
@@ -430,8 +368,30 @@ class PythonModeler():
             return tuple(elements)
             # return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
         elif self.mode=='hfss':
-            raise NotImplementedError()
+            # check that port is at the BEGINNING of the path
+            self.polyline_2D(points, closed=True, **kwargs)
+            ori = port.ori
+            pos = port.pos
+            entities = []
+            for ii in port.N:
+                offset = port.offsets[ii]
+                width = port.widths[ii]
+                subname = port.subnames[ii]
+                layer = port.layers[ii]
+                points_starter = [Vector(0, offset+width/2).rot(ori)+pos,
+                                  Vector(0, offset-width/2).rot(ori)+pos]
+                entity = self.polyline_2D(points_starter, closed=False,
+                                          name=kwargs['name']+'_'+subname,
+                                          layer=layer)
+                path = self.polyline_2D(points, closed=False,
+                                name=kwargs['name']+'_'+subname+'_path',
+                                layer=layer)
+                self._fillets(fillet, path, kind='open')
 
+                entity = self._sweep_along_path(entity, path, name=None)
+                entities.append(entity)
+
+            return tuple(entities)
 
     def ports_to_move(self):
         inter1 = Port.instances_to_move
@@ -845,7 +805,7 @@ class Port():
             self.r.pos = self.pos
             self.r.widths = self.widths
             self.r.offsets = other.offsets
-        return points
+        return points, 2*max_diff
 
     def val(self):
         _widths = []
@@ -1193,59 +1153,6 @@ class Body(PythonModeler):
         ModelEntity.merge(n)
 
     @move_port
-    def draw_adaptor(self, name, iInPort, track, gap, iSlope=0.33):
-        '''
-        Draws an adaptor between two ports.
-        Given input port iIn, and slope of line iSlope, calculates iOut, and draws adpator.
-
-        Inputs:
-        -------
-        name:
-        iIn: tuple, input port
-        iOut: tuple, output port, usually Nones
-        iSlope: slope of line to connect iIn and iOut. If iSlope=1, 45 degrees.
-
-        Returns:
-        --------
-        reversed iIn and calculated iOut
-        '''
-#        if not self.isOut:
-#            # calculate the output
-#            # do not forget to add the new port to dict
-        track, gap = parse_entry(track, gap)
-        adaptDist = abs(track/2-iInPort.track/2)/iSlope
-#            outPort = [self.pos+self.ori*adaptDist, self.ori, self.outPort['track'], self.outPort['gap']]
-#            self.ports[self.iIn+'_bis'] = outPort
-#            self.__init__(self.name, self.iIn, self.iIn+'_bis')
-#        else:
-
-#        adaptDist = (iInPort.pos-iOutPort.pos).norm()
-
-        points = self.append_points([(0, iInPort.track/2),
-                                     (adaptDist, track/2-iInPort.track/2),
-                                     (0, -track),
-                                     (-adaptDist, track/2-iInPort.track/2)])
-        track_points = self.polyline_2D(points, name=name+"_track", layer = layer_TRACK)
-#        self.trackObjects.append(track)
-        points = self.append_points([(0, iInPort.gap+iInPort.track/2),
-                                     (adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2),
-                                     (0, -2*gap-track),
-                                     (-adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2)])
-        gap_points = self.polyline_2D(points, name=name+"_GAP", layer = layer_GAP)
-#        self.gapObjects.append(gap)
-
-        mask = None
-        if self.is_mask:
-            points = self.append_points([(0, self.gap_mask+iInPort.gap+iInPort.track/2),
-                             (adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2),
-                             (0, -2*self.gap_mask-2*gap-track),
-                             (-adaptDist, (gap-iInPort.gap)+(track-iInPort.track)/2)])
-            mask = self.polyline_2D(points, name=name+"_MASK", layer = layer_MASK)
-#            self.maskObjects.append(mask)
-        #TODO create port out
-        return iInPort.name+'_bis', adaptDist, track_points, gap_points, mask
-
-    @move_port
     def _connect_JJ(self, name, iInPort, iOutPort, iTrackJ, iLengthJ=None, iInduct='1nH', fillet=None):
         '''
         Draws a Joseph's Son Junction.
@@ -1329,7 +1236,7 @@ class Body(PythonModeler):
         return pads
 
     @move_port
-    def draw_cable(self, name, *ports, fillet="0.3mm", is_bond=False, to_meanders=None, meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False):
+    def draw_cable(self, name, *ports, fillet="0.3mm", is_bond=False, to_meander=[[]], meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False):
         '''
         Draws a CPW transmission line along the ports
 
@@ -1345,577 +1252,126 @@ class Body(PythonModeler):
 
         '''
         #TODO change the format of the arguments
-        meander_length, meander_offset, fillet =parse_entry(meander_length, meander_offset, fillet)
+        meander_length, meander_offset, fillet = parse_entry(meander_length, meander_offset, fillet)
 
-        to_bond=[]
+        # to_meander should be a list of list
+        # meander_length, meander_offset should be lists
+        if not isinstance(to_meander[0], list):
+            to_meander = [to_meander]
+        if not isinstance(meander_length, list):
+            meander_length = [meander_length]*len(to_meander)
+        if not isinstance(meander_offset, list):
+            meander_offset = [meander_offset]*len(to_meander)
 
         ports = list(ports)
 
-        # TODO check port compatibility
-        # should return a set of trapeze points
-
-        # inTrack = self.variables[ports[0].track]
-        # outTrack = self.variables[ports[-1].track]
-        # inGap = self.variables[ports[0].gap]
-        # outGap = self.variables[ports[-1].gap]
-
-        # if (not equal_float(inTrack, outTrack)) or (not equal_float(inGap, outGap)):
-        #     if reverse_adaptor:
-        #         if (inTrack+inGap) > (outTrack+outGap):
-        #             iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',ports[0].name,ports[-1].track, ports[-1].gap)
-        #         else:
-        #             iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',ports[0].name,ports[-1].track, ports[-1].gap)
-        #     else:
-        #         if (inTrack+inGap) > (outTrack+outGap):
-        #             iOut, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',ports[0].name,ports[-1].track, ports[-1].gap)
-        #         else:
-        #             iIn, adaptor_length, track_adaptor, gap_adaptor, mask_adaptor = self.draw_adaptor('reverse',ports[0].name,ports[-1].track, ports[-1].gap)
-
-#            all_constrains = []
-#            for constrain in constrains:
-#                all_constrains.append(Port.dict_instances[constrain])
-#                all_constrains.append(Port.dict_instances[constrain])
-
-#                all_constrains.append(constrain)#[self.ports[constrain][POS], self.ports[constrain][ORI], self.ports[constrain][TRACK], self.ports[constrain][GAP]])
-#                previous modification to tackle the case where a cable is drawn between two ports defined on the fly
-        nb_constraints = len(ports)-1
-        if 0:
-            if not isinstance(to_meanders[0], list):
-                to_meanders = [to_meanders for ii in range(nb_constraints+1)]
-#        print(to_meanders)
-
-
-        cable_length = []
-        tracks = []
-        gaps = []
-        masks = []
-#            port_names = [iInPort]+all_constrains+[iOutPort] # List of ports
-#            print(meander_length)
-
-        all_points = []
-        index_prev = 0
-        index_next = 0
-        for ii in range(nb_constraints):
-
-            if not ports[ii].constraint_port:
-                index_next = ii+1
-                while ports[index_next].constraint_port:
-                    index_next += 1
-                #index_next is the index of the next normal port
-
-                # find and plot adaptor geometry
-                # or reverse
-                if reverse_adaptor:
-                    points = ports[index_next].compare(ports[ii])
-                    index_modified = index_next
-                else:
-                    points = ports[ii].compare(ports[index_next])
-                    index_modified = ii
-
-                for jj, pts in enumerate(points):
-                    self.polyline_2D(pts, name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt', layer=ports[index_modified].layers[jj])
-
-                for jj in range(ii+1, index_next):
-                    ports[jj].widths = ports[index_next].widths
-                    ports[jj].offsets = ports[index_next].offsets
-                    ports[jj].layers = ports[index_next].layers
-                    ports[jj].subnames = ports[index_next].subnames
-                    ports[jj].N = ports[index_next].N
-
-            # to_meander = to_meanders[ii]
-            to_meander = []
-            if isinstance(meander_length, (list, np.ndarray)):
-                m_length = meander_length[ii]
-            else:
-                m_length = meander_length
-
-            points = self.find_path('points', ports[ii].name, ports[ii+1].name, fillet, to_bond, to_meander, m_length, meander_offset)
-            all_points.append(points)
-            ports[ii+1] = ports[ii+1].r
-
-            # plotting cable in between two normal ports
-            if ii+1==index_next:
-                points = []
-                for jj, p in enumerate(all_points):
-                    if jj==0:
-                        points += p
-                    else:
-                        points += p[1:]
-                self.path(points, ports[index_next], fillet, name=name, layer=layer_TRACK)
-                if is_bond:
-                    self.draw_bond(to_bond, *ports[index_next].bond_params(), name=name+'_wb_%d'%ii)
-                index_prev = index_next
-                all_points = []
-                to_bond = []
-
-            ports[ii].revert()
-            ports[ii+1].revert()
-
-#         for ii in range(nb_constraints):
-#             to_meander = to_meanders[ii]
-#             if isinstance(meander_length, (list, np.ndarray)):
-#                 m_length = meander_length[ii]
-#             else:
-#                 m_length = meander_length
-#             if nb_constraints!=0:
-#                 to_add = '_'+str(ii)
-#             else:
-#                 to_add = ''
-# #                print(port_names[2*ii:2*ii+2])
-# #                self.__init__(self.name, *port_names[2*ii:2*ii+2]) CONNECT ELEMENT USELESS
-#             points = self.find_path('points', ports[ii].name, ports[ii+1].name, fillet, is_meander, to_meander, m_length, meander_offset)
-#             all_points.append(points)
-#             ports[ii+1].reverse()
-
-        if 0:
-            points = []
-            for ii, p in enumerate(all_points):
-                if ii==0:
-                    points += p
-                else:
-                    points += p[1:]
-            if 1:
-                self.path(points, ports[0], fillet, name=name, layer=layer_TRACK)
-            else:
-                connection_track = self.polyline_2D(points, name=name+'path_track'+to_add, closed=False ,layer = layer_Default)
-    #            print('length_adaptor = %.3f'%(val(adaptor_length)*1000))
-                cable_length.append(self.length(points, 0, len(points)-1, fillet)+val(adaptor_length))
-                self._fillets(fillet-eps, connection_track)
-
-                connection_gap = self.polyline_2D(points, name=name+'path_gap'+to_add, closed=False ,layer = layer_Default)
-                self._fillets(fillet-eps, connection_gap)
-    #                self.set_current_coor([0,0], [0, -1])
-                track_starter = self.polyline_2D(points[0]+[[-ports[2*ii].track/2,0],[ports[2*ii].track/2,0]], closed=False, name = name+'start_gap', layer = layer_Default)
-                gap_starter = self.polyline_2D([[-ports[2*ii].gap,0],[ports[2*ii].gap,0]], closed=False, name = name+'start_track', layer = layer_Default)
-
-                if self.is_mask:
-                    connection_mask = self.polyline_2D(points, name=name+'_mask'+to_add, closed=False ,layer = layer_MASK)
-                    self.set_current_coor([0,0], [0, -1])
-                    mask_starter = self.cable_starter(name, ports[2*ii].name)
-                    mask = self._sweep_along_path(mask_starter, connection_mask)
-    #                    masks.append(connection_mask.sweep_along_path(mask_starter))
-
-                track = self._sweep_along_path(track_starter, connection_track)
-                tracks.append(track)
-                gap = self._sweep_along_path(gap_starter, connection_gap)
-                gaps.append(gap)
-
-            if 0:
-                if is_bond:
-                    self.draw_bond(to_bond, (ports[0].track+ports[0].gap*2)*1.5)
-
-                if track_adaptor is not None:
-                    tracks = [*tracks, track_adaptor]
-                    gaps = [*gaps, gap_adaptor]
-                    if self.is_mask:
-        #                    self.maskObjects.pop()
-                        masks = [*masks, mask_adaptor]
-
-                if len(tracks)>1:
-                    print([t.name for t in tracks])
-                    track = self.unite(tracks, name=name+'union_track')
-                    gap = self.unite(gaps, name=name+'union_track')
-        #                if layer is None:
-        #                    self.trackObjects.append(track)
-        #                    self.gapObjects.append(gap)
-        #                else:
-        #                    self.layers[layer]['trackObjects'].append(track)
-        #                    self.layers[layer]['gapObjects'].append(gap)
-        #                if self.is_mask:
-        #                    mask = self.unite(masks, names[2])
-        #                    self.maskObjects.append(mask)
-                else:
-                    track = tracks[0]
-                    gap = gaps[0]
-        #                if layer is None:
-        #                    self.trackObjects.append(track)
-        #                    self.gapObjects.append(gap)
-        #                else:
-        #                    self.layers[layer]['trackObjects'].append(track)
-        #                    self.layers[layer]['gapObjects'].append(gap)
-        #                if self.is_mask:
-        #                    self.maskObjects.append(*masks)
-        #            print(track)
-        #            if is_mesh is True:
-        #                if not self.is_litho:
-        #                    self.mesh_zone(track,2*iInPort.track)
-        #
-                for length in cable_length:
-                    print('{0}_length = {1:.3f} mm'.format(name, length*1000))
-                print('sum = %.3f mm'%(1000*np.sum(cable_length)))
-
-    @move_port
-    def find_simple_path(self, name, iInPort, iOutPort, fillet):
-
-        iIn_pos = Vector(iInPort.pos)
-        iIn_ori = Vector(iInPort.ori)
-        iOut_pos = Vector(iOutPort.pos)
-        iOut_ori = Vector(iOutPort.ori)
-        room_bonding = 0*100e-6 #SMPD MANU BOND SPACE
-
-        dist_y = (iOut_pos-iIn_pos).dot(iIn_ori.orth())
-        slanted=False
-        if iIn_ori.dot(iOut_ori)==-1 and abs(val(dist_y))<val(2*fillet):
-            slanted=True  # need to do a slanted_path
-
-        pointA = val(iIn_pos+iIn_ori*room_bonding)
-        pointB = val(iOut_pos+iOut_ori*room_bonding)
-
-
-        point1 = val(iIn_pos+iIn_ori*(1.1*fillet+room_bonding))
-        point2 = val(iOut_pos+iOut_ori*(1.1*fillet+room_bonding))
-
-        points_choices = Vector([])
-        if iIn_ori.dot(iOut_ori)==-1:
-            middle_point = (point1 + point2)/2
-
-            choice_in = next_point(point1, middle_point, iIn_ori) #bon sens
-            choice_out = next_point(point2, middle_point, iOut_ori) #à inverser
-            for c_in in choice_in:
-                for c_out in choice_out:
-                    points_choices.append([pointA, *c_in, *c_out[:-1][::-1], pointB])
+        # asserts neither in nor out port are constraint_ports
+        if ports[0].constraint_port and ports[-1].constraint_port:
+            raise ValueError('At least the first (%s) or last port (%s) \
+                             should define the port parameters'%(ports[0].name,
+                                                             ports[-1].name))
+        elif ports[0].constraint_port:
+            ports[0].widths = ports[-1].widths
+            ports[0].offsets = ports[-1].offsets
+            ports[0].layers = ports[-1].layers
+            ports[0].subnames = ports[-1].subnames
+            ports[0].N = ports[-1].N
+            ports[0].constraint_port = False  # ports[0] is now defined
+        elif ports[-1].constraint_port:
+            ports[-1].widths = ports[0].widths
+            ports[-1].offsets = ports[0].offsets
+            ports[-1].layers = ports[0].layers
+            ports[-1].subnames = ports[0].subnames
+            ports[-1].N = ports[0].N
+            ports[-1].constraint_port = False  # ports[-1] is now defined
         else:
-            choice_in = next_point(point1, point2, iIn_ori)
-            for c_in in choice_in:
-                points_choices.append([pointA, *c_in, pointB])
+            pass
 
-        final_choice= None
-        cost=np.inf
-        for ii, choice in enumerate(points_choices):
-            new_cost, new_choice, new_length = check(choice)
+        # recursive approach if there are intermediate non_constraint ports
 
-            if new_cost<cost:
-                final_choice = new_choice
-                cost = new_cost
-                length = new_length
-
-        def working_points(points, min_dist, to_meander):
-            min_dist = min_dist*1.1
-            working_p_start = []
-            working_p_end = []
-            left_p_start=[points[0]]
-            left_p_end=[points[-1]]
-            success=False
-            index_start = 0
-            for ii, point in enumerate(points[1:]):
-                A = left_p_start[-1]
-                B = point
-                AB = B-A
-                vec = way(val(B-A))
-                if val(AB).norm() > val(min_dist):
-                    working_p_start.append(A+vec*min_dist/2)
-                    success = True
-                    index_start = ii+1
-                    break
-                else:
-                    left_p_start.append(B)
-                    to_meander.pop(0)
+        cable_portion = 0
+        _ports = [ports[0]]
+        for port in ports[1:-1]:
+            _ports.append(port)
+            if not port.constraint_port:
+                print(to_meander[cable_portion])
+                print(meander_length[cable_portion])
+                self.draw_cable(name+'_%d'%cable_portion, *_ports,
+                                fillet=fillet, is_bond=is_bond,
+                                to_meander=[to_meander[cable_portion]],
+                                meander_length=[meander_length[cable_portion]],
+                                meander_offset=[meander_offset[cable_portion]],
+                                is_mesh=is_mesh,
+                                reverse_adaptor=reverse_adaptor)
+                cable_portion += 1
+                _ports = [port.r]
+        if cable_portion != 0:
+            name = name+'_%d'%cable_portion
+            to_meander = [to_meander[cable_portion]]
+            meander_length = [meander_length[cable_portion]]
+            meander_offset = [meander_offset[cable_portion]]
+        _ports.append(ports[-1])
 
 
-            if not success:
-                print('Warning: Could not find points to elongate cable %s' %self.name)
-                left_p = left_p_start+left_p_end[::-1]
-                return [], left_p, 0
-            else:
-                success=False
-                index_end = 0
-                for ii, point in enumerate(points[::-1][1:]):
-                    A = left_p_end[-1]
-                    B = point
-                    AB = B-A
-                    vec = way(val(B-A))
-                    if val(AB).norm() > val(min_dist):
-                        working_p_end.append(A+vec*min_dist/2)
-                        success = True
-                        index_end = ii+1
-                        break
-                    else:
-                        left_p_end.append(B)
-                        to_meander.pop(-1)
-                if not success:
-                    print('Warning: Could not find points to elongate cable %s' %self.name)
-                    left_p = left_p_start+left_p_end[::-1]
-                    return [], left_p, 0
+        # at this stage first and last port are not constraint_port and all
+        # intermediate port should be constraint_port
 
+        ports = _ports
 
-            working_p = working_p_start+points[index_start:-index_end]+working_p_end
-            index_insertion = len(left_p_start)
-            left_p = left_p_start+left_p_end[::-1]
-
-            return working_p, left_p, index_insertion
-
-        def right_left(points):
-            vecs = []
-            A = points[0]
-            for B in points[1:]:
-                vecs.append(way(val(B-A)))
-                A=B
-        #    print(points)
-        #    print(vecs)
-            vecA = vecs[0]
-            r_l = [0]
-            for vecB in vecs[1:]:
-                r_l.append(vecA.cross(vecB))
-                vecA=vecB
-            r_l.append(0)
-            return r_l
-
-        def add_points(points, rl, min_dist, n_meander):
-            min_dist = min_dist*1.1
-            n_points = len(points)
-
-            A = points[0]
-            new_points =[]
-            if n_points==2:
-                new_points.append(A)
-                B=points[-1]
-                vec = way(val(B-A))
-                AB = (B-A).norm()
-                n_add = int(val(AB/min_dist))
-                if rl[0]*rl[1]==1 and n_add%2==0:
-                    n_add-=1
-                if rl[0]*rl[1]==-1 and n_add%2==1:
-                    n_add-=1
-                if n_meander==-1 or n_meander>=n_add:
-                    dist = AB/n_add
-                    ignore=False
-                elif n_meander<n_add:
-                    n_add=n_meander
-                    centerAB=(A+B)/2
-                    addedA=centerAB-vec*n_add/2*min_dist
-                    addedB=centerAB+vec*n_add/2*min_dist
-                    dist=min_dist
-                    A=addedA
-                    new_points.append(addedA)
-                    ignore=True
-                new_points+=[A+vec*dist/2]
-                new_points+=[A+vec*dist*(jj+1+1/2) for jj in range(n_add-1)]
-                rl=None
-                indices_corners=None
-#                else:
-#                    indices_corners=[]
-#                    rl = right_left(points)
-#
-#                    for ii, B in enumerate(points[1:]):
-#                        new_points.append(A)
-#                        vec = way(val(B-A))
-#                        AB = (B-A).norm()
-#                        if ii==0 or ii==n_points-2:
-#                            factor = 0.5
-#                        else:
-#                            factor = 1
-#                        n_add = int(val(AB/min_dist)-factor)
-#                        if not(ii==0 or ii==n_points-2):
-#                            if rl[ii-1]*rl[ii]==-1 and n_add%2==1:
-#                                n_add-=1
-#                            if rl[ii-1]*rl[ii]==1 and n_add%2==0:
-#                                n_add-=1
-#
-#                        dist = AB/(n_add+factor)
-#                        if n_add>=1:
-#                            if ii==0:
-#                                new_points+=[A+vec*dist/2]
-#                                new_points+=[A+vec*dist*(jj+1+1/2) for jj in range(n_add-1)]
-#                            elif ii!=n_points-2:
-#                                new_points+=[A+vec*dist*(jj+1) for jj in range(n_add)]
-#                            else:
-#                                new_points+=[A+vec*dist*(jj+1) for jj in range(n_add)]
-#                        indices_corners.append(len(new_points))
-#                        A=B
-#                    indices_corners= indices_corners[:-1]
-
-            if ignore:
-                new_points.append(addedB)
-            new_points.append(points[-1])
-            return new_points, indices_corners, dist, ignore
-
-        def displace(points, rl, min_dist, displacement=0, offset=0, n_meander=-1):
-            if np.abs(val(displacement))<val(min_dist)*1.1:
-                displacement = min_dist*1.1
-            points, indices_corners, dist, ignore = add_points(points, rl, min_dist, n_meander=n_meander)
-            new_points = [points[0]]
-            parity = 1
-            if indices_corners is not None:
-                for ii, B in enumerate(points[1:-1]):
-                    A = points[ii]
-                    AB= B-A
-                    vec = way(val(AB))
-                    if ii==0:
-                        parity = (-2*((indices_corners[0]-(ii+1))%2)+1)*(-rl[0])
-                    else:
-                        parity = -parity
-
-                    if ii+1 not in indices_corners:
-                        #regular point
-                        new_points[ii+1] = points[ii+1]+vec.orth()*parity*min_dist
-                    else:
-                        new_points[ii+1] = points[ii+1]+(vec.orth()*parity+vec).unit()*min_dist
-            else:
-                if rl[0]!=0:
-                    parity = -rl[0]
-                else:
-                    parity = (2*(len(points)%2)-1) * (-rl[1]*(rl[1]+1)+1)
-                if ignore:
-                    n_ignore=2
-                    new_points.append(points[1])
-                else:
-                    n_ignore=1
-                for ii, B in enumerate(points[n_ignore:-n_ignore]):
-                    A=points[ii]
-                    AB=B-A
-                    vec=way(val(AB))
-                    if parity==1:
-                        new_points.append(points[ii+n_ignore]+vec.orth()*parity*(displacement+offset)-vec*dist/2)
-                        new_points.append(points[ii+n_ignore]+vec.orth()*parity*(displacement+offset)+vec*dist/2)
-                    else:
-                        new_points.append(points[ii+n_ignore]+vec.orth()*parity*(displacement-offset)-vec*dist/2)
-                        new_points.append(points[ii+n_ignore]+vec.orth()*parity*(displacement-offset)+vec*dist/2)
-                    parity = -parity
-                if ignore:
-                    new_points.append(points[-2])
-                new_points.append(points[-1])
-
-
-            return new_points
-
-        def meander(points, min_dist, to_meander, meander_length, meander_offset): # to_meander is list of segments to be meander
-            n_points = len(points)
-            n_to_meander = len(to_meander)
-            if n_points-1>n_to_meander:
-                to_meander = to_meander+[0 for ii in range(n_points-1-n_to_meander)]
-            else:
-                to_meander = to_meander[:n_points-1]
-            working_p, left_p, index_insertion = working_points(points, min_dist, to_meander)
-
-            if len(working_p) != 0:
-                rl = right_left(working_p)
-
-                working_ps = []
-                for ii, isit in enumerate(to_meander):
-                    if isit!=0:
-                        new_working_p = displace(working_p[ii:ii+2], rl[ii:ii+2], min_dist, displacement=meander_length, offset=meander_offset, n_meander=isit) # n_meander=-1 -> auto
-                    else:
-                        new_working_p = working_p[ii:ii+2]
-                    working_ps += new_working_p
-#                        print(working_ps)
-
-                left_p[index_insertion:index_insertion] = working_ps
-            return  left_p#left_p#,
-
-        if any(to_meander):
-            min_dist = 2*fillet
-            final_choice = meander(final_choice, min_dist, to_meander, meander_length, meander_offset)
-
-        final_choice =  [val(iIn_pos)] + final_choice + [val(iOut_pos)]
-
-# Needed to draw Manu bond
-        def add_fillet_points(points, fillet):
-            new_points = [points[0]]
-            for ii, point in enumerate(points[1:-1]):
-                index = ii+1
-                p_vec = points[index-1]-point
-                n_vec = points[index+1]-point
-                new_points.append(point+way(val(p_vec))*fillet)
-                new_points.append(point+way(val(n_vec))*fillet)
-            new_points.append(points[-1])
-            return new_points
-
-
-
-#        new_points = add_fillet_points(final_choice, fillet)
-#        for ii, point in enumerate(new_points[::2]):
-#            self.draw('bef_test', [new_points[2*ii], new_points[2*ii+1]], closed=False)
-#            self.to_bond.append([new_points[2*ii], new_points[2*ii+1]])
-
-
-
-#        self.draw('test', new_points, closed=False)
-
-# Needed for equidistant fillet
-#
-#
-#
-#
-
-        def dist(points, A, B, fillet): # A and B are integer point indices
-            if A<0 or A>=len(points):
-                raise ValueError('First index should be within the point list')
-            if B<0 or B>=len(points):
-                raise ValueError('Second index should be within the point list')
-            if A==B:
-                return 0
-            if abs(A-B)==1:
-                if A<B:
-                    if A%2==1:
-                        return fillet*np.pi/2
-                    else:
-                        return (points[A]-points[B]).norm()
-                else:
-                    return dist(points, B, A, fillet)
-            if abs(A-B)>1:
-                if A<B:
-                    return dist(points, A, B-1, fillet) + dist(points, B-1, B, fillet)
-                else:
-                    return dist(points, B, A, fillet)
-
-        def where(points, length, fillet):
-            n_points = len(points)
-            for ii in range(n_points-1):
-                distance = dist(points, ii, ii+1, fillet)
-                if length <= distance:
-                    if ii%2==0:
-                        kind = 'normal'
-                    else:
-                        kind = 'fillet'
-                    return [ii, ii+1], kind, length
-                else:
-                    length = length-distance
-            raise ValueError('Length should be smaller than cable length')
-
-        _, final_choice, _ = check(final_choice)
-
-        if slanted:
-            h = abs(dist_y/2)
-            x = (fillet-h)/fillet
-            d = h*x/(1-x**2)**0.5
-            dist_x = (iOut_pos-iIn_pos).dot(iIn_ori)
-            pointA = iIn_pos+iIn_ori*(dist_x/2-d)
-            pointB = iOut_pos+iOut_ori*(dist_x/2-d)
-
-            to_bond.append([iIn_pos, pointA])
-            to_bond.append([pointB, iOut_pos])
-
-            return [iIn_pos, pointA, pointB, iOut_pos]
+        # find and plot adaptor geometry
+        if reverse_adaptor:
+            points, length_adaptor = ports[-1].compare(ports[0])
+            index_modified = -1
         else:
-            to_bond_points = add_fillet_points(final_choice, fillet)
-            for ii, point in enumerate(to_bond_points[::2]):
-                points = [to_bond_points[2*ii], to_bond_points[2*ii+1]]
-    #            print("points", points)
-                # self.polyline_2D(points , closed=False, name='bef_test'+str(ii), layer=layer_Default)
-                to_bond.append(points)
-            return final_choice
+            points, length_adaptor = ports[0].compare(ports[-1])
+            index_modified = 0
 
-    def find_meander_path(points, fillet, to_bond, to_meander, meander_length, meander_offset))
+        # plot adaptors
+        for jj, pts in enumerate(points):
+            self.polyline_2D(pts, name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt', layer=ports[index_modified].layers[jj])
 
-    def length(self, points, A, B, fillet): # A and B are integer point indices
-#        for point in points:
-#            print(val(point[0]), val(point[1]))
-        if A<0 or A>=len(points):
-            raise ValueError('First index should be within the point list')
-        if B<0 or B>=len(points):
-            raise ValueError('Second index should be within the point list')
-        if A==B:
-            return 0
-        if A<B:
-            value = 0
-            for ii in range(B-A):
-                value+=val((points[A+ii+1]-points[A+ii]).norm())
-            return value-(B-A-1)*val(fillet*(2-np.pi/2))
-        else:
-            return self.length(points, B, A, fillet)
+        # define the constraint_port parameters
+        for port in ports[1:-1]:
+            port.widths = ports[0].widths
+            port.offsets = ports[0].offsets
+            port.layers = ports[0].layers
+            port.subnames = ports[0].subnames
+            port.N = ports[0].N
 
+        # find all intermediate paths
+        total_path = None
+        for ii in range(len(ports)-1):
+            path = Path(name, ports[ii], ports[ii+1], fillet)
+            if total_path is None:
+                total_path = path
+            else:
+                total_path += path
+            ports[ii+1] = ports[ii+1].r # reverse the last port
+
+        total_path.clean()
+
+        # do meandering
+        total_path.meander(to_meander[0], meander_length[0], meander_offset[0])
+
+        total_path.clean()
+
+        # plot cable
+        self.path(total_path.points, total_path.port_in, total_path.fillet,
+                  name=name)
+
+        # if bond plot bonds
+        if is_bond:
+            self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name+'_wb_%d'%ii)
+
+        ports[0].revert()
+        ports[-1].revert()
+
+        length = total_path.length() + length_adaptor
+        print('Cable "%s" length = %.3f mm'%(name, length*1000))
+        return length
 
     def draw_bond(self, to_bond, ymax, ymin, name='wb', min_dist='0.5mm'):
+        # to_bond list of segments
         ymax, ymin, min_dist = parse_entry(ymax, ymin, min_dist)
 
         min_dist = val(min_dist)
