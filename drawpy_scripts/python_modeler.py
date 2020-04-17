@@ -174,7 +174,7 @@ class PythonModeler():
                 coor_sys = parse_entry(coor_sys)
                 self.interface.create_coor_sys(coor_name, coor_sys)
         N = Network(body_name, coor_name, self.interface, self.variables)
-        B = Body(self.interface, coor_name, body_name, N, self.mode, self.variables)
+        B = Body(self, coor_name, body_name, N)
         return B
 
     @set_active_coor_system
@@ -369,11 +369,10 @@ class PythonModeler():
             # return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
         elif self.mode=='hfss':
             # check that port is at the BEGINNING of the path
-            self.polyline_2D(points, closed=True, **kwargs)
             ori = port.ori
             pos = port.pos
             entities = []
-            for ii in port.N:
+            for ii in range(port.N):
                 offset = port.offsets[ii]
                 width = port.widths[ii]
                 subname = port.subnames[ii]
@@ -1002,18 +1001,18 @@ class Network(PythonModeler):
 @Lib.add_methods_from(KeyElement, CustomElement)
 class Body(PythonModeler):
 
-    def __init__(self, interface, coor_sys, name, network, mode, variables):
-        self.interface = interface
+    def __init__(self, pm, coor_sys, name, network):
+        self.pm = pm
+        self.interface = pm.interface
         self.coor_sys = coor_sys
         self.name = name
         self.maskObjects = []
         self.trackObjects = []
         self.gapObjects = []
-        self.mode = mode # 'hfss' or 'gds'
-        self.variables = variables
+        self.mode = pm.mode # 'hfss' or 'gds'
+        self.variables = pm.variables
         network.update(coor_sys)
         self.network = network
-
 
 
 #    @staticmethod
@@ -1330,10 +1329,10 @@ class Body(PythonModeler):
 
         # find and plot adaptor geometry
         if reverse_adaptor:
-            points, length_adaptor = ports[-1].compare(ports[0], self)
+            points, length_adaptor = ports[-1].compare(ports[0], self.pm)
             index_modified = -1
         else:
-            points, length_adaptor = ports[0].compare(ports[-1], self)
+            points, length_adaptor = ports[0].compare(ports[-1], self.pm)
             index_modified = 0
 
         # plot adaptors
