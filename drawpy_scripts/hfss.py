@@ -982,15 +982,18 @@ class HfssModeler(COMWrapper):
 
     @assert_name
     def wirebond_2D(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
-        raise NotImplementedError('HFSS wirebond not implemented')
-        pos, ori, width, heigth = parse_entry((pos, ori, width, height))
-        xpad = pos[0]-width/2.*ori[1]
-        ypad = pos[1]+width/2.*ori[0]
-        xdir = ori[1]
-        ydir = -ori[0]
+        bond_diam = '20um'
+        params = parse_entry(pos, ori, width, height, bond_diam)
+        pos, ori, width, heigth, bond_diam = params
+        bond1 = pos + ori.orth()*(ymax+2*bond_diam)
+        bond2 = pos + ori.orth()*(ymin-2*bond_diam)
+        width = ymax-ymin
+        direction = - ori.orth()
+        xpad, ypad = bond1
+        xdir, ydir = direction
         name = self._modeler.CreateBondwire(["NAME:BondwireParameters",
                                             "WireType:=", "Low",
-                                            "WireDiameter:=", "0.02mm",
+                                            "WireDiameter:=", bond_diam,
                                             "NumSides:=", 6,
                                             "XPadPos:=", xpad,
                                             "YPadPos:=", ypad,
