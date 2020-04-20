@@ -342,24 +342,6 @@ class GdsModeler():
 
         return names
 
-    def _sweep_along_path(self, to_sweep, path_obj, name=None):
-        try:
-            length_to_sweep = (Vector(self.gds_object_instances[to_sweep.name].polygons[0][0])-Vector(self.gds_object_instances[to_sweep.name].polygons[0][1])).norm()
-        except Exception:
-            length_to_sweep = (Vector(self.gds_object_instances[to_sweep.name].points[0])-Vector(self.gds_object_instances[to_sweep.name].points[1])).norm()
-        try:
-            flexpath = gdspy.FlexPath(self.gds_object_instances[path_obj.name].polygons[0], length_to_sweep, layer = to_sweep.layer)
-        except Exception:
-            flexpath = gdspy.FlexPath(self.gds_object_instances[path_obj.name].points, length_to_sweep, layer = to_sweep.layer)
-
-
-        self.cell.add(flexpath)
-
-        if name==None:
-            return to_sweep.name
-        else:
-            return name
-
     def sweep_along_vector(self, names, vector):
         self._modeler.SweepAlongVector(self._selections_array(*names),
                                         	["NAME:VectorSweepParameters",

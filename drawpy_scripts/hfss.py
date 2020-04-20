@@ -14,7 +14,7 @@ from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 from win32com.client import Dispatch, CDispatch
 
-from variable_string import VariableString, \
+from .variable_string import VariableString, \
                             parse_entry, \
                             var
                             #simplify_arith_expr, \
@@ -981,16 +981,17 @@ class HfssModeler(COMWrapper):
         return name
 
     @assert_name
-    def wirebond_2D(self, pos, ori, width, height='0.1mm', **kwargs): #ori should be normed
+    def wirebond_2D(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
         bond_diam = '20um'
-        params = parse_entry(pos, ori, width, height, bond_diam)
-        pos, ori, width, heigth, bond_diam = params
+        params = parse_entry(pos, ori, ymax, ymin, height, bond_diam)
+        pos, ori, ymax, ymin, heigth, bond_diam = params
         bond1 = pos + ori.orth()*(ymax+2*bond_diam)
-        bond2 = pos + ori.orth()*(ymin-2*bond_diam)
-        width = ymax-ymin
+        width = ymax-ymin + 4*bond_diam
         direction = - ori.orth()
         xpad, ypad = bond1
         xdir, ydir = direction
+        kwargs2 = kwargs.copy()
+        kwargs2.pop('layer', None)
         name = self._modeler.CreateBondwire(["NAME:BondwireParameters",
                                             "WireType:=", "Low",
                                             "WireDiameter:=", bond_diam,
@@ -1007,7 +1008,8 @@ class HfssModeler(COMWrapper):
                                             "alpha:=", "80deg",
                                             "beta:=", "80deg",
                                             "WhichAxis:=", "Z"],
-                                            self._attributes_array(**kwargs))
+                                            self._attributes_array(**kwargs2))
+        del kwargs2
         return name
 
     def duplicate_along_line(self, entity, vec, n=2):
@@ -1148,7 +1150,7 @@ class HfssModeler(COMWrapper):
 
     def _fillets(self, radius, vertices, entity):
         to_fillet = [int(vertice) for vertice in vertices]
-        print("to_fillet", to_fillet)
+#        print("to_fillet", to_fillet)
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                               ["NAME:Parameters",
                                ["NAME:FilletParameters",
@@ -1303,18 +1305,19 @@ class HfssModeler(COMWrapper):
         return blank_entity.name
 
     def _sweep_along_path(self, entity_to_sweep, path_entity):
-        name_temp = path_entity.name
-        self.rename_entity(path_entity, path_entity.name+'_path')
-        self.rename_entity(entity_to_sweep, name_temp)
+#        name_temp = path_entity.name
+#        self.rename_entity(path_entity, path_entity.name+'_path')
+#        self.rename_entity(entity_to_sweep, name_temp)
 
-        names = [path_entity.name, path_entity.name+'_path']
+        names = [entity_to_sweep.name, path_entity.name]
+        print(names)
         self._modeler.SweepAlongPath(self._selections_array(*names),
                                      ["NAME:PathSweepParameters",
                                 		"DraftAngle:="		, "0deg",
                                 		"DraftType:="		, "Round",
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
-        return name_temp
+        return entity_to_sweep.name
 
     def sweep_along_vector(self, entities, vector):
         names = [entity.name for entity in entities]

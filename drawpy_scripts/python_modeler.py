@@ -284,8 +284,6 @@ class PythonModeler():
             print("Fillet operation resulted in an error")
 
     def _fillets(self, radius, entity, kind='open'):
-        print(self)
-        print(type(entity))
         vertices = self.interface.get_vertex_ids(entity)
         if entity.dimension==1:
             self.interface._fillets(radius, vertices[1:-1], entity)
@@ -372,6 +370,7 @@ class PythonModeler():
             ori = port.ori
             pos = port.pos
             entities = []
+            print(port.subnames)
             for ii in range(port.N):
                 offset = port.offsets[ii]
                 width = port.widths[ii]
@@ -520,12 +519,11 @@ class PythonModeler():
 #        return ModelEntity(name, 2, self.coor_sys, layer=blank_entity.layer)
 
     def _sweep_along_path(self, entity_to_sweep, path_entity, name=None):
-        new_name = self.interface._sweep_along_path(entity_to_sweep,
+        _ = self.interface._sweep_along_path(entity_to_sweep,
                                                     path_entity)
-#        self.delete(path_entity)
+        self.delete(path_entity)
         entity_to_sweep.modify_dimension(2)
-        path_entity.rename_entity(new_name)
-        return path_entity
+        return entity_to_sweep
 
     def translate(self, entities, vector=[0, 0, 0]):
         if self.mode == 'gds':
@@ -1370,7 +1368,7 @@ class Body(PythonModeler):
 
         # if bond plot bonds
         if is_bond:
-            self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name+'_wb_%d'%ii)
+            self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name+'_wb')
 
         ports[0].revert()
         ports[-1].revert()
@@ -1386,6 +1384,7 @@ class Body(PythonModeler):
         min_dist = val(min_dist)
         n_segments = len(to_bond)
         jj=0
+        bond_number = 0
         while jj<n_segments:
             elt = to_bond[jj]
             A = elt[0]
@@ -1399,10 +1398,10 @@ class Body(PythonModeler):
             n_bond = int(length/_val(min_dist))+1
             spacing = (B-A).norm()/n_bond
             pos = A+ori*spacing/2
-            self.wirebond_2D(pos, ori, ymax, ymin, layer=layer_Default, name=name+'_0')
-            for ii in range(n_bond-1):
+            for ii in range(n_bond):
+                self.wirebond_2D(pos, ori, ymax, ymin, layer=layer_Default, name=name+'_%d'%(bond_number))
+                bond_number += 1
                 pos = pos + ori*spacing
-                self.wirebond_2D(pos, ori, ymax, ymin, layer=layer_Default, name=name+'_%d'%ii)
             jj+=1
 
     @move_port

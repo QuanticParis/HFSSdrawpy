@@ -5,7 +5,7 @@ Created on Tue Oct 29 14:05:00 2019
 @author: wcs
 """
 
-from drawpy_scripts.python_modeler import PythonModeler
+from drawpy_scripts.python_modeler import PythonModeler, ModelEntity
 from drawpy_scripts.variable_string import parse_entry, Vector
 import os
 import gdspy
