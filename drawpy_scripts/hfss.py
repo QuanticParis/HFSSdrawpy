@@ -815,6 +815,7 @@ class HfssModeler(COMWrapper):
     def copy(self, entity):
         self._modeler.Copy(["NAME:Selections", "Selections:=", entity.name])
         new_obj = self._modeler.Paste()
+        print('Copying %s'%new_obj)
         return new_obj[0]
 
     def create_coor_sys(self, name, coor_sys):
@@ -1048,6 +1049,7 @@ class HfssModeler(COMWrapper):
 
     def assign_perfect_E(self, entities, name):
         if isinstance(entities, list):
+            raise NotImplementedError()
             entity_names = [entity.name for entity in entities]
             self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", entity_names, "InfGroundPlane:=", False])
         else:
@@ -1078,15 +1080,22 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
-    def assign_mesh_length(self, entity, length):#, suff = '_mesh'):
-        name = entity.name
+    def assign_mesh_length(self, entities, length):#, suff = '_mesh'):
+        if not isinstance(entities, list):
+            entities = [entities]
+        name = entities[0].name
         params = ["NAME:"+name]
-        if entity.dimension==3:
+        list_bool = [entity.dim==3 for entity in entities]
+        if all(list_bool):
             params += ["RefineInside:=", True, "Enabled:=", True]
-        else :
+        elif any(list_bool):
+            raise TypeError('Please do not mix 3D element with other \
+                            dimenstions when assigning mesh length')
+        else:
             params += ["RefineInside:=", False, "Enabled:=", True]
+
         ######## RefineInside Should be False for planar object
-        params += ["Objects:=", [name]]
+        params += ["Objects:=", [entity.name for entity in entities]]
         params += ["RestrictElem:=", False,
 			         "RestrictLength:=",  True,
 			         "MaxLength:=", length]
@@ -1116,14 +1125,16 @@ class HfssModeler(COMWrapper):
                 return str(name)
         return self.parent.eval_var_str(name, unit=unit)
 
-    def _fillet(self, radius, vertex_index, entity):
-        vertices = self._modeler.GetVertexIDsFromObject(entity.name)
+    def fillet(self, entity, radius, vertex_indices):
+        vertices = self.get_vertex_ids(entity)
         if isinstance(vertex_index, list):
-            to_fillet = [int(vertices[v]) for v in vertex_index]
+            to_fillet = [int(vertices[v]) for v in vertex_indices]
         elif isinstance(vertex_index, int):
             to_fillet = [int(vertices[vertex_index])]
         else:
-            to_fillet = vertex_index
+            msg = 'Arg vertex_index should be either a list or an int. \
+                   Given %s'%type(vertex_index)
+            raise TypeError(msg)
 
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                           ["NAME:Parameters",
@@ -1134,7 +1145,21 @@ class HfssModeler(COMWrapper):
                             "Setback:=", "0mm"]])
         return None
 
-    def _fillet_edges(self, radius, edge_index, entity):
+    def fillets(self, entity, radius):
+        vertices = self.get_vertex_ids(entity)
+        if entity.dimension ==1:
+            vertices = vertices[1:-1]
+        to_fillet = [int(vertex) for vertex in vertices]
+#        print("to_fillet", to_fillet)
+        self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
+                              ["NAME:Parameters",
+                               ["NAME:FilletParameters",
+                                "Edges:=", [],
+                                "Vertices:=", to_fillet,
+                                "Radius:=", radius,
+                                "Setback:=", "0mm"]])
+
+    def _fillet_edges(self, entity, radius, edge_index):
         edges = self.get_edge_ids(entity.name)
         if isinstance(edge_index, list):
             to_fillet = [int(edges[e]) for e in edge_index]
@@ -1145,17 +1170,6 @@ class HfssModeler(COMWrapper):
                                ["NAME:FilletParameters",
                                 "Edges:=", to_fillet,
                                 "Vertices:=", [],
-                                "Radius:=", radius,
-                                "Setback:=", "0mm"]])
-
-    def _fillets(self, radius, vertices, entity):
-        to_fillet = [int(vertice) for vertice in vertices]
-#        print("to_fillet", to_fillet)
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
-                              ["NAME:Parameters",
-                               ["NAME:FilletParameters",
-                                "Edges:=", [],
-                                "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
 
@@ -1249,7 +1263,7 @@ class HfssModeler(COMWrapper):
 
         self._boundaries.AssignLumpedPort(params)
 
-    def make_material(self, entity, material):
+    def assign_material(self, entity, material):
         self._modeler.ChangeProperty(["NAME:AllTabs",
                                 		["NAME:Geometry3DAttributeTab",
                                 			["NAME:PropServers", entity.name],
@@ -1259,26 +1273,19 @@ class HfssModeler(COMWrapper):
                                 		]
                                 	])
 
-
-
-
     def rotate(self, entities, angle):
-        names = []
-        for entity in entities:
-            if isinstance(entity, list):
-                self.rotate(entity, angle)
-            else:
-                if entity!=None:
-                    names.append(entity.name)
-        if len(names)!=0:
-            self._modeler.Rotate(self._selections_array(*names),
-                ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=", "%ddeg"%(angle)])
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=",
+             "%ddeg"%(angle)])
 
-    def rename_entity(self, entity, name):
+    def rename(self, entity, name):
         new_name = self._modeler.ChangeProperty(["NAME:AllTabs",
-                                    		["NAME:Geometry3DAttributeTab",
-                                    			["NAME:PropServers", str(entity.name)],
-                                    			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
+      		["NAME:Geometry3DAttributeTab",
+      		["NAME:PropServers", str(entity.name)],
+      			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
         return new_name
 
     def set_coor_sys(self, coor_sys):
@@ -1294,15 +1301,12 @@ class HfssModeler(COMWrapper):
         for entity in tool_entities:
             if entity!=None:
                 tool_names.append(entity.name)
-
         selection_array= ["NAME:Selections",
                           "Blank Parts:=", blank_entity.name,
                           "Tool Parts:=", ",".join(tool_names)]
-        self._modeler.Subtract(
-                                selection_array,
-                                ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
-                                )
-        return blank_entity.name
+        self._modeler.Subtract(selection_array,
+                                ["NAME:UniteParameters",
+                                 "KeepOriginals:=", keep_originals])
 
     def _sweep_along_path(self, entity_to_sweep, path_entity):
 #        name_temp = path_entity.name
@@ -1343,28 +1347,19 @@ class HfssModeler(COMWrapper):
                                 		"BothSides:="		, bothsides
                                 	])
     def translate(self, entities, vector):
-        names = []
-        for entity in entities:
-            if entity!=None:
-                names.append(entity.name)
-        self._modeler.Move(
-                            self._selections_array(*names),
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Move(self._selections_array(*names),
                             ["NAME:TranslateParameters",
                         		"TranslateVectorX:="	, vector[0],
                         		"TranslateVectorY:="	, vector[1],
-                        		"TranslateVectorZ:="	, vector[2]]
-                            )
+                        		"TranslateVectorZ:="	, vector[2]])
 
-    def unite(self, entities, name=None, keep_originals=False):
-        names = []
-        for entity in entities:
-            if entity!=None:
-                names.append(entity.name)
-        self._modeler.Unite(
-            self._selections_array(*names),
+    def unite(self, entities, keep_originals=False):
+        names = [entity.name for entity in entities]
+        self._modeler.Unite(self._selections_array(*names),
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals])
-        new_name = names[0] if names!=None else None
-        return new_name
 
 
 # class ModelEntity():

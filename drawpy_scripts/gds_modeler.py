@@ -11,7 +11,7 @@ import gdspy
 from .variable_string import parse_entry, var, Vector
 
 eps = 1e-7
-TOLERANCE = 1e-7
+TOLERANCE = 1e-7 # for arcs
 print("gdspy_version : ",gdspy.__version__)
 
 # Create the geometry: a single rectangle.
@@ -51,11 +51,16 @@ class GdsModeler():
             self.coor_systems[coor_name] = coor_sys
             self.gds_cells[coor_name] = coor_sys
 
-    def copy(self, polygon, name):
+    def _copy(self, polygon, name):
         new_polygon = gdspy.copy(polygon, 0, 0)
         self.gds_object_instances[name] = new_polygon
 
-    def generate_gds(self,name_file):
+    def copy(self, entity, new_name):
+        new_polygon = gdspy.copy(self.gds_object_instances[entity.name], 0, 0)
+        self.gds_object_instances[new_name] = new_polygon
+        self.cell.add(new_polygon)
+
+    def generate_gds(self, name_file):
         gdspy.write_gds(name_file, unit=1.0, precision=1e-9)
 #        writer =
 #        writer.write_cell(self.cell)
@@ -66,32 +71,11 @@ class GdsModeler():
     def set_coor_sys(self, coor_name):
         self.coor_system = self.coor_systems[coor_name]
 
-    def _attributes_array(self, name=None, nonmodel=False, color=None,
-                          transparency=0.9, material=None, solve_inside = None):
-        arr = ["NAME:Attributes", "PartCoordinateSystem:=", "Global"]
-        if name is not None:
-            arr.extend(["Name:=", name])
-        if nonmodel:
-            arr.extend(["Flags:=", "NonModel"])
-
-        if color is not None:
-            arr.extend(["Color:=", "(%d %d %d)" % color])
-        if transparency is not None:
-            arr.extend(["Transparency:=", transparency])
-        if material is not None:
-            arr.extend(["MaterialName:=", material])
-        if solve_inside is not None:
-            arr.extend(["SolveInside:=", solve_inside])
-        return arr
-
-    def _selections_array(self, *names):
-        return ["NAME:Selections", "Selections:=", ",".join(names)]
-
     def box_corner_3D(self, pos, size, **kwargs):
-        print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
+        # print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
         pass
     def box_center_3D(self, pos, size, **kwargs):
-        print("ERROR : The function --box_center_3D-- cannot be used for GDSmodeler")
+        # print("ERROR : The function --box_center_3D-- cannot be used for GDSmodeler")
         pass
 
     def polyline_2D(self, points, closed, **kwargs):
@@ -128,12 +112,7 @@ class GdsModeler():
         return self.rect_corner_2D(corner_pos, size, **kwargs)
 
     def cylinder_3D(self, pos, radius, height, axis, **kwargs):
-        print("ERROR : The function --cylinder_3D-- cannot be used for GDSmodeler")
-        pass
-
-    def cylinder_center_3D(self, pos, radius, height, axis, **kwargs):
-        #Useless ?
-        print("ERROR : The function --cylinder_center_3D-- cannot be used for GDSmodeler")
+        # print("ERROR : The function --cylinder_3D-- cannot be used for GDSmodeler")
         pass
 
     def disk_2D(self, pos, radius, axis, number_of_points=0, **kwargs):
@@ -160,11 +139,11 @@ class GdsModeler():
         pass
 
     def delete(self, entity):
-        self.cell.remove_polygon_modified(self.gds_object_instances[entity.name])
-        self.gds_object_instances.pop(entity.name, None)
+        self.cell.polygons.remove(self.gds_object_instances[entity.name])
+        self.gds_object_instances.pop(entity.name)
 
     def rename_entity(self, entity, name):
-        polygon = self.gds_object_instances.pop(entity.name, None)
+        polygon = self.gds_object_instances.pop(entity.name)
         self.gds_object_instances[name] = polygon
 
     def polygonset_norm(self, polygonset):
@@ -176,125 +155,107 @@ class GdsModeler():
                 list_norm.append(np.linalg.norm(polygon)**2)
             return np.amin(np.array(list_norm))
 
-    def gds_boolean(self, operand1, operand2, operation, precision=0.001, max_points=199, layer=0, datatype=0):
-        ratio = 10**9
-        operand1 = operand1.scale(ratio, ratio)
-        operand2 = operand2.scale(ratio, ratio)
-        result = gdspy.boolean(operand1, operand2, operation, precision, max_points, layer, datatype)
-        result = result.scale(ratio**(-1), ratio**(-1))
-        return result
+    # def gds_boolean(self, operand1, operand2, operation, precision=0.001, max_points=199, layer=0, datatype=0):
+    #     ratio = 10**9
+    #     operand1 = operand1.scale(ratio, ratio)
+    #     operand2 = operand2.scale(ratio, ratio)
+    #     result = gdspy.boolean(operand1, operand2, operation, precision, max_points, layer, datatype)
+    #     result = result.scale(ratio**(-1), ratio**(-1))
+    #     return result
 
-    def unite(self, entities, name=None, keep_originals=False):
+    def unite(self, entities, keep_originals=True):
+
         blank_entity = entities.pop(0)
-        blank_polygon = self.gds_object_instances[blank_entity.name]
+        blank_polygon = self.gds_object_instances.pop(blank_entity.name)
         self.cell.polygons.remove(blank_polygon)
+
         tool_polygons = []
         for tool_entity in entities:
             tool_polygon = self.gds_object_instances[tool_entity.name]
-
-            self.cell.polygons.remove(tool_polygon)
             if isinstance(tool_polygon, gdspy.PolygonSet):
                 for polygon in tool_polygon.polygons:
                     tool_polygons.append(polygon)
             else:
                 tool_polygons.append(tool_polygon)
 
+        #2 subtract operation
         tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
-        sub = self.gds_boolean(blank_polygon, tool_polygon_set, 'or')
-        if name==None:
-            self.gds_object_instances[blank_entity.name] = sub
-        else:
-            self.gds_object_instances[name] = sub
+        united = gdspy.boolean(blank_polygon, tool_polygon_set, 'or',
+                               precision=TOLERANCE, max_points=0,
+                               layer=blank_entity.layer)
+        self.gds_object_instances[blank_entity.name] = united
+        self.cell.add(united)
 
-        self.cell.add(sub)
-        return name
+    def intersect(self, entities):
+        raise NotImplementedError()
+        # should do intersection of all entities two by two
 
-    def intersect(self, entities, name=None, keep_originals=False):
-        if not(isinstance(entities, list)):
-            raise Exception('Union takes a list of entities as an argument')
-        if len(entities)==0:
-            raise Exception('Union takes a non-empty list of entities as an argument')
+        # if not(isinstance(entities, list)):
+        #     raise Exception('Union takes a list of entities as an argument')
+        # if len(entities)==0:
+        #     raise Exception('Union takes a non-empty list of entities as an argument')
 
-        entity_0 = entities.pop(0)
-        polygon_0 = self.gds_object_instances[entity_0.name]
-        final_name = entities[0].name if name==None else name
+        # entity_0 = entities.pop(0)
+        # polygon_0 = self.gds_object_instances[entity_0.name]
+        # final_name = entities[0].name if name==None else name
 
-        if len(entities)>=2:
-            #We fuse all gds_entities on the first element of the list
-            polygon_list = []
-            for entity in entities:
-                polygon_list.append(self.gds_object_instances[entity.name])
-            polygon_set = gdspy.PolygonSet(polygon_list)
-            fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'or')
-            self.cell.add(fused_polygon, polygon_0.layer)
+        # if len(entities)>=2:
+        #     #We fuse all gds_entities on the first element of the list
+        #     polygon_list = []
+        #     for entity in entities:
+        #         polygon_list.append(self.gds_object_instances[entity.name])
+        #     polygon_set = gdspy.PolygonSet(polygon_list)
+        #     fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'or')
+        #     self.cell.add(fused_polygon, polygon_0.layer)
 
-        if not(keep_originals):
-            for entity in entities:
-                polygon = self.gds_object_instances.pop(entity.name, None)
-                self.cell.remove_polygons(polygon)
-                self.cell.remove_labels(entity.name)
+        # if not(keep_originals):
+        #     for entity in entities:
+        #         polygon = self.gds_object_instances.pop(entity.name, None)
+        #         self.cell.remove_polygons(polygon)
+        #         self.cell.remove_labels(entity.name)
 
-        self.gds_object_instances[final_name]=fused_polygon
+        # self.gds_object_instances[final_name]=fused_polygon
 
-        return final_name
+        # return final_name
 
-    def subtract(self, blank_entity, tool_entities, keep_originals=True, name=None):
-        if name!=None:
-            final_name = name
-        else:
-            final_name = blank_entity.name
-
+    def subtract(self, blank_entity, tool_entities, keep_originals=True):
         #1 We clear the cell of all elements and create lists to store the polygons
-        blank_polygon = self.gds_object_instances.pop(blank_entity.name, None)
+        blank_polygon = self.gds_object_instances.pop(blank_entity.name)
         self.cell.polygons.remove(blank_polygon)
 
         tool_polygons = []
         for tool_entity in tool_entities:
             tool_polygon = self.gds_object_instances[tool_entity.name]
-            tool_polygons.append(tool_polygon)
-            if not(keep_originals):
-                self.cell.polygons.remove(tool_polygon)
-                self.gds_object_instances.pop(tool_entity.name, None)
-#
-#        #2 Then, we perform fast boolean
-        sub = blank_polygon
-        for tool_polygon in tool_polygons:
-            try:
-                sub = gdspy.Polygon(self.gds_boolean(sub, tool_polygon, 'not').polygons[0])
+            if isinstance(tool_polygon, gdspy.PolygonSet):
+                for polygon in tool_polygon.polygons:
+                    tool_polygons.append(polygon)
+            else:
+                tool_polygons.append(tool_polygon)
 
-            except Exception:
-                sub = blank_polygon
+        #2 subtract operation
+        tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
+        subtracted = gdspy.boolean(blank_polygon, tool_polygon_set, 'not',
+                                   precision=TOLERANCE, max_points=0,
+                                   layer=blank_entity.layer)
 
         #3 At last we update the cell and the gds_object_instance
-        self.gds_object_instances[final_name] = sub
-        self.cell.add(sub)
+        self.gds_object_instances[blank_entity.name] = subtracted
+        self.cell.add(subtracted)
 
-
-        return final_name
-
-#    def make_perfect_E(self, *objects):
-#        print(self._boundaries.GetBoundaries())
-#        name = increment_name("PerfE", self._boundaries.GetBoundaries())
-#        print(name)
-#        self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", objects, "InfGroundPlane:=", False])
-
-    def assign_perfect_E(self, obj, name='PerfE'):
-        '''useless'''
+    def assign_perfect_E(self, entity, name=None):
         pass
 
-    def assign_perfect_E_faces(self, name):
-        print("ERROR : The function --assign_perfect_E-- cannot be used for GDSmodeler")
+    def assign_perfect_E_faces(self, entity):
         pass
 
-    def assign_mesh_length(self, obj, length):#, suff = '_mesh'):
-        print("ERROR : The function --assign_mesh_length-- cannot be used for GDSmodeler")
+    def assign_mesh_length(self, entity, length):#, suff = '_mesh'):
         pass
 
     def create_object_from_face(self, name):
-        print("ERROR : The function --create_object_from_face-- cannot be used for GDSmodeler")
         pass
 
-    def _fillet(self, radius, vertices, entity):
+    def fillet(self, entity, radius, vertices):
+        raise NotImplementedError()
         #TODO : Correct the choice of vertices
         #1 We need to extract the associated polygon
         polygon = self.gds_object_instances[entity.name]
@@ -309,12 +270,12 @@ class GdsModeler():
 #        #3 We apply fillet on the polygon
         polygon.fillet(new_radius)
 
-    def _fillets(self, radius, vertices, entity):
-        #Vertices = None in gds
-        polygon = self.gds_object_instances[entity.name]
-        points = gdspy.PolygonSet(polygon.get_polygons())
-        self.cell.add(points)
-        points.fillet(radius)
+    def fillets(self, entity, radius):
+        if entity.dimension==1:
+            raise TypeError('Trying to gds fillet a 1D geometry')
+        else:
+            polygon = self.gds_object_instances[entity.name]
+            polygon.fillet(radius, max_points=0)
 
     def get_vertex_ids(self, entity):
         return None
@@ -365,21 +326,8 @@ class GdsModeler():
                                 		"BothSides:="		, bothsides
                                 	])
 
-    def mirrorZ(self, obj):
-        self._modeler.Mirror([
-                        		"NAME:Selections", "Selections:=", obj,
-                        		"NewPartsModelFlag:="	, "Model"
-                        	  ],
-                        	  [
-                        		"NAME:MirrorParameters",
-                        		"MirrorBaseX:="		, "0mm",
-                        		"MirrorBaseY:="		, "0mm",
-                        		"MirrorBaseZ:="		, "0mm",
-                        		"MirrorNormalX:="	, "0mm",
-                        		"MirrorNormalY:="	, "0mm",
-                        		"MirrorNormalZ:="	, "1mm"
-                        	  ])
-        return obj
+    def mirrorZ(self, entity):
+        pass
 
 
     def duplicate_along_line(self, obj, vec):
@@ -466,23 +414,23 @@ class GdsModeler():
     def get_matched_object_name(self, name):
         return self._modeler.GetMatchedObjectName(name+'*')
 
-
-
     def translate(self, entities, vector):
         '''vector is 3-dimentional but with a z=0 component'''
+        if not isinstance(entities, list):
+            entities = [entities]
         translation_vector = [vector[0], vector[1]]
         for entity in entities:
-            if entity!=None:
-                gds_entity = self.gds_object_instances[entity.name]
-                gds_entity.translate(*translation_vector)
-
+            # if entity!=None:
+            gds_entity = self.gds_object_instances[entity.name]
+            gds_entity.translate(*translation_vector)
 
     def rotate(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
         for entity in entities:
-            if entity!=None:
-                gds_entity = self.gds_object_instances[entity.name]
-#                print(gds_entity.polygons)
-                gds_entity.rotate(angle/360*2*np.pi)
+            # if entity!=None:
+            gds_entity = self.gds_object_instances[entity.name]
+            gds_entity.rotate(angle/360*2*np.pi)
 
 
 
