@@ -10,7 +10,7 @@ from drawpy_scripts.variable_string import parse_entry, Vector
 import os
 import gdspy
 
-PM = PythonModeler('gds')
+PM = PythonModeler('hfss')
 
 # body(self, body_name, coor_name='Global', coor_sys=None):
 chip1 = PM.body('chip1', 'Global')  # create a chip
@@ -74,6 +74,7 @@ else:
 if 1:
     chip1.draw_cable('cable', 'in', 'middle', 'out', is_bond=True, fillet='100um', reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
 
+ModelEntity.print_instances()
 cwd  = os.getcwd()
 gdspy.write_gds(os.path.join(cwd, 'test.gds'), unit=1.0, precision=1e-9)
 #PM.interface.generate_gds('test_parity.gds')

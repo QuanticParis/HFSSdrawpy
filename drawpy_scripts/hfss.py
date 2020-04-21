@@ -840,12 +840,15 @@ class HfssModeler(COMWrapper):
                                 ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
 
     def delete(self, entity):
-        self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
+        objects = [self._modeler.GetObjectName(str(ii)) 
+                        for ii in range(int(self._modeler.GetNumObjects()))]
+        if entity.name in objects:        
+            self._modeler.Delete(["NAME:Selections", 
+                                  "Selections:=", entity.name])
 
     def delete_all_objects(self):
-        objects = []
-        for ii in range(int(self._modeler.GetNumObjects())):
-            objects.append(self._modeler.GetObjectName(str(ii)))
+        objects = [self._modeler.GetObjectName(str(ii)) 
+                        for ii in range(int(self._modeler.GetNumObjects()))]
         self._modeler.Delete(self._selections_array(*objects))
 
     @assert_name

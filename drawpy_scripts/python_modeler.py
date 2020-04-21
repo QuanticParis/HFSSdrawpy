@@ -209,7 +209,7 @@ class PythonModeler():
 
     def delete_all_objects(self, entities):
         for entity in entities:
-            self.delete(entity)
+            entity.delete()
 
     def set_current_coor(self, pos, ori):
         self.current_pos, self.current_ori = parse_entry(pos, ori)
@@ -327,11 +327,6 @@ class PythonModeler():
 
     @set_active_coor_system
     def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
-#        try:
-#            print(kwargs['name'])
-#        except:
-#            pass
-#
         kwargs['coor_sys']=self.coor_sys
         i = 0
         while i < len(points[:-1]):
@@ -343,7 +338,10 @@ class PythonModeler():
             points = val(points)
         name = self.interface.polyline_2D(points, closed, **kwargs)
         dim = closed + 1
-        return ModelEntity(name, dim, self, layer=kwargs['layer'])
+        entity_kwargs = {'layer': kwargs['layer']}
+        if 'nonmodel' in kwargs.keys():
+            entity_kwargs['nonmodel'] = kwargs['nonmodel']
+        return ModelEntity(name, dim, self, **entity_kwargs)
 
 #    @set_active_coor_system # TODO ?
     def path_2D(self, points, port, fillet, **kwargs):
@@ -486,11 +484,12 @@ class ModelEntity():
     instances_layered = {}
     dict_instances = {}
     instances_to_move = []
-    def __init__(self, name, dimension, pm, model = 'True', layer=layer_Default, coor_sys=None, copy=None):
+    def __init__(self, name, dimension, pm, nonmodel=False, layer=layer_Default, 
+                 coor_sys=None, copy=None):
         self.name = name
         self.dimension = dimension
         self.pm = pm
-        self.model = model
+        self.nonmodel = nonmodel
         self.layer = layer
         if coor_sys is None:
             self.coor_sys = pm.coor_sys
@@ -524,18 +523,8 @@ class ModelEntity():
 
     @classmethod
     def print_instances(cls):
-        for instance in cls.instances:
-            print(instance)
-
-#    @staticmethod
-#    def merge(n):
-#        key_list = []
-#        for idx, key in enumerate(ModelEntity.instances_to_move):
-#            if idx>=n:
-#                key_list.append(key)
-#        for key in key_list:
-#            entity = ModelEntity.instances_to_move.pop(key, None)
-#            ModelEntity.instances_moved[key]=entity
+        for instance_name in cls.dict_instances:
+            print(instance_name, cls.dict_instances[instance_name])
 
     @staticmethod
     def reset():
@@ -546,7 +535,7 @@ class ModelEntity():
     def delete(self):
         # deletes the modelentity and its occurences throughout the code
         self.pm.interface.delete(self)
-        self.dict_instances.pop(entity.name)
+        self.dict_instances.pop(self.name)
         self.instances_layered[self.layer].remove(self)
         general_remove(self, self.instances_to_move)
         del self
@@ -968,7 +957,7 @@ class Body(PythonModeler):
             points = [(0, offset+width/2),
                       (width/3, offset),
                       (0, offset-width/2)]
-            self.polyline_2D(points, name='_'+name, layer=layer_PORT)
+            self.polyline_2D(points, name='_'+name, layer=layer_PORT, nonmodel=True)
         else:
             pos, ori, widths, offsets = parse_entry(pos, ori, widths, offsets)
             for ii in range(len(widths)):
@@ -977,7 +966,7 @@ class Body(PythonModeler):
                 points = [(0, offset+width/2),
                           (width/3, offset),
                           (0, offset-width/2)]
-                self.polyline_2D(points, name='_'+name+'_'+subnames[ii], layer=layer_PORT)
+                self.polyline_2D(points, name='_'+name+'_'+subnames[ii], layer=layer_PORT, nonmodel=True)
 
         return Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
 
