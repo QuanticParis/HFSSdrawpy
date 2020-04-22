@@ -818,26 +818,38 @@ class HfssModeler(COMWrapper):
         new_obj = self._modeler.Paste()
         return new_obj[0]
 
-    def create_coor_sys(self, name, coor_sys):
-        origin = coor_sys[0]
-        new_x = coor_sys[1]
-        new_y =coor_sys[2]
-        if not(name in self._modeler.GetCoordinateSystems()):
+    def create_coor_sys(self, coor_sys='chip', rel_coor=None):
+        if rel_coor is None:
+            rel_coor = [[0, 0, 0],  # origin
+                        [1, 0, 0],  # new_x
+                        [0, 1, 0]]  # new_y
+        origin = rel_coor[0]
+        new_x = rel_coor[1]
+        new_y = rel_coor[2]
+        if not(coor_sys in self._modeler.GetCoordinateSystems()):
+            # if the coor_sys does not exist : create
             self._modeler.CreateRelativeCS(["NAME:RelativeCSParameters",
             "Mode:="		, "Axis/Position",
             "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
             "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
             "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]],
 
-            ["NAME:Attributes", "Name:=", name])
+            ["NAME:Attributes", "Name:=", coor_sys])
         else:
-
+            # if the coor_sys exists : modify
             self._modeler.ChangeProperty(["NAME:AllTabs",
 		["NAME:Geometry3DCSTab",
-			["NAME:PropServers", name],
+			["NAME:PropServers", coor_sys],
 			["NAME:ChangedProps", ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
                                 ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
                                 ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
+
+    def set_coor_sys(self, coor_sys):
+        if coor_sys != self.get_coor_sys():
+            self._modeler.SetWCS(["NAME:SetWCS Parameter","Working Coordinate System:=", coor_sys , "RegionDepCSOk:="	, False])
+
+    def get_coor_sys(self):
+        return self._modeler.GetActiveCoordinateSystem()
 
     def delete(self, entity):
         objects = [self._modeler.GetObjectName(str(ii))
@@ -1205,9 +1217,6 @@ class HfssModeler(COMWrapper):
     def get_matched_object_name(self, name):
         return self._modeler.GetMatchedObjectName(name+'*')
 
-    def get_coor_sys(self):
-        return self._modeler.GetActiveCoordinateSystem()
-
 
     def mirrorZ(self, entity):
         self._modeler.Mirror([
@@ -1271,7 +1280,7 @@ class HfssModeler(COMWrapper):
         entities_name = [entity.name for entity in entities]
         solve_inside = not(material=='perfect conductor')
         material = '\"'+material+'\"'
-        self._modeler.AssignMaterial(self._selections_array(*entities_name), 
+        self._modeler.AssignMaterial(self._selections_array(*entities_name),
                         	[
                         		"NAME:Attributes",
                         		"MaterialValue:="	, material,
@@ -1294,10 +1303,6 @@ class HfssModeler(COMWrapper):
       		["NAME:PropServers", str(entity.name)],
       			["NAME:ChangedProps",["NAME:Name","Value:=", str(name)]]]])
         return new_name
-
-    def set_coor_sys(self, coor_sys):
-        if coor_sys!= self.get_coor_sys():
-            self._modeler.SetWCS(["NAME:SetWCS Parameter","Working Coordinate System:=", coor_sys , "RegionDepCSOk:="	, False])
 
     def set_units(self, units='m'):
         self._modeler.SetModelUnits(["NAME:Units Parameter",

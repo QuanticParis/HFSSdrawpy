@@ -8,7 +8,7 @@ Created on Thu Oct 31 14:14:51 2019
 from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 import numpy as np
-# import sys
+import os
 from functools import wraps
 from inspect import currentframe, getfile
 
@@ -156,7 +156,7 @@ class PythonModeler():
 
     Inputs:
     -------
-    name_interface: string in "gds" or "hfss"
+    mode: string in "gds" or "hfss"
     """
     is_overdev = False
     is_litho = False
@@ -164,14 +164,13 @@ class PythonModeler():
     gap_mask = parse_entry('20um')
     overdev = parse_entry('0um')
 
-    def __init__(self, name_interface):
+    def __init__(self, mode):
         """
         Creates a PythonMdlr object based on the chosen interface.
         For now the interface cannot be changed during an execution, only at the beginning
         """
-        self.variables = {}
-        self.name_interface = name_interface
-        if name_interface=="hfss":
+        self.mode = mode
+        if mode == "hfss":
             from .hfss import get_active_project
             project = get_active_project()
             design = project.get_active_design()
@@ -180,15 +179,11 @@ class PythonModeler():
             self.modeler.set_units('mm')
             self.modeler.delete_all_objects()
             self.interface = self.modeler
-
-        elif name_interface=="gds":
+        elif mode=="gds":
             from . import gds_modeler
             self.interface = gds_modeler.GdsModeler()
-
         else:
-            print('Interface should be either hfss or gds')
-
-        self.mode = name_interface
+            print('Mode should be either hfss or gds')
 
     ### Utils methods
 
@@ -243,16 +238,21 @@ class PythonModeler():
             VariableString.variables[name]=value
             return VariableString.instances[name]
 
-    def body(self, body_name, coor_name='Global', coor_sys=None):
+    def body(self, body_name, ref_name='Global', rel_coor=None):
         """
         Creates a Body object which inherits from the current PythonModeler object.
         The body is associated with a coordinate system of choice.
         """
-        if coor_name != 'Global':
-            if not(coor_sys is None):
-                coor_sys = parse_entry(coor_sys)
-                self.interface.create_coor_sys(coor_name, coor_sys)
-        _body = Body(self, coor_name, body_name)
+        if ref_name !='Global':
+            raise NotImplementedError()
+        if rel_coor is None:
+            rel_coor = [[0, 0, 0],  # origin
+                        [1, 0, 0],  # new_x
+                        [0, 1, 0]]  # new_y
+        else:
+            rel_coor = parse_entry(rel_coor)
+        self.interface.create_coor_sys(coor_sys=body_name, rel_coor=rel_coor)
+        _body = Body(self, body_name)
         return _body
 
     def modelentities_to_move(self):
@@ -265,9 +265,10 @@ class PythonModeler():
         inter2= find_last_list(inter1)
         return inter2
 
-    def generate_gds(self, name_file):
-        '''Only for gds modeler'''
-        self.interface.generate_gds(name_file)
+    def generate_gds(self, folder, filename):
+        file = os.path.join(folder, filename)
+        if self.mode=='gds':
+            self.interface.generate_gds(file)
 
     def make_material(self, material_params):
         raise NotImplementedError()
@@ -343,8 +344,9 @@ class PythonModeler():
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return ModelEntity(name, dim, self, **kwargs)
 
-#    @set_active_coor_system # TODO ?
-    def path_2D(self, points, port, fillet, name=''):
+    @set_active_coor_system
+    def path_2D(self, points, port, fillet, **kwargs):
+        name = kwargs['name']
         model_entities = []
         if self.mode == 'gds':
             points = val(points)
@@ -893,18 +895,12 @@ class Port():
 @Lib.add_methods_from(KeyElement, CustomElement)
 class Body(PythonModeler):
 
-    def __init__(self, pm, coor_sys, name): #network
+    def __init__(self, pm, coor_sys): #network
         self.pm = pm
+        self.coor_sys = coor_sys # also called body_name
+                                 # a body is equivalent to a coor_sys
         self.interface = pm.interface
-        self.coor_sys = coor_sys
-        self.name = name
-        self.maskObjects = []
-        self.trackObjects = []
-        self.gapObjects = []
         self.mode = pm.mode # 'hfss' or 'gds'
-        self.variables = pm.variables
-        # network.update(coor_sys)
-        # self.network = network
 
     def move_port(func):
         @wraps(func)

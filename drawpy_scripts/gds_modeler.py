@@ -26,31 +26,34 @@ print("gdspy_version : ",gdspy.__version__)
 
 class GdsModeler():
     gds_object_instances = {}
-    gds_cells  = {'Global':[[0,0,0],[1,0,0],[0,1,0]]}
+    gds_cells  = {}
     dict_units = {'km':1.0e3,'m':1.0,'cm':1.0e-2,'mm':1.0e-3}
-    coor_systems = {'Global':[[0,0,0],[1,0]]}
-    coor_system = coor_systems['Global']
+    # coor_systems = {'Global':[[0,0,0],[1,0]]}
+    # coor_system = coor_systems['Global']
 
     def __init__(self, unit=1.0e-6, precision=1.0e-9):
         self.unit = unit
         self.precision = precision
         gdspy.current_library = gdspy.GdsLibrary()
-        self.create_coor_sys()
-
 
     def reset_cell(self):
         del self.cell
 
-    def create_coor_sys(self, coor_name='Global', coor_sys=[[0,0,0], [1,0]]):
-        try:
-            #Test if the cell already exists
-            self.cell = gdspy.current_library.cells[coor_name]
-            self.coor = GdsModeler.gds_cells[coor_name]
-        except Exception:
-            self.cell = gdspy.Cell(coor_name)
-            self.coor_system = coor_sys
-            self.coor_systems[coor_name] = coor_sys
-            self.gds_cells[coor_name] = coor_sys
+    def create_coor_sys(self, coor_sys='chip', rel_coor=None):
+        # this creates a cell, should not care about the rel_coor
+        if not (coor_sys in gdspy.current_library.cells.keys()):
+            cell = gdspy.Cell(coor_sys)
+            self.gds_cells[coor_sys] = cell
+        else:
+            cell = self.gds_cells[coor_sys]
+        # active cell should be the new cell
+        self.cell = cell
+
+    def set_coor_sys(self, coor_sys):
+        if coor_sys in self.gds_cells.keys():
+            self.cell = self.gds_cells[coor_sys]
+        else:
+            raise ValueError('%s cell do not exist'%coor_sys)
 
     def _copy(self, polygon):
         new_polygon = gdspy.copy(polygon, 0, 0)
@@ -62,16 +65,15 @@ class GdsModeler():
         self.gds_object_instances[new_name] = new_polygon
         self.cell.add(new_polygon)
 
-    def generate_gds(self, name_file):
-        gdspy.write_gds(name_file, unit=1.0, precision=1e-9)
-#        writer =
-#        writer.write_cell(self.cell)
+    def generate_gds(self, file):
+        for cell_name in self.gds_cells.keys():
+            filename = file+'_%s.gds'%cell_name
+            gdspy.write_gds(filename, cells=[cell_name],
+                            unit=1.0, precision=1e-9)
+
 
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
-
-    def set_coor_sys(self, coor_name):
-        self.coor_system = self.coor_systems[coor_name]
 
     def box_corner_3D(self, pos, size, **kwargs):
         # print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
@@ -83,7 +85,6 @@ class GdsModeler():
     def polyline_2D(self, points, closed, **kwargs):
         #TODO sace of open path
         #size is the thickness of the polyline for gds, must be a 2D-list with idential elements
-
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
@@ -243,7 +244,7 @@ class GdsModeler():
         #3 At last we update the cell and the gds_object_instance
         self.gds_object_instances[blank_entity.name] = subtracted
         self.cell.add(subtracted)
-        
+
     def assign_material(self, material):
         pass
 
