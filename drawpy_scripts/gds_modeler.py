@@ -9,6 +9,7 @@ import numpy as np
 import gdspy
 
 from .variable_string import parse_entry, var, Vector
+from .python_modeler import gen_name
 
 eps = 1e-7
 TOLERANCE = 1e-7 # for arcs
@@ -51,12 +52,13 @@ class GdsModeler():
             self.coor_systems[coor_name] = coor_sys
             self.gds_cells[coor_name] = coor_sys
 
-    def _copy(self, polygon, name):
+    def _copy(self, polygon):
         new_polygon = gdspy.copy(polygon, 0, 0)
         self.gds_object_instances[name] = new_polygon
 
-    def copy(self, entity, new_name):
+    def copy(self, entity):
         new_polygon = gdspy.copy(self.gds_object_instances[entity.name], 0, 0)
+        new_name = gen_name(entity.name)
         self.gds_object_instances[new_name] = new_polygon
         self.cell.add(new_polygon)
 
@@ -281,9 +283,8 @@ class GdsModeler():
         return None
 
 
-    def path(self, points, port, fillet, **kwargs):
+    def path(self, points, port, fillet, name=''):
 
-        name = kwargs['name']
         # use dummy layers to recover the right elements
         layers = [ii  for ii in range(len(port.widths))]
         cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
@@ -293,15 +294,16 @@ class GdsModeler():
 
         polygons = cable.get_polygons()
         names = []
+        layers = []
         for ii in range(len(polygons)):
             poly = gdspy.Polygon(polygons[ii])
             poly.layers = [port.layers[ii]]
             current_name = name+'_'+port.subnames[ii]
             names.append(current_name)
+            layers.append(port.layers[ii])
             self.gds_object_instances[current_name] = poly
             self.cell.add(poly)
-
-        return names
+        return names, layers
 
     def sweep_along_vector(self, names, vector):
         self._modeler.SweepAlongVector(self._selections_array(*names),

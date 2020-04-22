@@ -136,6 +136,13 @@ def gen_name(name):
         suffix = str(number+1)
         return prefix+suffix
 
+def entity_kwargs(kwargs, keys):
+    entity_kwargs = {}
+    for key in keys:
+        if key in kwargs.keys():
+            entity_kwargs[key] = kwargs[key]
+    return entity_kwargs
+
 class PythonModeler():
     """
     Modeler which defines basic operations and methods to perform on ModelEntity and on the chosen interface.
@@ -282,14 +289,12 @@ class PythonModeler():
         -------
         box: Corresponding 3D Model Entity
         """
-
-        layer = kwargs['layer'] if layer!=None else layer_Default
         name = self.interface.box_corner_3D(pos, size, **kwargs)
-        box = ModelEntity(name, 3, self, layer=layer)
-        return box
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 3, self, **kwargs)
 
     @set_active_coor_system
-    def box_center(self, pos, size, layer, **kwargs):
+    def box_center_3D(self, pos, size, **kwargs):
         """
         Draws a 3D box based on the coordinates of its center.
 
@@ -303,31 +308,28 @@ class PythonModeler():
         -------
         box: Corresponding 3D Model Entity
         """
-        layer = kwargs['layer'] if layer!=None else layer_Default
         name = self.interface.box_center_3D(pos, size, **kwargs)
-        return ModelEntity(name, 3, self, layer=layer)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 3, self, **kwargs)
 
     @set_active_coor_system
     def cylinder_3D(self, pos, radius, height, axis, **kwargs):
-        kwargs['coor_sys']=self.coor_sys
         name = self.interface.cylinder_3D(pos, radius, height, axis, **kwargs)
-        return ModelEntity(name, 3, self, layer=kwargs['layer'])
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 3, self, **kwargs)
 
 
     @set_active_coor_system
     def disk_2D(self, pos, radius, axis, **kwargs):
-        kwargs['coor_sys']=self.coor_sys
         if self.mode=='gds':
             pos = val(pos)
             radius = val(radius)
         name = self.interface.disk_2D(pos, radius, axis, **kwargs)
-        return ModelEntity(name, 2, self, layer=kwargs['layer'])
-
-
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
 
     @set_active_coor_system
     def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
-        kwargs['coor_sys']=self.coor_sys
         i = 0
         while i < len(points[:-1]):
             if np.array_equal(points[i], points[i+1]):
@@ -338,26 +340,29 @@ class PythonModeler():
             points = val(points)
         name = self.interface.polyline_2D(points, closed, **kwargs)
         dim = closed + 1
-        entity_kwargs = {'layer': kwargs['layer']}
-        if 'nonmodel' in kwargs.keys():
-            entity_kwargs['nonmodel'] = kwargs['nonmodel']
-        return ModelEntity(name, dim, self, **entity_kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
 
 #    @set_active_coor_system # TODO ?
-    def path_2D(self, points, port, fillet, **kwargs):
-        if self.mode=='gds':
+    def path_2D(self, points, port, fillet, name=''):
+        model_entities = []
+        if self.mode == 'gds':
             points = val(points)
             fillet = val(fillet)
             _port = port.val()
-            elements = self.interface.path(points, _port, fillet, **kwargs)
-            return tuple(elements)
-            # return ModelEntity(name, dim, self.coor_sys, layer=kwargs['layer'])
-        elif self.mode=='hfss':
-            # check that port is at the BEGINNING of the path
+            names, layers = self.interface.path(points, _port, fillet, name=name)
+            for name, layer in zip(names, layers):
+                kwargs = {'layer':layer}  # model by default for now
+                model_entities.append(ModelEntity(name, 2, self, **kwargs))
+        elif self.mode == 'hfss':
+            # check that port is at the BEGINNING of the path (hfss only)
             ori = port.ori
             pos = port.pos
-            entities = []
             print(port.subnames)
+            path_entity = self.polyline_2D(points, closed=False,
+                                           name=name, layer=layer)
+            path_entity.fillets(fillet)
+
             for ii in range(port.N):
                 offset = port.offsets[ii]
                 width = port.widths[ii]
@@ -366,22 +371,16 @@ class PythonModeler():
                 points_starter = [Vector(0, offset+width/2).rot(ori)+pos,
                                   Vector(0, offset-width/2).rot(ori)+pos]
                 entity = self.polyline_2D(points_starter, closed=False,
-                                          name=kwargs['name']+'_'+subname,
-                                          layer=layer)
-                path_entity = self.polyline_2D(points, closed=False,
-                                name=kwargs['name']+'_'+subname+'_path',
-                                layer=layer)
-                path_entity.fillets(fillet)
+                                          name=name+'_'+subname, layer=layer)
+                path_name = name+'_'+subname+'_path'
+                current_path_entity = path_entity.copy(new_name=path_name)
+                self.interface._sweep_along_path(entity, current_path_entity)
+                current_path_entity.delete()
+                model_entities.append(entity)
 
-                self.interface._sweep_along_path(entity, path_entity)
-                path_entity.delete()
-                entity.dimension +=1
+            path_entity.delete()
 
-                entities.append(entity)
-
-            return tuple(entities)
-
-
+        return model_entities
 
     @set_active_coor_system
     def rect_corner_2D(self, pos, size, **kwargs):
@@ -390,7 +389,8 @@ class PythonModeler():
             pos = val(pos)
             size = val(size)
         name = self.interface.rect_corner_2D(pos, size, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
 
     @set_active_coor_system
     def rect_center_2D(self, pos, size, **kwargs):
@@ -399,8 +399,8 @@ class PythonModeler():
             pos = val(pos)
             size = val(size)
         name = self.interface.rect_center_2D(pos, size, **kwargs)
-        return ModelEntity(name, 2, self.coor_sys, layer=kwargs['layer'])
-
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
 
 
 
@@ -412,11 +412,13 @@ class PythonModeler():
         if self.mode=='gds':
             pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
             name_a, name_b = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
-            return ModelEntity(name_a, 2, self, layer=kwargs['layer']), \
-                    ModelEntity(name_b, 2, self, layer=kwargs['layer'])
+            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+            return ModelEntity(name_a, 2, self, **kwargs), \
+                    ModelEntity(name_b, 2, self, **kwargs)
         else:
             name = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
-            return ModelEntity(name, 3, self, layer=kwargs['layer'])
+            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+            return ModelEntity(name, 3, self, **kwargs)
 
     ### Methods acting on list of entities
 
@@ -426,9 +428,7 @@ class PythonModeler():
         for entity in entities:
             if entity.dimension<dim_Intersection:
                 dim_Intersection = entity.dimension
-
-        intersection = ModelEntity(entities[0].name, dim_Intersection, entities[0].coor_sys, entities[0].model)
-
+        intersection = ModelEntity(entities[0].name, dim_Intersection, entities[0].coor_sys, entities[0].nonmodel)
         if not(keep_originals):
             for entity in entities:
                 entity.delete()
@@ -484,7 +484,7 @@ class ModelEntity():
     instances_layered = {}
     dict_instances = {}
     instances_to_move = []
-    def __init__(self, name, dimension, pm, nonmodel=False, layer=layer_Default, 
+    def __init__(self, name, dimension, pm, nonmodel=False, layer=layer_Default,
                  coor_sys=None, copy=None):
         self.name = name
         self.dimension = dimension
@@ -541,11 +541,14 @@ class ModelEntity():
         del self
 
     def copy(self, new_name=None):
-        if new_name is None:
-            new_name = gen_name(self.name)
-        self.pm.interface.copy(self, new_name)
-        return ModelEntity(new_name, self.dimension, self.pm, self.model,
-                           layer=self.layer, coor_sys=self.coor_sys)
+        generated_name = gen_name(self.name)
+        self.pm.interface.copy(self)
+        copied = ModelEntity(generated_name, self.dimension, self.pm,
+                             nonmodel=self.nonmodel, layer=self.layer,
+                             coor_sys=self.coor_sys, copy=self)
+        if new_name is not None:
+            copied.rename(new_name)
+        return copied
 
     def rename(self, new_name):
         self.dict_instances.pop(self.name)
@@ -557,17 +560,16 @@ class ModelEntity():
         raise NotImplementedError()
 
     def assign_perfect_E(self, suffix='perfE'):
-        self.pm.interface.assign_perfect_E(self, entity.name+'_'+suffix)
+        self.pm.interface.assign_perfect_E(self, self.name+'_'+suffix)
 
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()
-        assert entity1.dimension == entity2.dimension
-        assert entity1.dimension == 2
 
-    def duplicate_along_line(self, entity, vec):
+    def duplicate_along_line(self, vec):
         # not implemented with the HFSS function for handling the copy better
+        # copy and translate the copy
         vec = Vector(vec)
-        copy = self.copy(entity, new_name=None)
+        copy = entity.copy()
         copy.translate(vec)
         return copy
 

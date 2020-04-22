@@ -22,6 +22,7 @@ from .variable_string import VariableString, \
                             #extract_value_dim, \
                             #rem_unit, \
 
+from .python_modeler import gen_name
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -815,6 +816,7 @@ class HfssModeler(COMWrapper):
     def copy(self, entity):
         self._modeler.Copy(["NAME:Selections", "Selections:=", entity.name])
         new_obj = self._modeler.Paste()
+        print(new_obj, gen_name(entity.name))
         print('Copying %s'%new_obj)
         return new_obj[0]
 
@@ -840,14 +842,14 @@ class HfssModeler(COMWrapper):
                                 ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
 
     def delete(self, entity):
-        objects = [self._modeler.GetObjectName(str(ii)) 
+        objects = [self._modeler.GetObjectName(str(ii))
                         for ii in range(int(self._modeler.GetNumObjects()))]
-        if entity.name in objects:        
-            self._modeler.Delete(["NAME:Selections", 
+        if entity.name in objects:
+            self._modeler.Delete(["NAME:Selections",
                                   "Selections:=", entity.name])
 
     def delete_all_objects(self):
-        objects = [self._modeler.GetObjectName(str(ii)) 
+        objects = [self._modeler.GetObjectName(str(ii))
                         for ii in range(int(self._modeler.GetNumObjects()))]
         self._modeler.Delete(self._selections_array(*objects))
 
@@ -1051,12 +1053,10 @@ class HfssModeler(COMWrapper):
 #                                	])
 
     def assign_perfect_E(self, entities, name):
-        if isinstance(entities, list):
-            raise NotImplementedError()
-            entity_names = [entity.name for entity in entities]
-            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", entity_names, "InfGroundPlane:=", False])
-        else:
-            self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", [entities.name], "InfGroundPlane:=", False])
+        if not isinstance(entities, list):
+            entities = [entities]
+        entity_names = [entity.name for entity in entities]
+        self._boundaries.AssignPerfectE(["NAME:"+name, "Objects:=", entity_names, "InfGroundPlane:=", False])
 
     def assign_perfect_E_faces(self, entity):
         # this is very peculiar to cavity Si chips
@@ -1324,6 +1324,7 @@ class HfssModeler(COMWrapper):
                                 		"DraftType:="		, "Round",
                                 		"CheckFaceFaceIntersection:=", False,
                                 		"TwistAngle:="		, "0deg"])
+        entity_to_sweep.dimension += 1
         return entity_to_sweep.name
 
     def sweep_along_vector(self, entities, vector):
