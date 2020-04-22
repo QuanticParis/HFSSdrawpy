@@ -818,7 +818,13 @@ class HfssModeler(COMWrapper):
         new_obj = self._modeler.Paste()
         return new_obj[0]
 
-    def create_coor_sys(self, coor_sys='chip', rel_coor=None):
+    def create_coor_sys(self, coor_sys='chip', rel_coor=None, 
+                        ref_name='Global'):
+        if not(ref_name in self._modeler.GetCoordinateSystems()):
+            raise ValueError('%s reference coordinate system does \
+                             not exist'%ref_name)
+        else:
+            self.set_coor_sys(ref_name)
         if rel_coor is None:
             rel_coor = [[0, 0, 0],  # origin
                         [1, 0, 0],  # new_x

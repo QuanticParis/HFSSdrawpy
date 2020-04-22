@@ -238,20 +238,20 @@ class PythonModeler():
             VariableString.variables[name]=value
             return VariableString.instances[name]
 
-    def body(self, body_name, ref_name='Global', rel_coor=None):
+    def body(self, body_name, rel_coor=None, ref_name='Global'):
         """
         Creates a Body object which inherits from the current PythonModeler object.
         The body is associated with a coordinate system of choice.
         """
-        if ref_name !='Global':
-            raise NotImplementedError()
+        # Note: for now coordinate systems are not reactualized at each run
         if rel_coor is None:
             rel_coor = [[0, 0, 0],  # origin
                         [1, 0, 0],  # new_x
                         [0, 1, 0]]  # new_y
         else:
             rel_coor = parse_entry(rel_coor)
-        self.interface.create_coor_sys(coor_sys=body_name, rel_coor=rel_coor)
+        self.interface.create_coor_sys(coor_sys=body_name, rel_coor=rel_coor,
+                                       ref_name=ref_name)
         _body = Body(self, body_name)
         return _body
 

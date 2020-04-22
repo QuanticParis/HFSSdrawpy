@@ -10,13 +10,14 @@ from drawpy_scripts.variable_string import parse_entry, Vector
 import os
 import gdspy
 
-pm = PythonModeler('gds')
+pm = PythonModeler('hfss')
 
 # body(self, body_name, coor_name='Global', coor_sys=None):
 chip1 = pm.body('chip1')  # create a chip
 
 relative = pm.set_variable('20um')
-chip2 = pm.body('chip2', rel_coor=[[0,0,relative], [1,0,0], [0,1,0]])
+chip2 = pm.body('chip2', rel_coor=[[0,0,relative], [1,0,0], [0,1,0]], 
+                ref_name='Global')
 
 # use litho for optical
 # use litho + mask for ground plane mesh

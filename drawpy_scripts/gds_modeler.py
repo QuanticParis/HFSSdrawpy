@@ -39,7 +39,8 @@ class GdsModeler():
     def reset_cell(self):
         del self.cell
 
-    def create_coor_sys(self, coor_sys='chip', rel_coor=None):
+    def create_coor_sys(self, coor_sys='chip', rel_coor=None, 
+                        ref_name='Global'):
         # this creates a cell, should not care about the rel_coor
         if not (coor_sys in gdspy.current_library.cells.keys()):
             cell = gdspy.Cell(coor_sys)
