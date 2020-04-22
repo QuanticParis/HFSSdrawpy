@@ -243,6 +243,9 @@ class GdsModeler():
         #3 At last we update the cell and the gds_object_instance
         self.gds_object_instances[blank_entity.name] = subtracted
         self.cell.add(subtracted)
+        
+    def assign_material(self, material):
+        pass
 
     def assign_perfect_E(self, entity, name=None):
         pass

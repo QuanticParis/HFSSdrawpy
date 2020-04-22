@@ -789,7 +789,7 @@ class HfssModeler(COMWrapper):
         if transparency is not None:
             arr.extend(["Transparency:=", transparency])
         if material is not None:
-            arr.extend(["MaterialName:=", material])
+            arr.extend(["MaterialName:=", '\"' + material + '\"'])
         if solve_inside is not None:
             arr.extend(["SolveInside:=", solve_inside])
         return arr
@@ -816,8 +816,6 @@ class HfssModeler(COMWrapper):
     def copy(self, entity):
         self._modeler.Copy(["NAME:Selections", "Selections:=", entity.name])
         new_obj = self._modeler.Paste()
-        print(new_obj, gen_name(entity.name))
-        print('Copying %s'%new_obj)
         return new_obj[0]
 
     def create_coor_sys(self, name, coor_sys):
@@ -998,6 +996,8 @@ class HfssModeler(COMWrapper):
         xdir, ydir = direction
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
+        kwargs2['material'] = 'perfect conductor'
+        kwargs2['solve_inside'] = False
         name = self._modeler.CreateBondwire(["NAME:BondwireParameters",
                                             "WireType:=", "Low",
                                             "WireDiameter:=", bond_diam,
@@ -1083,7 +1083,7 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
-    def assign_mesh_length(self, entities, length):#, suff = '_mesh'):
+    def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
             entities = [entities]
         name = entities[0].name
@@ -1097,7 +1097,6 @@ class HfssModeler(COMWrapper):
         else:
             params += ["RefineInside:=", False, "Enabled:=", True]
 
-        ######## RefineInside Should be False for planar object
         params += ["Objects:=", [entity.name for entity in entities]]
         params += ["RestrictElem:=", False,
 			         "RestrictLength:=",  True,
@@ -1150,7 +1149,7 @@ class HfssModeler(COMWrapper):
 
     def fillets(self, entity, radius):
         vertices = self.get_vertex_ids(entity)
-        if entity.dimension ==1:
+        if entity.dimension == 1:
             vertices = vertices[1:-1]
         to_fillet = [int(vertex) for vertex in vertices]
 #        print("to_fillet", to_fillet)
@@ -1266,15 +1265,20 @@ class HfssModeler(COMWrapper):
 
         self._boundaries.AssignLumpedPort(params)
 
-    def assign_material(self, entity, material):
-        self._modeler.ChangeProperty(["NAME:AllTabs",
-                                		["NAME:Geometry3DAttributeTab",
-                                			["NAME:PropServers", entity.name],
-                                			["NAME:ChangedProps",
-                                				["NAME:Material","Value:=", material]
-                                			]
-                                		]
-                                	])
+    def assign_material(self, entities, material):
+        if not isinstance(entities, list):
+            entities = [entities]
+        entities_name = [entity.name for entity in entities]
+        solve_inside = not(material=='perfect conductor')
+        material = '\"'+material+'\"'
+        self._modeler.AssignMaterial(self._selections_array(*entities_name), 
+                        	[
+                        		"NAME:Attributes",
+                        		"MaterialValue:="	, material,
+                        		"SolveInside:="		, solve_inside,
+                        		"IsMaterialEditable:="	, True,
+                        		"UseMaterialAppearance:=", False
+                        	])
 
     def rotate(self, entities, angle):
         if not isinstance(entities, list):
@@ -1317,7 +1321,6 @@ class HfssModeler(COMWrapper):
 #        self.rename_entity(entity_to_sweep, name_temp)
 
         names = [entity_to_sweep.name, path_entity.name]
-        print(names)
         self._modeler.SweepAlongPath(self._selections_array(*names),
                                      ["NAME:PathSweepParameters",
                                 		"DraftAngle:="		, "0deg",

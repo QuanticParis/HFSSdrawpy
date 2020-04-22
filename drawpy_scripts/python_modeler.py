@@ -341,7 +341,7 @@ class PythonModeler():
         name = self.interface.polyline_2D(points, closed, **kwargs)
         dim = closed + 1
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 2, self, **kwargs)
+        return ModelEntity(name, dim, self, **kwargs)
 
 #    @set_active_coor_system # TODO ?
     def path_2D(self, points, port, fillet, name=''):
@@ -358,9 +358,8 @@ class PythonModeler():
             # check that port is at the BEGINNING of the path (hfss only)
             ori = port.ori
             pos = port.pos
-            print(port.subnames)
             path_entity = self.polyline_2D(points, closed=False,
-                                           name=name, layer=layer)
+                                           name=name, layer=layer_Default)
             path_entity.fillets(fillet)
 
             for ii in range(port.N):

@@ -10,7 +10,7 @@ from drawpy_scripts.variable_string import parse_entry, Vector
 import os
 import gdspy
 
-PM = PythonModeler('gds')
+PM = PythonModeler('hfss')
 
 # body(self, body_name, coor_name='Global', coor_sys=None):
 chip1 = PM.body('chip1', 'Global')  # create a chip
