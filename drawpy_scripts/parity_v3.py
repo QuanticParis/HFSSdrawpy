@@ -4,37 +4,13 @@ Created on Tue Oct 29 14:05:00 2019
 
 @author: wcs
 """
-import drawpy_scripts
-from drawpy_scripts.variable_string import parse_entry
-from drawpy_scripts.vector import Vector
+from drawpy_scripts.python_modeler import PythonModeler, ModelEntity
+from drawpy_scripts.variable_string import parse_entry, Vector
 import os
-import gdspy
 
-PM = drawpy_scripts.PythonModeler('gds')
+pm = PythonModeler('gds')
 
-# body(self, body_name, coor_name='Global', coor_sys=None):
-chip1 = PM.body('chip1', 'Global')  # create a chip
-
-# use litho for optical
-# use litho + mask for ground plane mesh
-# use litho + ebeam for ebeam
-# use nothing for hfss
-
-litho = False
-mask = False
-ebeam = False
-
-if litho:
-    is_bond = False
-    PM.is_overdev = False
-    PM.is_litho = True
-    # KeyElt.overdev = parse_entry('0.5um')
-    if mask:
-        PM.is_mask = True
-        PM.gap_mask = parse_entry('20um')
-else:
-    mask = False
-    is_bond = True
+chip1 = pm.body('chip1')
 
 qubit = True
 memory = True
@@ -45,25 +21,25 @@ flux_lines = True
 
 ### Standard dimensions
 
-chip_width = PM.set_variable('8.67mm')
-chip_length = PM.set_variable('8.12mm')
-chip_thickness = PM.set_variable('280um')
-pcb_thickness = PM.set_variable('320um')
-vaccuum_thickness = PM.set_variable(6*chip_thickness)
+chip_width = pm.set_variable('8.67mm')
+chip_length = pm.set_variable('8.12mm')
+chip_thickness = pm.set_variable('280um')
+pcb_thickness = pm.set_variable('320um')
+vaccuum_thickness = pm.set_variable(6*chip_thickness)
 
 ### Connectors
 
 con1, con2, con3, con4, con5 = '4.06mm', '3.01mm', '7.54mm', '3.01mm', '6.36mm'
 
 bond_length, bond_slope, pcb_track, pcb_gap = '200um', '0.5', '300um', '200um'
-track = PM.set_variable('42um')
-gap = PM.set_variable('25um')
-track_mem = PM.set_variable('10um')
-gap_mem = PM.set_variable('50um')
-track_flux = PM.set_variable('50um')
-min_track_flux = PM.set_variable('4um')
-gap_flux = PM.set_variable('10um')
-fillet = PM.set_variable('200um')
+track = pm.set_variable('42um')
+gap = pm.set_variable('25um')
+track_mem = pm.set_variable('10um')
+gap_mem = pm.set_variable('50um')
+track_flux = pm.set_variable('50um')
+min_track_flux = pm.set_variable('4um')
+gap_flux = pm.set_variable('10um')
+fillet = pm.set_variable('200um')
 
 chip1.set_current_coor([con2, chip_length], [0, -1])
 chip1.draw_connector(chip1.name+'in_flux_top', track, gap, bond_length,
@@ -82,7 +58,7 @@ chip1.set_current_coor([con3, chip_length], [0, -1])
 chip1.draw_connector(chip1.name+'in_other_flux', track, gap, bond_length,
                      pcb_track, pcb_gap, bond_slope)
 # print([(k.name, k.ori) for k in PythonModeler.Port.dict_instances.values()])
-# PM.set_variable('gap_capa_readout', '8um')
+# pm.set_variable('gap_capa_readout', '8um')
 # chip1.set_current_coor(['0.9mm', con1], [1,0])
 # chip1.draw_capa_inline('capa_readout', track, gap, '100um',
 #                        gap_capa_readout, n_pad=2)
@@ -94,13 +70,13 @@ chip1.draw_connector(chip1.name+'in_other_flux', track, gap, bond_length,
 
 ### Drawing
 
-x_T = PM.set_variable('4.685mm')  # (con4 + con5)/2
-y_T = PM.set_variable('2.5mm')
+x_T = pm.set_variable('4.685mm')  # (con4 + con5)/2
+y_T = pm.set_variable('2.5mm')
 
 #
 if qubit:
-    Lj = PM.set_variable('12nH')
-    trm_junction_width = PM.set_variable('10um')
+    Lj = pm.set_variable('12nH')
+    trm_junction_width = pm.set_variable('10um')
     track_right = '0mm'
     track_left = '0mm'
     if readout:
@@ -129,16 +105,16 @@ if qubit:
                                           alternate_width=False)
 
 if parity:
-    cutout_depth = PM.set_variable('0.26mm')
-    cutout_width = PM.set_variable('0.295mm')
-    cap_gap = PM.set_variable('4um')
-    cap_depth = PM.set_variable('0.0mm')
-    ind_gap = PM.set_variable('90um')
-    jn_gap = PM.set_variable('90um')
-    buffer = PM.set_variable('50um')
-    par_track = PM.set_variable('5um')
-    x_I = PM.set_variable(con5-0.5*(-track_mem+par_track+ind_gap)-buffer)
-    y_I = PM.set_variable('2.9mm')
+    cutout_depth = pm.set_variable('0.26mm')
+    cutout_width = pm.set_variable('0.295mm')
+    cap_gap = pm.set_variable('4um')
+    cap_depth = pm.set_variable('0.0mm')
+    ind_gap = pm.set_variable('90um')
+    jn_gap = pm.set_variable('90um')
+    buffer = pm.set_variable('50um')
+    par_track = pm.set_variable('5um')
+    x_I = pm.set_variable(con5-0.5*(-track_mem+par_track+ind_gap)-buffer)
+    y_I = pm.set_variable('2.9mm')
     chip1.set_current_coor([x_I, y_I], [0, 1])
     chip1.draw_selfparity('parity', [cutout_depth, cutout_width],
                           cap_depth, ind_gap, jn_gap, buffer,
@@ -161,7 +137,7 @@ if parity:
             chip1.draw_dose_test_junction('ind_parity', ['5um', '5um'],
                                            '90um', '0.852um', '400nm',
                                            n_bridge=10, spacing_bridge='1.047um', alternate_width=False) #n_bridge = 52
-                #PM.ind_parity.draw_meander_array(['5um', '5um'], '90um', '0.852um', '400nm',
+                #pm.ind_parity.draw_meander_array(['5um', '5um'], '90um', '0.852um', '400nm',
                 #                                  ['60um', '80um'], [52, 26],
                 #                                  spacing_bridge='1.047um')
 
@@ -169,8 +145,8 @@ if memory and parity:
     chip1.draw_cable('mem', 'parity_portOut1', 'trm_portOut1', is_bond=is_bond, fillet='200um', is_mesh=True)
 
 if flux_lines:
-    approach = PM.set_variable('40um')
-    offset = PM.set_variable('-40um')
+    approach = pm.set_variable('40um')
+    offset = pm.set_variable('-40um')
 
     chip1.set_current_coor([x_I + offset, y_I + 0.5*cutout_depth - 1.75*approach], [0,1])
     chip1.draw_fluxline('flux_top', track, gap, 10*min_track_flux, min_track_flux, sym='center', slope=0.2)
@@ -188,18 +164,18 @@ if flux_lines:
         chip1.gapObjects[-1] = chip1.gapObjects[-1] + '_1'
 
 if drive_mem:
-    len_capa_drive = PM.set_variable('100um')
+    len_capa_drive = pm.set_variable('100um')
     chip1.set_current_coor([con5, y_I - 0.5*cutout_depth - 0.5*len_capa_drive], [0,1])
     chip1.draw_capa_inline('capa_drive', track, gap, len_capa_drive, 0.5*(track - 3*track_mem), n_pad=3)
 
 #    chip1.draw_cable('chip1in_flux_topiOut', 'chip1in_memiOut', 'capa_drive_outPort2', is_bond=is_bond)
 
 if not(readout):
-    gap_capa_readout = PM.set_variable('8um')
+    gap_capa_readout = pm.set_variable('8um')
     chip1.set_current_coor(['0.9mm', con1], [1,0])
     chip1.draw_capa_inline('capa_readout', track, gap, '100um', gap_capa_readout, n_pad=2)
 
-    tune_ro = PM.set_variable('3mm')
+    tune_ro = pm.set_variable('3mm')
     chip1.double_port('constrain_readout1', [x_T-tune_ro, y_T], [1,0], track, gap)
     chip1.double_port('constrain_readout2', [x_T-0.3574*tune_ro, 0.5*(y_T+con1)], [0,-1] ,track, gap)
 
@@ -210,86 +186,86 @@ if not(readout):
 
 cwd  = os.getcwd()
 gdspy.write_gds(os.path.join(cwd, 'test.gds'), unit=1.0, precision=1e-9)
-#PM.interface.generate_gds('test_parity.gds')
+#pm.interface.generate_gds('test_parity.gds')
 
 #%%
 
 #### Test junctions
 #
 #if litho and 1:
-#    PM.set_variable('x_D', '4.6mm')
-#    PM.set_variable('y_D', '3.6mm')
-#    PM.set_variable('dose_pad', '100um')
-#    PM.set_variable('dose_sep', '100um')
-#    PM.set_variable('dose_cor', '10um')
-#    PM.key_elt('dose_test', [PM.x_D, PM.y_D], [1,0])
+#    pm.set_variable('x_D', '4.6mm')
+#    pm.set_variable('y_D', '3.6mm')
+#    pm.set_variable('dose_pad', '100um')
+#    pm.set_variable('dose_sep', '100um')
+#    pm.set_variable('dose_cor', '10um')
+#    pm.key_elt('dose_test', [pm.x_D, pm.y_D], [1,0])
 #    dose_mat = [2,6]
 #
-#    PM.key_elt('align_dose_test', PM.dose_test.pos + 0.5*Vector([2*PM.dose_pad*dose_mat[0] + 3*PM.dose_sep*dose_mat[0] - PM.dose_cor*(2*dose_mat[0]-1), PM.dose_pad*dose_mat[1] + PM.dose_sep*(dose_mat[1]+1)]), PM.dose_test.ori)
-#    PM.align_dose_test.draw_alignement_marks('20um', ['0.3mm', '0.7mm'])
-#    PM.key_elt('align_chip', [0.5*PM.chip_width, 0.5*PM.chip_length], PM.dose_test.ori)
-#    PM.align_chip.draw_alignement_marks('80um', ['3.5mm', '3.2mm'])
-#    PM.dose_test.draw_dose_test_Nb([PM.dose_pad, PM.dose_pad], PM.dose_sep, dose_mat, correction=PM.dose_cor)
+#    pm.key_elt('align_dose_test', pm.dose_test.pos + 0.5*Vector([2*pm.dose_pad*dose_mat[0] + 3*pm.dose_sep*dose_mat[0] - pm.dose_cor*(2*dose_mat[0]-1), pm.dose_pad*dose_mat[1] + pm.dose_sep*(dose_mat[1]+1)]), pm.dose_test.ori)
+#    pm.align_dose_test.draw_alignement_marks('20um', ['0.3mm', '0.7mm'])
+#    pm.key_elt('align_chip', [0.5*pm.chip_width, 0.5*pm.chip_length], pm.dose_test.ori)
+#    pm.align_chip.draw_alignement_marks('80um', ['3.5mm', '3.2mm'])
+#    pm.dose_test.draw_dose_test_Nb([pm.dose_pad, pm.dose_pad], pm.dose_sep, dose_mat, correction=pm.dose_cor)
 #
 #    if ebeam:
-#        xpos = PM.x_D - PM.dose_pad - 1.5*PM.dose_sep
-#        ypos = PM.y_D + 0.5*PM.dose_pad + PM.dose_sep
+#        xpos = pm.x_D - pm.dose_pad - 1.5*pm.dose_sep
+#        ypos = pm.y_D + 0.5*pm.dose_pad + pm.dose_sep
 #        for ii in range(dose_mat[0]):
-#            xpos = xpos + 3*PM.dose_sep + 2*PM.dose_pad
-#            PM.key_elt('temp', [xpos, ypos], [1,0])
-#            PM.temp.draw_dose_test_junction(['5um', '5um'],
-#                                            PM.dose_sep-PM.dose_cor, '0.172um', '400nm',
+#            xpos = xpos + 3*pm.dose_sep + 2*pm.dose_pad
+#            pm.key_elt('temp', [xpos, ypos], [1,0])
+#            pm.temp.draw_dose_test_junction(['5um', '5um'],
+#                                            pm.dose_sep-pm.dose_cor, '0.172um', '400nm',
 #                                            alternate_width=False, version=1)
-#            PM.key_elt('temp', [xpos, ypos + PM.dose_sep + PM.dose_pad], [1,0])
-#            PM.temp.draw_dose_test_junction(['5um','5um'],
-#                                            PM.dose_sep-PM.dose_cor, '0.147um', '400nm',
+#            pm.key_elt('temp', [xpos, ypos + pm.dose_sep + pm.dose_pad], [1,0])
+#            pm.temp.draw_dose_test_junction(['5um','5um'],
+#                                            pm.dose_sep-pm.dose_cor, '0.147um', '400nm',
 #                                            alternate_width=False)
-#            PM.key_elt('temp', [xpos, ypos + 2*PM.dose_sep + 2*PM.dose_pad], [1,0])
-#            PM.temp.draw_dose_test_junction(['5um', '5um'],
-#                                            PM.dose_sep-PM.dose_cor, '0.852um', '400nm',
+#            pm.key_elt('temp', [xpos, ypos + 2*pm.dose_sep + 2*pm.dose_pad], [1,0])
+#            pm.temp.draw_dose_test_junction(['5um', '5um'],
+#                                            pm.dose_sep-pm.dose_cor, '0.852um', '400nm',
 #                                            alternate_width=False)
-#            PM.key_elt('temp', [xpos, ypos + 3*PM.dose_sep + 3*PM.dose_pad], [1,0])
-#            PM.temp.draw_dose_test_junction(['5um', '5um'],
-#                                            PM.dose_sep-PM.dose_cor, '0.852um', '400nm',
+#            pm.key_elt('temp', [xpos, ypos + 3*pm.dose_sep + 3*pm.dose_pad], [1,0])
+#            pm.temp.draw_dose_test_junction(['5um', '5um'],
+#                                            pm.dose_sep-pm.dose_cor, '0.852um', '400nm',
 #                                            n_bridge=26, spacing_bridge='1.047um', alternate_width=False)
-#            PM.key_elt('temp', [xpos, ypos + 4*PM.dose_sep + 4*PM.dose_pad], [1,0])
-#            PM.temp.draw_dose_test_junction(['5um', '5um'],
-#                                            PM.dose_sep-PM.dose_cor, '0.852um', '400nm',
+#            pm.key_elt('temp', [xpos, ypos + 4*pm.dose_sep + 4*pm.dose_pad], [1,0])
+#            pm.temp.draw_dose_test_junction(['5um', '5um'],
+#                                            pm.dose_sep-pm.dose_cor, '0.852um', '400nm',
 #                                            n_bridge=52, spacing_bridge='1.047um', alternate_width=False)
-#            PM.key_elt('temp', [xpos, ypos + 5*PM.dose_sep + 5*PM.dose_pad], [0,1])
-#            PM.temp.draw_meander_array(['5um', '5um'], '90um', '0.852um', '400nm',
+#            pm.key_elt('temp', [xpos, ypos + 5*pm.dose_sep + 5*pm.dose_pad], [0,1])
+#            pm.temp.draw_meander_array(['5um', '5um'], '90um', '0.852um', '400nm',
 #                                            ['60um', '80um'], [52, 26],
 #                                            spacing_bridge='1.047um')
 #
 #### Other stuff
 #%%
 #
-#bottom, top, left, right  = PM.get_extent(margin='500um')
+#bottom, top, left, right  = pm.get_extent(margin='500um')
 #width = right-left
 #height = top-bottom
 #if not litho:
-#    PM.draw_box('pcb', [left, bottom, -PM.chip_thickness], [width, height, -PM.pcb_thickness], "Rogers TMM 10i (tm)")
-#    PM.draw_box('chip', [left, bottom, 0], [width, height, -PM.chip_thickness], 'silicon')
-#    PM.draw_box('box', [left, bottom, 0], [width, height, PM.vaccuum_thickness], 'vacuum')
-#    PM.draw_rect('ground_plane', [left, bottom], [width, height])
+#    pm.draw_box('pcb', [left, bottom, -pm.chip_thickness], [width, height, -pm.pcb_thickness], "Rogers TMM 10i (tm)")
+#    pm.draw_box('chip', [left, bottom, 0], [width, height, -pm.chip_thickness], 'silicon')
+#    pm.draw_box('box', [left, bottom, 0], [width, height, pm.vaccuum_thickness], 'vacuum')
+#    pm.draw_rect('ground_plane', [left, bottom], [width, height])
 #
 #if litho:
-#    PM.draw_rect('ground_plane', [0, 0], [PM.chip_width, PM.chip_length])
-#    PM.draw_rect('negatif', [0, 0], [PM.chip_width, PM.chip_length])
+#    pm.draw_rect('ground_plane', [0, 0], [pm.chip_width, pm.chip_length])
+#    pm.draw_rect('negatif', [0, 0], [pm.chip_width, pm.chip_length])
 #
-#PM.assign_perfE(PM.ground_plane)
+#pm.assign_perfE(pm.ground_plane)
 #
 #if mask:
-#    maskObject = PM.unite(PM.maskObjects, 'mask')
+#    maskObject = pm.unite(pm.maskObjects, 'mask')
 #
-#for obj in PM.trackObjects:
-#    PM.assign_perfE(obj)
+#for obj in pm.trackObjects:
+#    pm.assign_perfE(obj)
 #
 #if 0:
-#    gapObject = PM.unite(PM.gapObjects)
-#    PM.subtract(PM.ground_plane, [gapObject])
+#    gapObject = pm.unite(pm.gapObjects)
+#    pm.subtract(pm.ground_plane, [gapObject])
 #
 #if litho and 0:
-#    PM.subtract(PM.negatif, [PM.ground_plane]+PM.trackObjects)
+#    pm.subtract(pm.negatif, [pm.ground_plane]+pm.trackObjects)
 #
 #release()

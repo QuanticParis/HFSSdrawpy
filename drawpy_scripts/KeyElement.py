@@ -92,7 +92,7 @@ def move(func):
 
 @register_method
 @move
-def create_port(self, name, widths=None, subnames=None, layers=layer_Default, offsets=0):
+def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):
     """
     Creates and draws a port
 
@@ -132,13 +132,21 @@ def create_port(self, name, widths=None, subnames=None, layers=layer_Default, of
 
         # default subnames
         if subnames is None:
-            subnames = []
-            for ii in range(N):
-                subnames.append(str(ii))
+            if N==2:
+                subnames = ['track', 'gap']
+            else:
+                subnames = []
+                for ii in range(N):
+                    subnames.append(str(ii))
         elif not isinstance(subnames, list):
             subnames = [subnames]
 
-        if not isinstance(layers, list):
+        if layers is None:
+            if N==2:
+                layers = [layer_TRACK, layer_GAP]
+            else:
+                layers = [layer_Default]*N
+        elif not isinstance(layers, list):
             layers = [layers]*N
 
         if not isinstance(offsets, list):
@@ -150,11 +158,6 @@ def create_port(self, name, widths=None, subnames=None, layers=layer_Default, of
 
     port = self.port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
     return port
-
-@register_method
-def create_dc_port(self, name, layer, cut, rel_pos, wid):
-    portOut = self.port(layer+'_'+ name, [0,0], [1,0], cut, rel_pos, wid, len(rel_pos))
-    return portOut
 
 @register_method
 @move
@@ -190,8 +193,6 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
     adaptDist = (pcb_track/2-iTrack/2)/iSlope
 
-    portOut = self.port(name+'iOut', [adaptDist+pcb_gap+iBondLength,0], [1,0], iTrack+2*self.overdev, iGap-2*self.overdev)
-
     points = [(pcb_gap-self.overdev, pcb_track/2+self.overdev),
               (pcb_gap+iBondLength, pcb_track/2+self.overdev),
               (pcb_gap+iBondLength+adaptDist, self.overdev+iTrack/2),
@@ -222,7 +223,8 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
         mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
 
-        self.maskObjects.append(mask)
+    self.set_current_coor([adaptDist+pcb_gap+iBondLength,0], [1,0])
+    portOut = self.create_port(name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
 
 #        if not self.is_litho and tr_line:
 #            points = self.append_points([(pcb_gap/2+self.overdev, pcb_track/2+self.overdev),
@@ -236,7 +238,7 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 #            points = self.append_points([(pcb_gap/2+self.overdev,0),(pcb_gap/2-2*self.overdev,0)])
 #            self.draw(name+'_line', points, closed=False)
 
-    return [portOut], [track, gap, mask]
+    return portOut
     #on renvoie track, gap, mask
 
 @register_method

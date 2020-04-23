@@ -143,6 +143,16 @@ def entity_kwargs(kwargs, keys):
             entity_kwargs[key] = kwargs[key]
     return entity_kwargs
 
+def check_name(_class, name):
+    i = 0
+    new_name = name
+    while(new_name in _class.dict_instances.keys()):
+        new_name = name+'_'+str(i)
+        i+=1
+    if new_name != name:
+        print("%s: changed '%s' name into '%s'"%(_class.__name__, name, new_name))
+    return new_name
+
 class PythonModeler():
     """
     Modeler which defines basic operations and methods to perform on ModelEntity and on the chosen interface.
@@ -202,19 +212,9 @@ class PythonModeler():
             return func(*args, **kwargs)
         return updated
 
-    def append_lists(self):
-        """
-        We use a tree-like architecture to store the entities and port to be moved at the right place.
-        """
-        self.modelentities_to_move().append([])
-        self.ports_to_move().append([])
-
     def delete_all_objects(self, entities):
         for entity in entities:
             entity.delete()
-
-    def set_current_coor(self, pos, ori):
-        self.current_pos, self.current_ori = parse_entry(pos, ori)
 
     def set_variable(self, value, name=None):
         """
@@ -254,16 +254,6 @@ class PythonModeler():
                                        ref_name=ref_name)
         _body = Body(self, body_name)
         return _body
-
-    def modelentities_to_move(self):
-        inter1 = ModelEntity.instances_to_move
-        inter2= find_last_list(inter1)
-        return inter2
-
-    def ports_to_move(self):
-        inter1 = Port.instances_to_move
-        inter2= find_last_list(inter1)
-        return inter2
 
     def generate_gds(self, folder, filename):
         file = os.path.join(folder, filename)
@@ -485,8 +475,9 @@ class ModelEntity():
     instances_layered = {}
     dict_instances = {}
     instances_to_move = []
-    def __init__(self, name, dimension, pm, nonmodel=False, layer=layer_Default,
-                 coor_sys=None, copy=None):
+    def __init__(self, name, dimension, pm, nonmodel=False,
+                 layer=layer_Default, coor_sys=None, copy=None):
+        name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
         self.pm = pm
@@ -514,24 +505,16 @@ class ModelEntity():
     def __str__(self):
         return self.name
 
-    def check_name(self, name):
-        i = 0
-        new_name = name
-        while(new_name in self.dict_instances.keys()):
-            i+=1
-            new_name = name+'_'+str(i)
-        return new_name
-
-    @classmethod
-    def print_instances(cls):
-        for instance_name in cls.dict_instances:
-            print(instance_name, cls.dict_instances[instance_name])
-
     @staticmethod
     def reset():
         ModelEntity.instances_layered = {}
         ModelEntity.dict_instances = {}
         ModelEntity.instances_to_move = []
+
+    @classmethod
+    def print_instances(cls):
+        for instance_name in cls.dict_instances:
+            print(instance_name, cls.dict_instances[instance_name])
 
     def delete(self):
         # deletes the modelentity and its occurences throughout the code
@@ -628,10 +611,9 @@ class Port():
     dict_instances  = {}
 
     def __init__(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port, key='name'):
-        new_name = name
-        if not isinstance(key, Port):
-            new_name = self.check_name(name)
-        self.name = new_name
+        if not (isinstance(key, Port) or key is None):
+            name = check_name(self.__class__, name)
+        self.name = name
         self.pos = Vector(pos)
         self.ori = Vector(ori)
         self.constraint_port = constraint_port
@@ -671,19 +653,20 @@ class Port():
         else:
             pass  # when the port is only a float eval do not add it in dict
 
+    def __str__(self):
+        return self.name
+
     @staticmethod
     def reset():
         Port.instances_to_move = []
         Port.dict_instances  = {}
 
-    def check_name(self, name):
-        i = 0
-        new_name = name
-        while(new_name in self.dict_instances.keys()):
-            i+=1
-            new_name = name+'_'+str(i)
-        return new_name
 
+
+    @classmethod
+    def print_instances(cls):
+        for instance_name in cls.dict_instances:
+            print(instance_name, cls.dict_instances[instance_name])
     # def reverse(self):
     #     self.ori = -self.ori
     #     if self.offsets is not None:
@@ -901,13 +884,34 @@ class Body(PythonModeler):
                                  # a body is equivalent to a coor_sys
         self.interface = pm.interface
         self.mode = pm.mode # 'hfss' or 'gds'
+        self.current_pos = [0,0]
+        self.current_ori = [1,0]
+
+    def modelentities_to_move(self):
+        inter1 = ModelEntity.instances_to_move
+        inter2= find_last_list(inter1)
+        return inter2
+
+    def ports_to_move(self):
+        inter1 = Port.instances_to_move
+        inter2= find_last_list(inter1)
+        return inter2
+
+    def append_lists(self):
+        """
+        We use a tree-like architecture to store the entities and port to be moved at the right place.
+        """
+        self.modelentities_to_move().append([])
+        self.ports_to_move().append([])
+
+    def set_current_coor(self, pos, ori):
+        self.current_pos, self.current_ori = parse_entry(pos, ori)
 
     def move_port(func):
         @wraps(func)
         def moved(*args, **kwargs):
-            new_args = [args[0], args[1]]
-            #  args[0] = PM
-            #  args[1] = name
+            new_args = [args[0], args[1]]  # args[0] = chip, args[1] = name
+
             compteur = 0
             for i, argument in enumerate(args[2:]):
                 if isinstance(argument, str) and (argument in Port.dict_instances):
@@ -920,33 +924,35 @@ class Body(PythonModeler):
                     compteur+=1
                 else:
                     new_args.append(argument)
+            return func(*new_args, **kwargs)
                 # else:
                 #     error = '%s arg should be a port'%str(argument)
                 #     raise Exception(error)
 #            print("compteur",compteur)
-            if compteur==0:
-                raise Exception("Please indicate more than 0 port")
+#             if compteur==0:
+#                 raise Exception("Please indicate more than 0 port")
 
-            previous_pos = args[0].current_pos
-            previous_ori = args[0].current_ori
-            #TODO
-            if func.__name__=='draw_cable':
-                #TODO It depends of a parameter of drawCable
-                args[0].set_current_coor([0,0],[1,0])
-            elif func.__name__=='find_path':
-                args[0].set_current_coor([0,0],[1,0])
+#             previous_pos = args[0].current_pos
+#             previous_ori = args[0].current_ori
+#             #TODO
+#             if func.__name__=='draw_cable':
+#                 #TODO It depends of a parameter of drawCable
+#                 args[0].set_current_coor([0,0],[1,0])
+#             elif func.__name__=='find_path':
+#                 args[0].set_current_coor([0,0],[1,0])
 
-            #  the following is not robust
-            elif compteur==1:
-#                print(new_args[2].pos)
-                args[0].set_current_coor(new_args[2].pos, new_args[2].ori)
-            elif compteur==2:
-                args[0].set_current_coor(1/2*(new_args[2].pos+new_args[3].pos), new_args[2].ori)
-            new_args = tuple(new_args)
-            return KeyElement._moved(func, previous_pos, previous_ori, *new_args, **kwargs)
+#             #  the following is not robust
+#             elif compteur==1:
+# #                print(new_args[2].pos)
+#                 args[0].set_current_coor(new_args[2].pos, new_args[2].ori)
+#             elif compteur==2:
+#                 args[0].set_current_coor(1/2*(new_args[2].pos+new_args[3].pos), new_args[2].ori)
+#             new_args = tuple(new_args)
+#             return KeyElement._moved(func, previous_pos, previous_ori, *new_args, **kwargs)
         return moved
 
     def port(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port):
+        name = check_name(Port, name)
         if constraint_port:
             pos, ori = parse_entry(pos, ori)
             offset=0
@@ -1078,7 +1084,6 @@ class Body(PythonModeler):
             ports[-1].constraint_port = False  # ports[-1] is now defined
         else:
             pass
-
         # recursive approach if there are intermediate non_constraint ports
 
         cable_portion = 0
@@ -1097,6 +1102,7 @@ class Body(PythonModeler):
                                 reverse_adaptor=reverse_adaptor)
                 cable_portion += 1
                 _ports = [port.r]
+
         if cable_portion != 0:
             name = name+'_%d'%cable_portion
             to_meander = [to_meander[cable_portion]]
@@ -1146,7 +1152,6 @@ class Body(PythonModeler):
         total_path.meander(to_meander[0], meander_length[0], meander_offset[0])
 
         total_path.clean()
-
         # plot cable
         self.path_2D(total_path.points, total_path.port_in, total_path.fillet,
                   name=name)
