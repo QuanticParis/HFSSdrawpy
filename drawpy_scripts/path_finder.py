@@ -6,7 +6,7 @@ Created on Tue Apr 14 18:18:44 2020
 @author: Raphael
 """
 
-from .variable_string import VariableString, \
+from .utils import VariableString, \
                              extract_value_unit, \
                              extract_value_dim, \
                              parse_entry, \

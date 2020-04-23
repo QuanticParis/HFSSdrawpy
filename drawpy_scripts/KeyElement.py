@@ -9,7 +9,7 @@ from functools import wraps
 import numpy as np
 
 from . import Lib
-from .variable_string import parse_entry, Vector
+from .utils import parse_entry, Vector
 
 eps = 1e-7
 layer_TRACK = 1
@@ -70,7 +70,7 @@ def _moved(func, previous_pos, previous_ori, *args, **kwargs):
         args[0].reset()
 
     #7 We reset the current_coor to the last variables saved
-    args[0].set_current_coor(previous_pos, previous_ori)
+    args[0].set_coor(previous_pos, previous_ori)
     return result
 
 def move(func):
@@ -223,7 +223,7 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
         mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
 
-    self.set_current_coor([adaptDist+pcb_gap+iBondLength,0], [1,0])
+    self.set_coor([adaptDist+pcb_gap+iBondLength,0], [1,0])
     portOut = self.create_port(name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
 
     if tr_line:
@@ -441,7 +441,7 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
     if ports_param!=None:
         for ii,port_param in enumerate(ports_param):
             angle = port_param[3]
-            self.set_current_coor(pos=port_param[:3], ori=angle)
+            self.set_coor(pos=port_param[:3], ori=angle)
             result = self.cable_3D(*port_param[4])
             cylinders.append(result[0])
             to_subtract.append(result[1])
@@ -450,7 +450,7 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
         for ii,transmon_param in enumerate(transmons_param):
             angle = transmon_param[3]
 #            angle = {"+X":0, "+Y":90, "-Y":-90}[axis]
-            self.set_current_coor(pos=transmon_param[:3], ori=angle)
+            self.set_coor(pos=transmon_param[:3], ori=angle)
             cylinders.append(self.draw_cylinder_transmon(*transmon_param[4]))
 
 
@@ -493,7 +493,7 @@ def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
 @move
 def insert_transmon(self, name, cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc):
     cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc)
-    self.set_current_coor(pos = ['0mm', '0mm','0mm'], ori=[1,0])
+    self.set_coor(pos = ['0mm', '0mm','0mm'], ori=[1,0])
     L1 = self.draw_cavity_transmon('cavity_TRM', cutout_size[:2], pad_spacing, pad_size, Jwidth, track, gap, Jinduc)
     self.make_rlc_boundary(*L1)
     box = self.box_center([0,0,-cutout_size[2]/2], cutout_size, layer=layer_Default, name=name+"transmon_box")

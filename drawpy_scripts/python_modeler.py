@@ -15,13 +15,13 @@ from inspect import currentframe, getfile
 from . import Lib
 from . import KeyElement
 from . import CustomElement
-from .variable_string import VariableString, \
-                             extract_value_unit, \
-                             extract_value_dim, \
-                             parse_entry, \
-                             _val, val, \
-                             way, \
-                             Vector
+from .utils import VariableString, \
+                   extract_value_unit, \
+                   extract_value_dim, \
+                   parse_entry, \
+                   _val, val, \
+                   way, \
+                   Vector
 from .path_finder import Path
 
 # ModelEntity should be defined here probably
@@ -597,7 +597,7 @@ class ModelEntity():
         for ii in range(3):
             point_0.append(origin[ii] + new_x[ii] * points[0][0] + new_y[ii] * points[0][1])
             point_1.append(origin[ii] + new_x[ii] * points[1][0] + new_y[ii] * points[1][1])
-        
+
         r, l, c = rlc
         self.body.interface.assign_lumped_rlc(self, r, l, c, point_0,
                                               point_1, name="RLC")
@@ -926,7 +926,7 @@ class Body(PythonModeler):
         self.modelentities_to_move().append([])
         self.ports_to_move().append([])
 
-    def set_current_coor(self, pos, ori):
+    def set_coor(self, pos, ori):
         self.current_pos, self.current_ori = parse_entry(pos, ori)
 
     def move_port(func):
@@ -959,16 +959,16 @@ class Body(PythonModeler):
 #             #TODO
 #             if func.__name__=='draw_cable':
 #                 #TODO It depends of a parameter of drawCable
-#                 args[0].set_current_coor([0,0],[1,0])
+#                 args[0].set_coor([0,0],[1,0])
 #             elif func.__name__=='find_path':
-#                 args[0].set_current_coor([0,0],[1,0])
+#                 args[0].set_coor([0,0],[1,0])
 
 #             #  the following is not robust
 #             elif compteur==1:
 # #                print(new_args[2].pos)
-#                 args[0].set_current_coor(new_args[2].pos, new_args[2].ori)
+#                 args[0].set_coor(new_args[2].pos, new_args[2].ori)
 #             elif compteur==2:
-#                 args[0].set_current_coor(1/2*(new_args[2].pos+new_args[3].pos), new_args[2].ori)
+#                 args[0].set_coor(1/2*(new_args[2].pos+new_args[3].pos), new_args[2].ori)
 #             new_args = tuple(new_args)
 #             return KeyElement._moved(func, previous_pos, previous_ori, *new_args, **kwargs)
         return moved

@@ -9,8 +9,7 @@ import numpy as np
 from functools import wraps
 
 from . import Lib
-from .variable_string import parse_entry, Vector
-#from PythonModeler import PythonModeler
+from .utils import parse_entry, Vector
 from .KeyElement import move
 
 __methods__ = []
@@ -128,7 +127,7 @@ def draw_cylinder_transmon(self,
 
     sapphire_chip = self.box_corner([0,-cutout_size[1]/2-self.overdev/2,0], [cutout_size[0],cutout_size[1]+self.overdev, thickness], "3D", name=name+"_sapphire_chip")
 
-    self.set_current_coor([0,0,thickness], [1,0])
+    self.set_coor([0,0,thickness], [1,0])
     simple_transmon = self.draw_simple_transmon(name,
                                                cutout_size,
                                                pad_spacing,
@@ -370,16 +369,16 @@ def draw_ZR_transmon(self,
             self._fillet(track_right/2+gap_right-eps-self.overdev,[2,1], right_short)
 
             fillet_right1 = (pad_size_right[1]/2-spacing_right-short_right-gap_right-track_right/2)/4-self.overdev
-            self.set_current_coor([cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [1,0])
+            self.set_coor([cutout_size[0]/2-self.overdev, track_right/2+gap_right+short_right+self.overdev], [1,0])
             right_quarter_up1 = self.draw_quarter_circle(name+'right_quarter_up1', layer_TRACK, fillet_right1)
-            self.set_current_coor([cutout_size[0]/2-self.overdev, -(track_right/2+gap_right+short_right)-self.overdev], [0,-1])
+            self.set_coor([cutout_size[0]/2-self.overdev, -(track_right/2+gap_right+short_right)-self.overdev], [0,-1])
             right_quarter_down1 = self.draw_quarter_circle(name+'right_quarter_down1', layer_TRACK, fillet_right1)
             right_short = self.unite([right_short, right_quarter_up1, right_quarter_down1])
         else:
             fillet_right2 = (pad_size_right[1]/2-spacing_right-gap_right-track_right/2)/4+self.overdev
-            self.set_current_coor( [cutout_size[0]/2-self.overdev, track_right/2+gap_right-self.overdev], [1,0],)
+            self.set_coor( [cutout_size[0]/2-self.overdev, track_right/2+gap_right-self.overdev], [1,0],)
             right_quarter_up2 = self.draw_quarter_circle(name+'right_quarter_up2', layer_TRACK, fillet_right2)
-            self.set_current_coor([cutout_size[0]/2-self.overdev, -(track_right/2+gap_right)+self.overdev], [0,-1])
+            self.set_coor([cutout_size[0]/2-self.overdev, -(track_right/2+gap_right)+self.overdev], [0,-1])
             right_quarter_down2 = self.draw_quarter_circle(name+'right_quarter_down2', layer_TRACK , fillet_right2)
             cutout = self.unite([cutout, right_quarter_up2, right_quarter_down2], name+'nom1')
 
@@ -388,16 +387,16 @@ def draw_ZR_transmon(self,
             self._fillet(track_left/2+gap_left-eps-self.overdev,[2,1], left_short)
 
             fillet_left1= (pad_size_left[1]/2-spacing_left-short_left-gap_left-track_left/2)/4-self.overdev
-            self.set_current_coor( [-cutout_size[0]/2+self.overdev,track_left/2+gap_left+short_left+self.overdev], [0,1])
+            self.set_coor( [-cutout_size[0]/2+self.overdev,track_left/2+gap_left+short_left+self.overdev], [0,1])
             left_quarter_up1 = self.draw_quarter_circle(name+'left_quarter_up1', layer_TRACK, fillet_left1)
-            self.set_current_coor( [-cutout_size[0]/2+self.overdev,-(track_left/2+gap_left+short_left)-self.overdev], [-1,0])
+            self.set_coor( [-cutout_size[0]/2+self.overdev,-(track_left/2+gap_left+short_left)-self.overdev], [-1,0])
             left_quarter_down1 = self.draw_quarter_circle(name+'left_quarter_down1', layer_TRACK, fillet_left1)
             left_short = self.unite([left_short, left_quarter_up1, left_quarter_down1])
         else:
             fillet_left2 = (pad_size_left[1]/2-spacing_left-gap_left-track_left/2)/4+self.overdev
-            self.set_current_coor([-cutout_size[0]/2+self.overdev,track_left/2+gap_left-self.overdev], [0,1])
+            self.set_coor([-cutout_size[0]/2+self.overdev,track_left/2+gap_left-self.overdev], [0,1])
             left_quarter_up2 = self.draw_quarter_circle(name+'left_quarter_up2', layer_TRACK, fillet_left2)
-            self.set_current_coor([-cutout_size[0]/2+self.overdev,-(track_left/2+gap_left)+self.overdev], [-1,0])
+            self.set_coor([-cutout_size[0]/2+self.overdev,-(track_left/2+gap_left)+self.overdev], [-1,0])
             left_quarter_down2 = self.draw_quarter_circle(name+'left_quarter_down2', layer_TRACK, fillet_left2)
             cutout = self.unite([cutout, left_quarter_up2, left_quarter_down2], name+'nom2')
 

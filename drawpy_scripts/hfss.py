@@ -14,7 +14,7 @@ from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 from win32com.client import Dispatch, CDispatch
 
-from .variable_string import VariableString, \
+from .utils import VariableString, \
                             parse_entry, \
                             var, \
                             val

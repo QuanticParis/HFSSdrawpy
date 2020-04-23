@@ -8,7 +8,7 @@ Created on Mon Nov  4 11:13:09 2019
 import numpy as np
 import gdspy
 
-from .variable_string import parse_entry, var, Vector
+from .utils import parse_entry, var, Vector
 from .python_modeler import gen_name
 
 eps = 1e-7
