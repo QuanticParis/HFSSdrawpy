@@ -252,7 +252,7 @@ class PythonModeler():
             rel_coor = parse_entry(rel_coor)
         self.interface.create_coor_sys(coor_sys=body_name, rel_coor=rel_coor,
                                        ref_name=ref_name)
-        _body = Body(self, body_name)
+        _body = Body(self, body_name, rel_coor, ref_name)
         return _body
 
     def generate_gds(self, folder, filename):
@@ -475,16 +475,16 @@ class ModelEntity():
     instances_layered = {}
     dict_instances = {}
     instances_to_move = []
-    def __init__(self, name, dimension, pm, nonmodel=False,
+    def __init__(self, name, dimension, body, nonmodel=False,
                  layer=layer_Default, coor_sys=None, copy=None):
         name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
-        self.pm = pm
+        self.body = body
         self.nonmodel = nonmodel
         self.layer = layer
         if coor_sys is None:
-            self.coor_sys = pm.coor_sys
+            self.coor_sys = body.coor_sys
         else:
             self.coor_sys = coor_sys
 
@@ -518,7 +518,7 @@ class ModelEntity():
 
     def delete(self):
         # deletes the modelentity and its occurences throughout the code
-        self.pm.interface.delete(self)
+        self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
         self.instances_layered[self.layer].remove(self)
         general_remove(self, self.instances_to_move)
@@ -526,8 +526,8 @@ class ModelEntity():
 
     def copy(self, new_name=None):
         generated_name = gen_name(self.name)
-        self.pm.interface.copy(self)
-        copied = ModelEntity(generated_name, self.dimension, self.pm,
+        self.body.interface.copy(self)
+        copied = ModelEntity(generated_name, self.dimension, self.body,
                              nonmodel=self.nonmodel, layer=self.layer,
                              coor_sys=self.coor_sys, copy=self)
         if new_name is not None:
@@ -537,14 +537,14 @@ class ModelEntity():
     def rename(self, new_name):
         self.dict_instances.pop(self.name)
         self.dict_instances[new_name] = self
-        self.pm.interface.rename(self, new_name)
+        self.body.interface.rename(self, new_name)
         self.name = new_name
 
     def thicken_sheet(self, thickness, bothsides=False):
         raise NotImplementedError()
 
     def assign_perfect_E(self, suffix='perfE'):
-        self.pm.interface.assign_perfect_E(self, self.name+'_'+suffix)
+        self.body.interface.assign_perfect_E(self, self.name+'_'+suffix)
 
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()
@@ -563,33 +563,53 @@ class ModelEntity():
         if self.mode=='gds':
             raise NotImplementedError()
         else:
-            self.pm.interface.fillet(self, radius, vertex_indices)
+            self.body.interface.fillet(self, radius, vertex_indices)
 
     def fillets(self, radius):
         # fillet all corner of an entity
-        self.pm.interface.fillets(self, radius)
+        self.body.interface.fillets(self, radius)
 
 
 
-    def make_rlc_boundary(self, corner, size, axis, r, l, c, name="LumpRLC"):
-        raise NotImplementedError()
+    # def make_rlc_boundary(self, corner, size, axis, r, l, c, name="LumpRLC"):
+    #     raise NotImplementedError()
 #        self.interface.make_rlc_boundary(corner, size, axis, r, l, c, name)
 
     def assign_material(self, material):
-        self.pm.interface.assign_material(self, material)
+        self.body.interface.assign_material(self, material)
 
     def assign_mesh_length(self, mesh_length):
         mesh_length = parse_entry(mesh_length)
-        self.pm.interface.assign_mesh_length(self, mesh_length)
+        self.body.interface.assign_mesh_length(self, mesh_length)
+
+    def assign_lumped_RLC(self, points, rlc):
+        points = parse_entry(points)
+        # move the points coordinate in the global coordinate system
+        if self.body.ref_name != 'Global':
+            # TODO do recursive to handle this
+            raise NotImplementedError('Do not handle 2nd order relative \
+                                      coordinate system yet.')
+        origin = self.body.rel_coor[0]
+        new_x = self.body.rel_coor[1]
+        new_y =self.body.rel_coor[2]
+        point_0 = []
+        point_1 = []
+        for ii in range(3):
+            point_0.append(origin[ii] + new_x[ii] * points[0][0] + new_y[ii] * points[0][1])
+            point_0.append(origin[ii] + new_x[ii] * points[1][0] + new_y[ii] * points[1][1])
+
+        r, l, c = rlc
+        self.body.interface.assign_lumped_rlc(self, r, l, c, point_0,
+                                              point_1, name="RLC")
 
     def mirrorZ(self):
         raise NotImplementedError()
 
     def rotate(self, angle):
-        self.pm.rotate(self, angle)
+        self.body.rotate(self, angle)
 
     def translate(self, vector):
-        self.pm.translate(self, vector)
+        self.body.translate(self, vector)
 
     def subtract(self, tool_entities, keep_originals=False):
         if not isinstance(tool_entities, list):
@@ -600,7 +620,7 @@ class ModelEntity():
             raise TypeError('All subtracted elements should have the \
                             same dimension')
         else:
-            self.pm.interface.subtract(self, tool_entities,
+            self.body.interface.subtract(self, tool_entities,
                                        keep_originals=True)
         if not(keep_originals):
             for tool_entity in tool_entities:
@@ -878,10 +898,12 @@ class Port():
 @Lib.add_methods_from(KeyElement, CustomElement)
 class Body(PythonModeler):
 
-    def __init__(self, pm, coor_sys): #network
+    def __init__(self, pm, coor_sys, rel_coor, ref_name): #network
         self.pm = pm
         self.coor_sys = coor_sys # also called body_name
                                  # a body is equivalent to a coor_sys
+        self.rel_coor = rel_coor
+        self.ref_name = ref_name
         self.interface = pm.interface
         self.mode = pm.mode # 'hfss' or 'gds'
         self.current_pos = [0,0]

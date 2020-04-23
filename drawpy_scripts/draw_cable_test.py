@@ -8,7 +8,7 @@ import os
 
 from drawpy_scripts.python_modeler import PythonModeler, ModelEntity
 from drawpy_scripts.variable_string import parse_entry, Vector
-from drawpy_scripts.python_modeler import layer_TRACK, layer_GAP
+from drawpy_scripts.python_modeler import layer_TRACK, layer_GAP, layer_RLC
 
 pm = PythonModeler('gds')
 
@@ -51,7 +51,8 @@ chip2.set_current_coor(['0.5mm', '0.5mm'], [0, 1])
 chip2.draw_connector('in_flux_top', track, gap, bond_length, pcb_track,
                      pcb_gap, 0.5)
 
-chip2.draw_cable('cable2', 'in_flux_top', 'in2', is_bond=True, fillet='100um', reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
+chip2.draw_cable('cable2', 'in_flux_top', 'in2', is_bond=True, fillet='100um',
+                 reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
 
 
 # generate gds file

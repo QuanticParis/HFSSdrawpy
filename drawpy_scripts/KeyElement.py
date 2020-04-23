@@ -226,20 +226,17 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
     self.set_current_coor([adaptDist+pcb_gap+iBondLength,0], [1,0])
     portOut = self.create_port(name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
 
-#        if not self.is_litho and tr_line:
-#            points = self.append_points([(pcb_gap/2+self.overdev, pcb_track/2+self.overdev),
-#                                         (pcb_gap/2-2*self.overdev, 0),
-#                                         (0, -pcb_track-2*self.overdev),
-#                                         (-pcb_gap/2+2*self.overdev, 0)])
-#            ohm = self.draw(points, name=name+'_ohm')
-#            self.assign_lumped_RLC(ohm, self.ori, ('50ohm',0,0))
-#            self.modeler.assign_mesh_length(ohm, pcb_track/10)
-##            self.trackObjects.append(ohm)
-#            points = self.append_points([(pcb_gap/2+self.overdev,0),(pcb_gap/2-2*self.overdev,0)])
-#            self.draw(name+'_line', points, closed=False)
+    if tr_line:
+        ohm = self.rect_corner_2D([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
+                                  [pcb_gap/2-2*self.overdev, -pcb_track-2*self.overdev],
+                                  name=name+'_ohm', layer=layer_RLC)
+        points = [(pcb_gap/2+self.overdev, 0), (pcb_gap-self.overdev, 0)]
+        ohm.assign_lumped_RLC(points, ('50ohm', 0, 0))
+        self.polyline_2D(points, name=name+'_line', closed=False, layer=layer_Default)
+
+        ohm.assign_mesh_length(pcb_track/10)
 
     return portOut
-    #on renvoie track, gap, mask
 
 @register_method
 @move

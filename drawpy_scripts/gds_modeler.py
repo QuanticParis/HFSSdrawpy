@@ -39,7 +39,7 @@ class GdsModeler():
     def reset_cell(self):
         del self.cell
 
-    def create_coor_sys(self, coor_sys='chip', rel_coor=None, 
+    def create_coor_sys(self, coor_sys='chip', rel_coor=None,
                         ref_name='Global'):
         # this creates a cell, should not care about the rel_coor
         if not (coor_sys in gdspy.current_library.cells.keys()):
@@ -256,6 +256,9 @@ class GdsModeler():
         pass
 
     def assign_mesh_length(self, entity, length):#, suff = '_mesh'):
+        pass
+
+    def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
         pass
 
     def create_object_from_face(self, name):

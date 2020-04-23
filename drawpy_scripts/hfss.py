@@ -818,7 +818,7 @@ class HfssModeler(COMWrapper):
         new_obj = self._modeler.Paste()
         return new_obj[0]
 
-    def create_coor_sys(self, coor_sys='chip', rel_coor=None, 
+    def create_coor_sys(self, coor_sys='chip', rel_coor=None,
                         ref_name='Global'):
         if not(ref_name in self._modeler.GetCoordinateSystems()):
             raise ValueError('%s reference coordinate system does \
@@ -1121,6 +1121,17 @@ class HfssModeler(COMWrapper):
 			         "MaxLength:=", length]
         self._mesh.AssignLengthOp(params)
 
+    def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
+        name = increment_name(name, self._boundaries.GetBoundaries())
+        params = ["NAME:"+name, "Objects:="]
+        params.append([entity.name])
+        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
+        params += ["UseResist:=", r != 0, "Resistance:=", r,
+                   "UseInduct:=", l != 0, "Inductance:=", l,
+                   "UseCap:=", c != 0, "Capacitance:=", c]
+        self._boundaries.AssignLumpedRLC(params)
+
+
     def create_object_from_face(self, entity):
         faces = list(self._modeler.GetFaceIDs(entity.name))
         faces.sort()
@@ -1241,6 +1252,7 @@ class HfssModeler(COMWrapper):
         return entity.name
 
     def make_center_line(self, entity, axis):
+        raise NotImplementedError()
         center = [c + s/2 if s else c for c, s in zip(entity.pos, entity.size)]
         axis_idx = ["x", "y", "z"].index(axis.lower())
         start = [c for c in center]
