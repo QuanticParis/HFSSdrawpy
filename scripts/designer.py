@@ -3909,17 +3909,34 @@ _connect_snails  |-|      | pad_spacing
 
     def draw_snails_flux_line(self, iTrack, iGap, array_room, array_offset,
                               iTrackPump, iGapPump, snail_dict, 
-                              litho='elec', iInduct='0nH', 
-                             iTrackSnail=None, fillet=None):
+                              iTrackSnail=None, fillet=None, typePump='down',
+                              doublePump=False):
         '''
-
+        draws a 3 (or 4 if doublePump) device with 2 inputs connected by a
+        snail array and 1 (or 2) in puts for flux lines
+                    
+                            +-+
+                            | +-+
+                    +    +  |   +-+
+                    +----+  |     ++
+                      ||    +--------------+
+                     +-|    |     ++
+                     |-|    |   +-+
+                     |-|    | +-+
+                     +-|    +-+
+                      ||
+                    +----+
+                    +    +
 
         '''
         
+        iTrack, iGap, array_room, array_offset, iTrackPump, iGapPump, iTrackSnail = parse_entry((iTrack, iGap, array_room, array_offset, iTrackPump, iGapPump, iTrackSnail))
+        
+        if fillet is not None:
+            raise NotImplementedError
+            
         if iTrackSnail is None:
             iTrackSnail = iTrack/10
-
-        iTrack, iGap, array_room, array_offset, iTrackPump, iGapPump, iTrackSnail = parse_entry((iTrack, iGap, array_room, array_offset, iTrackPump, iGapPump, iTrackSnail))
 
         adapt_dist = iTrack/2 #if slope ==1 !!!!
 
@@ -3935,30 +3952,31 @@ _connect_snails  |-|      | pad_spacing
         raw_points_c = self.refy_points(raw_points_a)
         points_c = self.append_points(raw_points_c)
         track_c = self.draw(self.name+"_track_c", points_c)
-
-        #snail array
-        if L_eq is None:
-            in_array = [self.coor([array_room/2, array_offset]), -self.ori, iTrackSnail, 0]
-            out_array = [self.coor([-array_room/2, array_offset]), self.ori, iTrackSnail, 0]      
-            snail_array = self.connect_elt(self.name+'_array', in_array, out_array)
-            
-            __ = snail_array._connect_snails(self, 
-                             snail_dict['loop_width'], 
-                             snail_dict['loop_length'],
-                             snail_dict['N'], snail_dict['length_island'],
-                             snail_dict['width_bridge_left'], snail_dict['width_bridge_right'],
-                             snail_dict['width_jct_left'], snail_dict['width_jct_right'],
-                             n_left=snail_dict['n_left'], n_right=snail_dict['n_right'],
-                             spacing_bridge_left=snail_dict['spacing_bridge_left'], 
-                             spacing_bridge_right=snail_dict['spacing_bridge_right'],
-                             yoffset=snail_dict['yoffset'], litho=snail_dict['litho'],
-                             iInduct=snail_dict['iInduct'])
         
-        if L_eq is not None:
-            array_eq = self.draw_rect_center(self.name+"_array_eq", self.coor([0,array_offset]), self.coor_vec([array_room, iTrackSnail]))
-            self.assign_lumped_RLC(array_eq, self.ori, (0, L_eq, 0))
-            points = self.append_points([(-array_room/2,array_offset),(array_room,0)])
-            self.draw(self.name+'_array_eq_line', points, closed=False)
+        #snail array
+
+        in_array = [self.coor([array_room/2, array_offset]), -self.ori, iTrackSnail, 0]
+        out_array = [self.coor([-array_room/2, array_offset]), self.ori, iTrackSnail, 0]    
+        
+        self.ports[self.name+'_in_array'] = in_array
+        self.ports[self.name+'_out_array'] = out_array
+        
+        snail_array = self.connect_elt(self.name+'_array',
+                                       self.name+'_in_array', self.name+'_out_array')
+            
+        snail_array._connect_snails( 
+                     parse_entry(snail_dict['loop_width']), 
+                     parse_entry(snail_dict['loop_length']),
+                     snail_dict['N'], parse_entry(snail_dict['length_island']),
+                     parse_entry(snail_dict['width_bridge_left']),
+                     parse_entry(snail_dict['width_bridge_right']),
+                     parse_entry(snail_dict['width_jct_left']),
+                     parse_entry(snail_dict['width_jct_right']),
+                     n_left=snail_dict['n_left'], n_right=snail_dict['n_right'],
+                     spacing_bridge_left=parse_entry(snail_dict['spacing_bridge_left']), 
+                     spacing_bridge_right=parse_entry(snail_dict['spacing_bridge_right']),
+                     yoffset=snail_dict['yoffset'], litho=snail_dict['litho'],
+                     iInduct=snail_dict['iInduct'])
 
         right_track = self.draw_rect_center(self.name+"_added_track1", self.coor([2*(array_room/2+adapt_dist),0]), self.coor_vec([array_room+2*adapt_dist, iTrack]))
         left_track = self.draw_rect_center(self.name+"_added_track2", self.coor([-2*(array_room/2+adapt_dist),0]), self.coor_vec([array_room+2*adapt_dist, iTrack]))
@@ -3970,7 +3988,7 @@ _connect_snails  |-|      | pad_spacing
         if fillet is not None:
             squid.fillet(iTrack/2,[0, 3, 7, 10])
 
-        adapt_dist_pump = 4*iTrackPump#(4*iTrackPump - 2*iTrackSnail)/2/iSlopePump
+        adapt_dist_pump = 4*iTrackPump #(4*iTrackPump - 2*iTrackSnail)/2/iSlopePump
 
 
         self.gapObjects.append(self.draw_rect_center(self.name+"_added_gap", self.coor([0,0]), self.coor_vec([3*(array_room+2*adapt_dist), iTrack+2*iGap])))
@@ -3990,9 +4008,6 @@ _connect_snails  |-|      | pad_spacing
             self.maskObjects.append(self.draw(self.name+"_cutout_pump_a_mask", self.append_points(raw_points_adapt_pump_mask)))
             raw_points_adapt_pump_mask_b = self.refy_points(raw_points_adapt_pump_mask, offset = (array_room+2*adapt_dist)/2)
             self.maskObjects.append(self.draw(self.name+"_cutout_pump_b_mask", self.append_points(raw_points_adapt_pump_mask_b)))
-
-        typePump='up'
-        doublePump=False
 
         if typePump == 'up' or typePump == 'Up':
             raw_points_adapt_pump_a = self.refx_points(raw_points_adapt_pump_a)
@@ -7746,7 +7761,7 @@ class ConnectElt(KeyElt, Circuit):
                 jcts_right = self.connect_elt(self.name+'_right_'+str(ii),
                                         self.name+'_right_'+str(ii)+'_0',
                                         self.name+'_right_'+str(ii)+'_1')
-                
+
                 jcts_right._connect_jcts(width_bridge_right, width_jct_right,
                                          spacing_bridge=spacing_bridge_right,
                                          n=n_right)
