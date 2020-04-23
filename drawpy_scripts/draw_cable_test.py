@@ -10,12 +10,12 @@ from drawpy_scripts.python_modeler import PythonModeler, ModelEntity
 from drawpy_scripts.variable_string import parse_entry, Vector
 from drawpy_scripts.python_modeler import layer_TRACK, layer_GAP, layer_RLC
 
-pm = PythonModeler('gds')
+pm = PythonModeler('hfss')
 
 relative = pm.set_variable('1mm')
 
 chip1 = pm.body('chip1')
-chip2 = pm.body('chip2', rel_coor=[[0,0,relative], [1,0,0], [0,1,0]])
+chip2 = pm.body('chip2', rel_coor=[[0,0,relative], [0,1,0], [-1,0,0]])
 chip3 = pm.body('chip3', rel_coor=[[0,relative,0], [1,0,0], [0,1,0]],
                 ref_name='chip2')
 
@@ -31,18 +31,19 @@ gap_middle = pm.set_variable('12.5um')
 offset = pm.set_variable('-50um')
 
 # chip1
-port_design = {'widths':[track_big, track_big+2*gap_big, track_big], 'subnames':['track', 'gap', 'other'], 'offsets':[0, 0, offset], 'layers':[1, 3, 4]}
-chip1.set_current_coor(['-0.5mm', '0.5mm'], [1, 0])
-in_port = chip1.create_port('in', **port_design)
+# port_design = {'widths':[track_big, track_big+2*gap_big, track_big], 'subnames':['track', 'gap', 'other'], 'offsets':[0, 0, offset], 'layers':[1, 3, 4]}
+# chip1.set_current_coor(['-0.5mm', '0.5mm'], [1, 0])
+# in_port = chip1.create_port('in', **port_design)
 
-chip1.set_current_coor(['0.5mm', '-0.5mm'], [-1, 0])
-middle_port = chip1.create_port('middle')#, [track_middle, track_middle+2*gap_middle, track_middle], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
+# chip1.set_current_coor(['0.5mm', '-0.5mm'], [-1, 0])
+# middle_port = chip1.create_port('middle')#, [track_middle, track_middle+2*gap_middle, track_middle], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
 
-chip1.set_current_coor(['2mm', '2mm'], [-1, 0])
-out_port = chip1.create_port('out', [track, track+2*gap, track], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
+# chip1.set_current_coor(['2mm', '2mm'], [-1, 0])
+# out_port = chip1.create_port('out', [track, track+2*gap, track], subnames=['track', 'gap', 'other'], offsets=[0, 0, -offset], layers=[1, 3, 4])
 
-chip1.draw_cable('cable', 'in', 'middle', 'out', is_bond=True, fillet='100um', reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
+# chip1.draw_cable('cable', 'in', 'middle', 'out', is_bond=True, fillet='100um', reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
 
+# chip2
 chip2.set_current_coor(['0.0mm', '0.0mm'], [1, 0])
 in_port2 = chip2.create_port('in2', [track, track+2*gap]) # default is the widths of track and gap
 

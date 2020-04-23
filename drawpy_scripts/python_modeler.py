@@ -596,8 +596,8 @@ class ModelEntity():
         point_1 = []
         for ii in range(3):
             point_0.append(origin[ii] + new_x[ii] * points[0][0] + new_y[ii] * points[0][1])
-            point_0.append(origin[ii] + new_x[ii] * points[1][0] + new_y[ii] * points[1][1])
-
+            point_1.append(origin[ii] + new_x[ii] * points[1][0] + new_y[ii] * points[1][1])
+        
         r, l, c = rlc
         self.body.interface.assign_lumped_rlc(self, r, l, c, point_0,
                                               point_1, name="RLC")

@@ -16,7 +16,8 @@ from win32com.client import Dispatch, CDispatch
 
 from .variable_string import VariableString, \
                             parse_entry, \
-                            var
+                            var, \
+                            val
                             #simplify_arith_expr, \
                             #extract_value_unit, \
                             #extract_value_dim, \
@@ -1106,7 +1107,7 @@ class HfssModeler(COMWrapper):
             entities = [entities]
         name = entities[0].name
         params = ["NAME:"+name]
-        list_bool = [entity.dim==3 for entity in entities]
+        list_bool = [entity.dimension==3 for entity in entities]
         if all(list_bool):
             params += ["RefineInside:=", True, "Enabled:=", True]
         elif any(list_bool):
@@ -1122,8 +1123,13 @@ class HfssModeler(COMWrapper):
         self._mesh.AssignLengthOp(params)
 
     def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
-        name = increment_name(name, self._boundaries.GetBoundaries())
-        params = ["NAME:"+name, "Objects:="]
+        # parsing start and end is very peculiar for this function
+        # hfss style
+        start, end = parse_entry(start, end)
+        start, end = val(start, end)
+        start = [str(elt*1000)+'mm' for elt in start]
+        end = [str(elt*1000)+'mm' for elt in end]
+        params = ["NAME:"+entity.name+'_'+name, "Objects:="]
         params.append([entity.name])
         params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
         params += ["UseResist:=", r != 0, "Resistance:=", r,
