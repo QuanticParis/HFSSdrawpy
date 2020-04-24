@@ -36,6 +36,11 @@ class GdsModeler():
         self.precision = precision
         gdspy.current_library = gdspy.GdsLibrary()
 
+    @classmethod
+    def print_instances(cls):
+        for instance_name in cls.gds_object_instances:
+            print(instance_name)
+
     def reset_cell(self):
         del self.cell
 
@@ -183,13 +188,16 @@ class GdsModeler():
             else:
                 tool_polygons.append(tool_polygon)
 
-        #2 subtract operation
+        #2 unite operation
         tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
         united = gdspy.boolean(blank_polygon, tool_polygon_set, 'or',
                                precision=TOLERANCE, max_points=0,
                                layer=blank_entity.layer)
+
         self.gds_object_instances[blank_entity.name] = united
         self.cell.add(united)
+
+        return blank_entity
 
     def intersect(self, entities):
         raise NotImplementedError()

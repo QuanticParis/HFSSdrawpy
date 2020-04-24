@@ -108,18 +108,18 @@ def draw_IBM_transmon(self,
 @register_method
 @move
 def draw_cylinder_transmon(self,
-                   name,
-                   cutout_size,
-                   pad_spacing,
-                   pad_size,
-                   Jwidth,
-                   space,
-                   spacing2,
-                   tline_l,
-                   tline_w,
-                   thickness,
-                   Jinduc,
-                   fillet=None):
+                           name,
+                           cutout_size,
+                           pad_spacing,
+                           pad_size,
+                           Jwidth,
+                           space,
+                           spacing2,
+                           tline_l,
+                           tline_w,
+                           thickness,
+                           Jinduc,
+                           fillet=None):
     cutout_size, pad_spacing, pad_size, Jwidth, space, thickness = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, space, thickness)
     insert_radius = 1.2/2*cutout_size[1]
     length = cutout_size[0]

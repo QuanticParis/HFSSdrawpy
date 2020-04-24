@@ -261,7 +261,7 @@ class PythonModeler():
             self.interface.generate_gds(file)
 
     def make_material(self, material_params, name):
-        
+
         raise NotImplementedError()
         #raise ImportWarning("make material is not yet implemented")
 
@@ -427,11 +427,20 @@ class PythonModeler():
                 entity.delete()
         return intersection
 
-    def unite(self, entities, name=None, keep_originals=False):
+    def unite(self, entities, keep=None, keep_originals=False):
+        # keep: name or entity that should be returned/preserved/final union
         if not isinstance(entities, list):
             entities = [entities]
-        if name is None:
-            name = entities[0].name
+
+        if keep is not None:
+            if isinstance(keep, str):
+                keep = ModelEntity.dict_instances[keep]
+            if keep in entities:
+                entities.remove(keep)
+            entities = [keep] + entities
+
+        name = entities[0].name
+
         if len(entities)!=1:
             if not all([entity.dimension == entities[0].dimension
                                                     for entity in entities]):
@@ -439,17 +448,15 @@ class PythonModeler():
                                 same dimension')
             else:
                 if keep_originals:
-                    union_entity = entities[0].copy()
-                else:
-                    union_entity = entities[0]
-                self.interface.unite([union_entity]+entities[1:],
-                                               keep_originals=True)
+                    entities[0] = entities[0].copy()
+
+                union_entity = self.interface.unite(entities, keep_originals=keep_originals)
+
                 if not keep_originals:
-                    for entity in entities[1:]:
-                        entity.delete()
+                    for ii in range(len(entities)):
+                        entities[ii].delete()
         else:
             union_entity = entities[0]
-        union_entity.rename(name)
         return union_entity
 
     def rotate(self, entities, angle=0):
@@ -470,6 +477,7 @@ class PythonModeler():
         if self.mode == 'gds':
             vector = val(vector)
         self.interface.translate(entities, vector)
+
 
 class ModelEntity():
     # this should be the objects we are handling on the python interface
@@ -519,7 +527,7 @@ class ModelEntity():
     @classmethod
     def print_instances(cls):
         for instance_name in cls.dict_instances:
-            print(instance_name)#, cls.dict_instances[instance_name])
+            print(instance_name)
 
     def delete(self):
         # deletes the modelentity and its occurences throughout the code
@@ -617,11 +625,9 @@ class ModelEntity():
         self.body.translate(self, vector)
 
     def subtract(self, tool_entities, keep_originals=False):
-        
-        print("je fais des soustractions")
-        
+
         """
-        tool_entities: a list of ModelEntity of a ModelEntity
+        tool_entities: a list of ModelEntity or a ModelEntity
         keep_originals: Boolean
         """
         if not isinstance(tool_entities, list):
@@ -634,31 +640,17 @@ class ModelEntity():
         else:
             self.body.interface.subtract(self, tool_entities,
                                        keep_originals=True)
-        if not(keep_originals):
+        if not keep_originals:
             for ii in range(len(tool_entities)):
                 tool_entities[0].delete()
-    
+
     def unite(self, tool_entities, keep_originals=False):
-        
         """
-        tool_entities: a list of ModelEntity of a ModelEntity
+        tool_entities: a list of ModelEntity or a ModelEntity
         keep_originals: Boolean
         """
-        if not isinstance(tool_entities, list):
-            tool_entities = [tool_entities]
+        self.body.unite(tool_entities, keep=self, keep_originals=keep_originals)
 
-        if not all([entity.dimension==self.dimension
-                                            for entity in tool_entities]):
-            raise TypeError('All subtracted elements should have the \
-                            same dimension')
-        else:
-            self.body.interface.unite([self] + tool_entities,
-                                      keep_originals=True)
-        if( not keep_originals):
-            for tool_entity in tool_entities:
-                tool_entity.delete()
-        
-    
 
 class Port():
     instances_to_move = []
@@ -921,8 +913,6 @@ class Port():
 #         self.iIn = retIn
 #         self.iOut = retOut
 # #        return [retIn, retOut]
-
-
 
 
 @Lib.add_methods_from(KeyElement, CustomElement)

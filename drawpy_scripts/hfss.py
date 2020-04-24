@@ -1398,6 +1398,8 @@ class HfssModeler(COMWrapper):
         names = [entity.name for entity in entities]
         self._modeler.Unite(self._selections_array(*names),
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals])
+        return entities[0]
+
 
 
 # class ModelEntity():
