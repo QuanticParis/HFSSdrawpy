@@ -507,6 +507,9 @@ class ModelEntity():
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return self.name
+
     @staticmethod
     def reset():
         ModelEntity.instances_layered = {}
@@ -516,7 +519,7 @@ class ModelEntity():
     @classmethod
     def print_instances(cls):
         for instance_name in cls.dict_instances:
-            print(instance_name, cls.dict_instances[instance_name])
+            print(instance_name)#, cls.dict_instances[instance_name])
 
     def delete(self):
         # deletes the modelentity and its occurences throughout the code
@@ -631,9 +634,9 @@ class ModelEntity():
         else:
             self.body.interface.subtract(self, tool_entities,
                                        keep_originals=True)
-        if(not keep_originals):
-            for tool_entity in tool_entities:
-                tool_entity.delete()
+        if not(keep_originals):
+            for ii in range(len(tool_entities)):
+                tool_entities[0].delete()
     
     def unite(self, tool_entities, keep_originals=False):
         
@@ -707,6 +710,9 @@ class Port():
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return self.name
+
     @staticmethod
     def reset():
         Port.instances_to_move = []
@@ -717,14 +723,7 @@ class Port():
     @classmethod
     def print_instances(cls):
         for instance_name in cls.dict_instances:
-            print(instance_name, cls.dict_instances[instance_name])
-    # def reverse(self):
-    #     self.ori = -self.ori
-    #     if self.offsets is not None:
-    #         offsets = []
-    #         for ii in range(self.N):
-    #             offsets.append(-self.offsets[ii])
-    #         self.offsets = offsets
+            print(instance_name)#, cls.dict_instances[instance_name])
 
     def compare(self, other, pm):
         points = []

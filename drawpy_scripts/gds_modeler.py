@@ -78,10 +78,11 @@ class GdsModeler():
 
     def box_corner_3D(self, pos, size, **kwargs):
         # print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
-        pass
+        return kwargs['name']
+
     def box_center_3D(self, pos, size, **kwargs):
         # print("ERROR : The function --box_center_3D-- cannot be used for GDSmodeler")
-        pass
+        return kwargs['name']
 
     def polyline_2D(self, points, closed, **kwargs):
         #TODO sace of open path
@@ -117,7 +118,7 @@ class GdsModeler():
 
     def cylinder_3D(self, pos, radius, height, axis, **kwargs):
         # print("ERROR : The function --cylinder_3D-- cannot be used for GDSmodeler")
-        pass
+        return kwargs['name']
 
     def disk_2D(self, pos, radius, axis, number_of_points=0, **kwargs):
         pos, radius = parse_entry(pos, radius)
@@ -236,11 +237,12 @@ class GdsModeler():
             else:
                 tool_polygons.append(tool_polygon)
 
+
         #2 subtract operation
         tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
         subtracted = gdspy.boolean(blank_polygon, tool_polygon_set, 'not',
-                                   precision=TOLERANCE, max_points=0,
-                                   layer=blank_entity.layer)
+                                    precision=TOLERANCE, max_points=0,
+                                    layer=blank_entity.layer)
 
         #3 At last we update the cell and the gds_object_instance
         self.gds_object_instances[blank_entity.name] = subtracted
