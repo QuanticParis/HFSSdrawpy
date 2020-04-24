@@ -385,6 +385,7 @@ def size_dc_gap(self, length, positions, widths, border):
 
 @register_method
 @move
+
 def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, antenna_height):
     '''
     Draws a 3D vacuum cylinder (z axis) with an antenna. Assign PerfE to the surfaces
@@ -396,27 +397,63 @@ def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, ante
     \__________\
 
     '''
-#    inner_cylinder = self.cylinder([0,0,0], inner_radius , cylinder_height, "Z", name=name+"_inner_cylinder", layer="l1")
-    outer_cylinder = self.cylinder([0,0,0], cylinder_radius , cylinder_height, "Z", name=name+"_outer_cylinder", layer=layer_Default)
-#    tube = self.subtract(outer_cylinder, [inner_cylinder])
-    antenna = self.cylinder([0,0,0], antenna_radius ,antenna_height, "Z", name=name+"_antenna", layer=layer_Default)
-    self.subtract(outer_cylinder, [antenna], keep_originals = True)
+    outer_cylinder = self.cylinder_3D([0,0,0],
+                                      cylinder_radius,
+                                      cylinder_height,
+                                      "Z",
+                                      name=name+"_outer_cylinder",
+                                      layer=layer_Default)
+
+    antenna = self.cylinder_3D([0,0,0],
+                               antenna_radius
+                               ,antenna_height,
+                               "Z",
+                               name=name+"_antenna",
+                               layer=layer_Default)
+
+    outer_cylinder.subtract(antenna, keep_originals = True)
+    
     self.make_material(antenna, "\"aluminum\"")
-    self.assign_perfect_E(antenna, name+'antenna_PerfE')
-    self.assign_perfect_E(outer_cylinder, name+'cylinder_PerfE')
+    
+    antenna.assign_perfect_E(name+'_PerfE')
+    outer_cylinder.assign_perfect_E(name+'_PerfE')
 
     return [[],[antenna]]
 
 @register_method
 @move
+
 def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth):
+    
     radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth = parse_entry(radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth)
-    cylinder = self.cylinder([0,0,0], radius , cylinder_height, "Z", name=name+"_inner_cylinder", layer=layer_Default)
-    self.assign_perfect_E(cylinder, name+'_PerfE')
-    antenna = self.cylinder([0,0,0], antenna_radius ,antenna_height, "Z", name=name+"_antenna", layer=layer_Default)
+    
+    cylinder = self.cylinder_3D([0,0,0],
+                                radius,
+                                cylinder_height,
+                                "Z",
+                                name=name+"_inner_cylinder",
+                                layer=layer_Default)
+    
+    cylinder.assign_perfect_E(name+'_PerfE')
+    
+    antenna = self.cylinder_3D([0,0,0],
+                               antenna_radius,
+                               antenna_height,
+                               "Z",
+                               name=name+"_antenna",
+                               layer=layer_Default)
+    
     self.make_material(antenna, "\"aluminum\"")
-    self.assign_perfect_E(antenna, name+'antenna_PerfE')
-    cylinder_side = self.cylinder([0,radius-depth,antenna_height], insert_radius, radius, "Y", name=name+"_insert", layer=layer_Default)
+    
+    antenna.assign_perfect_E(name+'antenna_PerfE')
+    
+    cylinder_side = self.cylinder_3D([0,radius-depth,antenna_height],
+                                     insert_radius,
+                                     radius,
+                                     "Y",
+                                     name=name+"_insert",
+                                     layer=layer_Default)
+
     self.unite([cylinder, cylinder_side], name="union_cylinder")
     return [[],[cylinder, antenna]]
 

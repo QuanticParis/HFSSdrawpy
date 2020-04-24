@@ -260,8 +260,12 @@ class PythonModeler():
         if self.mode=='gds':
             self.interface.generate_gds(file)
 
-    def make_material(self, material_params):
-        raise NotImplementedError()
+    def make_material(self, material_params, name):
+        
+        #raise NotImplementedError()
+        #raise ImportWarning("make material is not yet implemented")
+        print("make material is not yet implemented")
+        pass
 
     ### Drawing methods
 
@@ -612,6 +616,11 @@ class ModelEntity():
         self.body.translate(self, vector)
 
     def subtract(self, tool_entities, keep_originals=False):
+        
+        """
+        tool_entities: a list of ModelEntity of a ModelEntity
+        keep_originals: Boolean
+        """
         if not isinstance(tool_entities, list):
             tool_entities = [tool_entities]
 
