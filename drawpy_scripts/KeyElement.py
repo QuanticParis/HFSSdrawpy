@@ -413,8 +413,7 @@ def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, ante
 
     outer_cylinder.subtract(antenna, keep_originals = True)
     
-    self.make_material(antenna, "\"aluminum\"")
-    
+    antenna.assign_material("aluminum")
     antenna.assign_perfect_E(name+'_PerfE')
     outer_cylinder.assign_perfect_E(name+'_PerfE')
 
@@ -468,17 +467,36 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
     '''
     cavity_param, ports_param, transmons_param = parse_entry(cavity_param, ports_param, transmons_param)
 
-    cavity = self.cylinder([0,0,0], cavity_param[0] , cavity_param[1], "Z", name=name+"_cavity", layer=layer_Default)
-#    self.assign_perfect_E(cylinder, name+'_PerfE')
-    antenna = self.cylinder([0,0,0], cavity_param[2] ,cavity_param[3], "Z", name=name+"_antenna", layer=layer_Default)
-#    self.make_material(antenna, "\"aluminum\"")
-    self.subtract(cavity, [antenna])
-#    self.assign_perfect_E(antenna, name+'antenna_PerfE')
+    cavity = self.cylinder_3D([0,0,0],
+                              cavity_param[0],
+                              cavity_param[1],
+                              "Z",
+                              name=name+"_cavity",
+                              layer=layer_Default)
+    
+    cavity.assign_perfect_E(name+'_PerfE')
+    
+    antenna = self.cylinder_3D([0,0,0],
+                               cavity_param[2],
+                               cavity_param[3],
+                               "Z",
+                               name=name+"_antenna",
+                               layer=layer_Default)
+    
+    self.make_material(antenna, "\"aluminum\"")
+    
+    cavity.subtract(antenna)
+    
+    antenna.assign_perfect_E(name+'antenna_PerfE')
+    
     cylinders = [cavity]
+    
     to_subtract = []
+    
     if ports_param!=None:
         for ii,port_param in enumerate(ports_param):
             angle = port_param[3]
+            print(angle)
             self.set_coor(pos=port_param[:3], ori=angle)
             result = self.cable_3D(*port_param[4])
             cylinders.append(result[0])
@@ -500,30 +518,75 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
 @register_method
 @move
 def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
+    
+    """
+    TODO: Add a clear description of what this function actually draws.
+    """
+    
     r_gaine, r_ame, r_dielec, L_cable, L_connector, axis = parse_entry(r_gaine, r_ame, r_dielec, L_cable, L_connector, axis)
-    ame = self.cylinder([0,0,0], r_ame, L_cable, axis, layer=layer_Default, name = name+'ame')
-    creux = self.cylinder([0,0,0], r_ame, L_cable, axis, layer=layer_Default, name = name+'creux')
-    dielec = self.cylinder([0,0,0], r_dielec, L_cable, axis, layer=layer_Default, name = name+'dielectric')
+    
+    ame = self.cylinder_3D([0,0,0],
+                           r_ame,
+                           L_cable,
+                           axis,
+                           layer=layer_Default,
+                           name=name+'ame')
+    creux = self.cylinder_3D([0,0,0],
+                             r_ame,
+                             L_cable,
+                             axis,
+                             layer=layer_Default,
+                             name=name+'creux')
+    dielec = self.cylinder_3D([0,0,0],
+                              r_dielec,
+                              L_cable,
+                              axis,
+                              layer=layer_Default,
+                              name=name+'dielectric')
 
-    self.subtract(dielec,[creux], keep_originals=True)
+    dielec.subtract(creux, keep_originals=True)
 
-    creux1 = self.cylinder([0,0,0], r_dielec, L_cable, axis, layer=layer_Default, name = name+'creux1')
-    gaine = self.cylinder([0,0,0], r_gaine, L_cable, axis, layer=layer_Default, name = name+'gaine')
-    self.subtract(gaine, [creux, creux1], keep_originals=False)
-    self.make_material(dielec, "\"Teflon (tm)\"")
-#    cable = self.unite([ame, dielec, gaine], name='cable3D')
+    creux1 = self.cylinder_3D([0,0,0],
+                              r_dielec,
+                              L_cable,
+                              axis,
+                              layer=layer_Default,
+                              name=name+'creux1')
+    gaine = self.cylinder_3D([0,0,0],
+                             r_gaine,
+                             L_cable,
+                             axis,
+                             layer=layer_Default,
+                             name=name+'gaine')
+    creux.subtract(creux1, keep_originals=False)
+    dielec.assign_material("Teflon (tm)")
 
-    creux2 = self.cylinder([0,0,L_cable], r_ame, L_connector, axis, layer=layer_Default, name = name+'creux2')
-    ame_probe = self.cylinder([0,0,L_cable], r_ame, L_connector, axis, layer=layer_Default, name = name+'ame_probe')
-    gaine_probe = self.cylinder([0,0,L_cable], r_gaine, L_connector, axis, layer=layer_Default, name = name+'gaine_probe')
-    self.subtract(gaine_probe, [creux2], keep_originals=False)
-    self.delete(creux)
-    self.delete(creux1)
-    self.delete(creux2)
-    self.make_material(ame, "\"copper\"")
-    self.make_material(ame_probe, "\"copper\"")
-    self.make_material(gaine, "\"perfect conductor\"")
-    self.make_material(gaine_probe, "\"perfect conductor\"")
+    creux2 = self.cylinder_3D([0,0,L_cable],
+                              r_ame,
+                              L_connector,
+                              axis,
+                              layer=layer_Default,
+                              name=name+'creux2')
+    ame_probe = self.cylinder_3D([0,0,L_cable],
+                                 r_ame,
+                                 L_connector,
+                                 axis,
+                                 layer=layer_Default,
+                                 name=name+'ame_probe')
+    gaine_probe = self.cylinder_3D([0,0,L_cable],
+                                   r_gaine,
+                                   L_connector,
+                                   axis,
+                                   layer=layer_Default,
+                                   name = name+'gaine_probe')
+    gaine_probe.subtract(creux2, keep_originals=False)
+    
+    creux.delete()
+    
+    ame.assign_material("copper")
+    ame_probe.assign_material("copper")
+    gaine.assign_material("perfect conductor")
+    gaine_probe.assign_material("perfect conductor")
 
     return gaine_probe, ame_probe
 

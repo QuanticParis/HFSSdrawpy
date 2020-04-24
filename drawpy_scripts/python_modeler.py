@@ -262,10 +262,8 @@ class PythonModeler():
 
     def make_material(self, material_params, name):
         
-        #raise NotImplementedError()
+        raise NotImplementedError()
         #raise ImportWarning("make material is not yet implemented")
-        print("make material is not yet implemented")
-        pass
 
     ### Drawing methods
 
@@ -616,6 +614,8 @@ class ModelEntity():
         self.body.translate(self, vector)
 
     def subtract(self, tool_entities, keep_originals=False):
+        
+        print("je fais des soustractions")
         
         """
         tool_entities: a list of ModelEntity of a ModelEntity
