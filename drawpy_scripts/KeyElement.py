@@ -454,7 +454,8 @@ def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenn
                                      name=name+"_insert",
                                      layer=layer_Default)
 
-    self.unite([cylinder, cylinder_side], name="union_cylinder")
+    cylinder.unite(cylinder_side)
+    
     return [[],[cylinder, antenna]]
 
 @register_method

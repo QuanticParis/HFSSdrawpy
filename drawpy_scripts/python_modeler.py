@@ -631,9 +631,31 @@ class ModelEntity():
         else:
             self.body.interface.subtract(self, tool_entities,
                                        keep_originals=True)
-        if not(keep_originals):
+        if(not keep_originals):
             for tool_entity in tool_entities:
                 tool_entity.delete()
+    
+    def unite(self, tool_entities, keep_originals=False):
+        
+        """
+        tool_entities: a list of ModelEntity of a ModelEntity
+        keep_originals: Boolean
+        """
+        if not isinstance(tool_entities, list):
+            tool_entities = [tool_entities]
+
+        if not all([entity.dimension==self.dimension
+                                            for entity in tool_entities]):
+            raise TypeError('All subtracted elements should have the \
+                            same dimension')
+        else:
+            self.body.interface.unite([self] + tool_entities,
+                                      keep_originals=True)
+        if( not keep_originals):
+            for tool_entity in tool_entities:
+                tool_entity.delete()
+        
+    
 
 class Port():
     instances_to_move = []
