@@ -325,8 +325,11 @@ class PythonModeler():
     def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
         i = 0
         while i < len(points[:-1]):
-            if np.array_equal(points[i], points[i+1]):
+            points_equal = [equal_float(val(p0),val(p1))
+                            for p0, p1 in zip(points[i], points[i+1])]
+            if all(points_equal):
                 points.pop(i)
+                print('Warning: Delete two coinciding points on a polyline2D')
             else:
                 i+=1
         if self.mode=='gds':
@@ -427,17 +430,25 @@ class PythonModeler():
                 entity.delete()
         return intersection
 
-    def unite(self, entities, keep=None, keep_originals=False):
-        # keep: name or entity that should be returned/preserved/final union
+    def unite(self, entities, main=None, new_name=None):
+        # main: name or entity that should be returned/preserved/final union
+        # if new_name (str) is provided, the original entities are kept and
+        # the union is named new_name
         if not isinstance(entities, list):
             entities = [entities]
+        entities = entities.copy()
 
-        if keep is not None:
-            if isinstance(keep, str):
-                keep = ModelEntity.dict_instances[keep]
-            if keep in entities:
-                entities.remove(keep)
-            entities = [keep] + entities
+        if new_name is None:
+            keep_originals = False
+        else:
+            keep_originals = True
+
+        if main is not None:
+            if isinstance(main, str):
+                main = ModelEntity.dict_instances[main]
+            if main in entities:
+                entities.remove(main)
+            entities = [main] + entities
 
         name = entities[0].name
 
@@ -457,6 +468,10 @@ class PythonModeler():
                         entities[ii].delete()
         else:
             union_entity = entities[0]
+
+        if keep_originals:
+            union_entity.rename(new_name)
+
         return union_entity
 
     def rotate(self, entities, angle=0):
@@ -482,7 +497,8 @@ class PythonModeler():
 class ModelEntity():
     # this should be the objects we are handling on the python interface
     # each method of this class should act in return in HFSS/GDS when possible
-    instances_layered = {}
+    instances_layered = {layer_TRACK:[], layer_GAP:[], layer_MASK:[],
+                         layer_Default:[], layer_RLC:[]}
     dict_instances = {}
     instances_to_move = []
     def __init__(self, name, dimension, body, nonmodel=False,
@@ -625,31 +641,35 @@ class ModelEntity():
         self.body.translate(self, vector)
 
     def subtract(self, tool_entities, keep_originals=False):
-
         """
         tool_entities: a list of ModelEntity or a ModelEntity
-        keep_originals: Boolean
+        keep_originals: Boolean, True : the tool entities still exist after
+                        boolean operation
         """
         if not isinstance(tool_entities, list):
             tool_entities = [tool_entities]
-
-        if not all([entity.dimension==self.dimension
-                                            for entity in tool_entities]):
-            raise TypeError('All subtracted elements should have the \
-                            same dimension')
+        if len(tool_entities)==0:
+            pass
         else:
-            self.body.interface.subtract(self, tool_entities,
-                                       keep_originals=True)
-        if not keep_originals:
-            for ii in range(len(tool_entities)):
-                tool_entities[0].delete()
+            if not all([entity.dimension==self.dimension
+                                                for entity in tool_entities]):
+                raise TypeError('All subtracted elements should have the \
+                                same dimension')
+            else:
+                self.body.interface.subtract(self, tool_entities,
+                                           keep_originals=True)
+            if not keep_originals:
+                for ii in range(len(tool_entities)):
+                    tool_entities[0].delete()
 
-    def unite(self, tool_entities, keep_originals=False):
+    def unite(self, tool_entities, new_name=None):
         """
         tool_entities: a list of ModelEntity or a ModelEntity
-        keep_originals: Boolean
+        if new_name (str) is provided, the tool_entities + self are kept and
+        the union is named new_name
         """
-        self.body.unite(tool_entities, keep=self, keep_originals=keep_originals)
+        return self.body.unite(tool_entities, main=self, new_name=new_name)
+
 
 
 class Port():

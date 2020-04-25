@@ -201,7 +201,6 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
               (pcb_gap-self.overdev, -pcb_track/2-self.overdev)]
 
     track = self.polyline_2D(points, name=name+'_track', layer=layer_TRACK)
-#        self.trackObjects.append(self.draw(points, ))
 
     points = [(pcb_gap/2+self.overdev, pcb_gap+pcb_track/2-self.overdev),
              (pcb_gap+iBondLength, pcb_gap+pcb_track/2-self.overdev),
@@ -211,15 +210,14 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
              (pcb_gap/2+self.overdev, -pcb_gap-pcb_track/2+self.overdev)]
 
     gap = self.polyline_2D(points, name=name+'_gap', layer=layer_GAP)
-#        self.gapObjects.append(self.draw(name+"_gap", points))
-    mask = None
+
     if self.is_mask:
         points =[(pcb_gap/2-self.gap_mask, pcb_gap+pcb_track/2+self.gap_mask),
-                 (pcb_gap+iBondLength, pcb_gap+pcb_track/2+self.gap_mask),
-                 (pcb_gap+iBondLength+adaptDist, iGap+iTrack/2+self.gap_mask),
-                 (pcb_gap+iBondLength+adaptDist, -iGap-self.gap_mask),
-                 (pcb_gap+iBondLength, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask),
-                 (pcb_gap/2-self.gap_mask, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask)]
+                  (pcb_gap+iBondLength, pcb_gap+pcb_track/2+self.gap_mask),
+                  (pcb_gap+iBondLength+adaptDist, iGap+iTrack/2+self.gap_mask),
+                  (pcb_gap+iBondLength+adaptDist, -iGap-self.gap_mask),
+                  (pcb_gap+iBondLength, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask),
+                  (pcb_gap/2-self.gap_mask, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask)]
 
         mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
 
@@ -412,7 +410,7 @@ def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, ante
                                layer=layer_Default)
 
     outer_cylinder.subtract(antenna, keep_originals = True)
-    
+
     antenna.assign_material("aluminum")
     antenna.assign_perfect_E(name+'_PerfE')
     outer_cylinder.assign_perfect_E(name+'_PerfE')
@@ -423,29 +421,29 @@ def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, ante
 @move
 
 def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth):
-    
+
     radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth = parse_entry(radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth)
-    
+
     cylinder = self.cylinder_3D([0,0,0],
                                 radius,
                                 cylinder_height,
                                 "Z",
                                 name=name+"_inner_cylinder",
                                 layer=layer_Default)
-    
+
     cylinder.assign_perfect_E(name+'_PerfE')
-    
+
     antenna = self.cylinder_3D([0,0,0],
                                antenna_radius,
                                antenna_height,
                                "Z",
                                name=name+"_antenna",
                                layer=layer_Default)
-    
+
     self.make_material(antenna, "\"aluminum\"")
-    
+
     antenna.assign_perfect_E(name+'antenna_PerfE')
-    
+
     cylinder_side = self.cylinder_3D([0,radius-depth,antenna_height],
                                      insert_radius,
                                      radius,
@@ -454,7 +452,7 @@ def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenn
                                      layer=layer_Default)
 
     cylinder.unite(cylinder_side)
-    
+
     return [[],[cylinder, antenna]]
 
 @register_method
@@ -473,26 +471,26 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
                               "Z",
                               name=name+"_cavity",
                               layer=layer_Default)
-    
+
     cavity.assign_perfect_E(name+'_PerfE')
-    
+
     antenna = self.cylinder_3D([0,0,0],
                                cavity_param[2],
                                cavity_param[3],
                                "Z",
                                name=name+"_antenna",
                                layer=layer_Default)
-    
+
     self.make_material(antenna, "\"aluminum\"")
-    
+
     cavity.subtract(antenna)
-    
+
     antenna.assign_perfect_E(name+'antenna_PerfE')
-    
+
     cylinders = [cavity]
-    
+
     to_subtract = []
-    
+
     if ports_param!=None:
         for ii,port_param in enumerate(ports_param):
             angle = port_param[3]
@@ -518,13 +516,13 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
 @register_method
 @move
 def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
-    
+
     """
     TODO: Add a clear description of what this function actually draws.
     """
-    
+
     r_gaine, r_ame, r_dielec, L_cable, L_connector, axis = parse_entry(r_gaine, r_ame, r_dielec, L_cable, L_connector, axis)
-    
+
     ame = self.cylinder_3D([0,0,0],
                            r_ame,
                            L_cable,
@@ -580,9 +578,9 @@ def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
                                    layer=layer_Default,
                                    name = name+'gaine_probe')
     gaine_probe.subtract(creux2, keep_originals=False)
-    
+
     creux.delete()
-    
+
     ame.assign_material("copper")
     ame_probe.assign_material("copper")
     gaine.assign_material("perfect conductor")

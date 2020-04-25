@@ -61,15 +61,15 @@ class GdsModeler():
         else:
             raise ValueError('%s cell do not exist'%coor_sys)
 
-    def _copy(self, polygon):
-        new_polygon = gdspy.copy(polygon, 0, 0)
-        self.gds_object_instances[name] = new_polygon
-
     def copy(self, entity):
         new_polygon = gdspy.copy(self.gds_object_instances[entity.name], 0, 0)
         new_name = gen_name(entity.name)
         self.gds_object_instances[new_name] = new_polygon
         self.cell.add(new_polygon)
+
+    def rename(self, entity, name):
+        obj = self.gds_object_instances.pop(entity.name)
+        self.gds_object_instances[name]=obj
 
     def generate_gds(self, file):
         for cell_name in self.gds_cells.keys():
