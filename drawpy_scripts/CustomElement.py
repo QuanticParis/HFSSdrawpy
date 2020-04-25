@@ -11,16 +11,17 @@ from functools import wraps
 from . import Lib
 from .utils import parse_entry, Vector
 from .KeyElement import move
+from .parameters import layer_TRACK, \
+                        layer_GAP, \
+                        layer_RLC, \
+                        layer_MESH, \
+                        layer_MASK, \
+                        layer_Default, \
+                        layer_PORT, \
+                        eps
 
 __methods__ = []
 register_method = Lib.register_method(__methods__)
-eps = 1e-7
-layer_TRACK = 1
-layer_GAP = 0
-layer_RLC = 2
-layer_MESH = 3
-layer_MASK = 4
-layer_Default = 10
 
 @register_method
 def draw_JJ(self, name, iInPort, iOutPort, iInduct='1nH', fillet=None):

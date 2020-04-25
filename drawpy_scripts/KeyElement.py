@@ -10,15 +10,14 @@ import numpy as np
 
 from . import Lib
 from .utils import parse_entry, Vector
-
-eps = 1e-7
-layer_TRACK = 1
-layer_GAP = 0
-layer_RLC = 2
-layer_MESH = 3
-layer_MASK = 4
-layer_Default = 10
-
+from .parameters import layer_TRACK, \
+                        layer_GAP, \
+                        layer_RLC, \
+                        layer_MESH, \
+                        layer_MASK, \
+                        layer_Default, \
+                        layer_PORT, \
+                        eps
 
 __methods__ = [] #Stores all methods of this file
 register_method = Lib.register_method(__methods__) # imports a decorator which stores methods in __methods__

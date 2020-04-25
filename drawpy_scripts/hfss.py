@@ -24,11 +24,11 @@ from .utils import VariableString, \
                             #rem_unit, \
 
 from .python_modeler import gen_name
-#First commit of Ulysse
+
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
-LENGTH_UNIT = 'meter'
+from .utils import LENGTH_UNIT
 
 BASIS_ORDER = {"Zero Order": 0,
                "First Order": 1,

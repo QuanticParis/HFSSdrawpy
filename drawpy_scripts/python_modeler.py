@@ -22,19 +22,40 @@ from .utils import VariableString, \
                    _val, val, \
                    way, \
                    Vector
+
 from .path_finder import Path
+
+from .parameters import layer_TRACK, \
+                        layer_GAP, \
+                        layer_RLC, \
+                        layer_MESH, \
+                        layer_MASK, \
+                        layer_Default, \
+                        layer_PORT, \
+                        eps
+
+from .utils import LENGTH, \
+                   INDUCTANCE, \
+                   CAPACITANCE, \
+                   RESISTANCE, \
+                   LENGTH_UNIT, \
+                   INDUCTANCE_UNIT, \
+                   CAPACITANCE_UNIT, \
+                   RESISTANCE_UNIT \
 
 # ModelEntity should be defined here probably
 
 # PARAMETERS FOR THE GDS OUTPUT AND FOR FILLETS
-eps = 1e-7
-layer_TRACK = 1
-layer_GAP = 0
-layer_RLC = 2
-layer_MESH = 3
-layer_MASK = 4
-layer_PORT = 10
-layer_Default = 10
+# NOTE: They are now defined in the parameter file.
+                        
+eps = eps
+layer_TRACK = layer_TRACK
+layer_GAP = layer_GAP
+layer_RLC = layer_RLC
+layer_MESH = layer_MESH
+layer_MASK = layer_MASK
+layer_PORT = layer_PORT
+layer_Default = layer_Default
 
 ##IMPORT KEY / CUSTOM Elements
 
@@ -43,16 +64,6 @@ layer_Default = 10
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
-
-LENGTH = '[length]'
-INDUCTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2'
-CAPACITANCE = '[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]'
-RESISTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3'
-
-LENGTH_UNIT = 'meter'
-INDUCTANCE_UNIT = 'nH'
-CAPACITANCE_UNIT = 'fF'
-RESISTANCE_UNIT = 'ohm'
 
 def equal_float(float1, float2):
     if float1!=0:

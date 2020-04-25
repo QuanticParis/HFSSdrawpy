@@ -11,7 +11,6 @@ import gdspy
 from .utils import parse_entry, var, Vector
 from .python_modeler import gen_name
 
-eps = 1e-7
 TOLERANCE = 1e-7 # for arcs
 print("gdspy_version : ",gdspy.__version__)
 
