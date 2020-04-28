@@ -22,6 +22,28 @@ INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
+def find_last_list(list_entities):
+    # return the last list of a set of nested lists
+    if isinstance(list_entities, list):
+        if len(list_entities)==0:
+            return list_entities
+        else:
+            if isinstance(list_entities[-1], list):
+                return find_last_list(list_entities[-1])
+            else:
+                return list_entities
+    else:
+        raise TypeError('There are no list')
+
+def check_name(_class, name):
+    i = 0
+    new_name = name
+    while(new_name in _class.dict_instances.keys()):
+        new_name = name+'_'+str(i)
+        i+=1
+    if new_name != name:
+        print("%s: changed '%s' name into '%s'"%(_class.__name__, name, new_name))
+    return new_name
 
 def simplify_arith_expr(expr):
     try:

@@ -5,12 +5,10 @@ Created on Mon Oct 28 16:18:36 2019
 @author: Zaki
 """
 
-from functools import wraps
 import numpy as np
 
-from . import Lib
-from .utils import parse_entry, Vector
-from .parameters import layer_TRACK, \
+from ..utils import parse_entry, Vector
+from ..parameters import layer_TRACK, \
                         layer_GAP, \
                         layer_RLC, \
                         layer_MESH, \
@@ -19,77 +17,12 @@ from .parameters import layer_TRACK, \
                         layer_PORT, \
                         eps
 
-__methods__ = [] #Stores all methods of this file
-register_method = Lib.register_method(__methods__) # imports a decorator which stores methods in __methods__
+from .utils import move
 
-def _moved(func, previous_pos, previous_ori, *args, **kwargs):
-    #1 We need to keep track of the entities created during the execution of a function
-    list_entities_old =args[0].modelentities_to_move()
-    list_ports_old = args[0].ports_to_move()
-    args[0].append_lists()
+def draw_cable(self, *args, **kwargs):
 
-    #2 We store the current position on the chip where the piece is to be drawn.
-    #2 It is modified during the execution of innner functions, which forces us to store them BEFORE the execution
-    pos = args[0].current_pos
-    angle = args[0].current_ori
+    self.draw_cable(*args, **kwargs)
 
-    if len(pos)==2:
-        pos.append(0)
-    #3 We execute the actual function
-    result = func(*args, **kwargs)
-
-    #4 We move the entity that were created by the last function
-    list_entities_new = args[0].modelentities_to_move()
-    list_ports_new = args[0].ports_to_move()
-
-#    print("to_move", [i.name for i in list_entities_new])
-
-    #5 We move the entities_to_move with the right operation
-    if len(list_entities_new)>0:
-        args[0].rotate(list_entities_new, angle=angle)
-        args[0].translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
-
-    if len(list_ports_new)>0:
-        args[0].rotate_port(list_ports_new, angle)
-        args[0].translate_port(list_ports_new, vector=[pos[0], pos[1], pos[2]])
-
-    #6 We empty a part of the 'to_move' dictionnaries
-    if isinstance(list_entities_old[-1], list):
-        a = list_entities_old.pop(-1)
-        for entity in a:
-            list_entities_old.append(entity)
-    else:
-        args[0].reset()
-
-    if isinstance(list_ports_old[-1], list):
-        a = list_ports_old.pop(-1)
-        for entity in a:
-            list_ports_old.append(entity)
-    else:
-        args[0].reset()
-
-    #7 We reset the current_coor to the last variables saved
-    args[0].set_coor(previous_pos, previous_ori)
-    return result
-
-def move(func):
-    '''
-    Decorator which moves the KeyElements and CustomElements (rotation+translation) with the parameters given by get_current_coor
-
-    Input : func to move
-    Output : moved is the composition of func with the rotation+translation of the ModeleEntities created during its execution
-    '''
-    @wraps(func)
-    # At the begining of the execution, we decide that all elements created go to instances_to_move
-    def moved(*args, **kwargs):
-        # args[0] = body
-        previous_pos = args[0].current_pos
-        previous_ori = args[0].current_ori
-#        print(previous_pos, previous_ori)
-        return _moved(func, previous_pos, previous_ori, *args, **kwargs)
-    return moved
-
-@register_method
 @move
 def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):
     """
@@ -158,7 +91,6 @@ def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):
     port = self.port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
     return port
 
-@register_method
 @move
 def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iSlope=1, tr_line=True):
     '''
@@ -221,7 +153,7 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
         mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
 
     self.set_coor([adaptDist+pcb_gap+iBondLength,0], [1,0])
-    portOut = self.create_port(name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
+    portOut = create_port(self, name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
 
     if tr_line:
         ohm = self.rect_corner_2D([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
@@ -235,7 +167,6 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
     return portOut
 
-@register_method
 @move
 def draw_quarter_circle(self, name, layer, fillet):
     '''
@@ -255,7 +186,6 @@ def draw_quarter_circle(self, name, layer, fillet):
     self.subtract(temp, [temp_fillet])
     return temp
 
-@register_method
 @move
 def cutout(self, name, zone_size):
     '''Create a mask of size 'zone_size'
@@ -266,7 +196,6 @@ def cutout(self, name, zone_size):
     return [[], [cutout_rect]]
 
 
-@register_method
 @move
 def draw_T(self, name, iTrack, iGap):
     if not self.is_overdev or self.val(self.overdev<0):
@@ -318,7 +247,6 @@ def draw_T(self, name, iTrack, iGap):
 
 
 
-@register_method
 @move
 def draw_end_cable(self, name, iTrack, iGap, typeEnd = 'open', fillet=None):
     iTrack, iGap = parse_entry(iTrack, iGap)
@@ -367,7 +295,6 @@ def draw_end_cable(self, name, iTrack, iGap, typeEnd = 'open', fillet=None):
 
 
 
-@register_method
 def size_dc_gap(self, length, positions, widths, border):
     # Ne pas s'en préoccuper
     length, positions, widths, border = parse_entry(length, positions, widths, border)
@@ -380,7 +307,6 @@ def size_dc_gap(self, length, positions, widths, border):
 
     return pos_cutout, width_cutout, vec_cutout
 
-@register_method
 @move
 
 def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, antenna_height):
@@ -416,7 +342,6 @@ def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, ante
 
     return [[],[antenna]]
 
-@register_method
 @move
 
 def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth):
@@ -454,7 +379,6 @@ def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenn
 
     return [[],[cylinder, antenna]]
 
-@register_method
 @move
 def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param):
     '''
@@ -512,7 +436,6 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
         self.subtract(union, to_subtract)
     return union
 
-@register_method
 @move
 def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
 
@@ -587,7 +510,6 @@ def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
 
     return gaine_probe, ame_probe
 
-@register_method
 @move
 def insert_transmon(self, name, cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc):
     cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc)
@@ -597,7 +519,6 @@ def insert_transmon(self, name, cutout_size, pad_spacing, pad_size, Jwidth, trac
     box = self.box_center([0,0,-cutout_size[2]/2], cutout_size, layer=layer_Default, name=name+"transmon_box")
     self.make_material(box, "\"sapphire\"")
 
-@register_method
 @move
 def draw_alignement_mark(self, name, iSize, iXdist, iYdist):
         iXdist, iYdist, iSize=parse_entry(iXdist, iYdist, iSize)
@@ -612,7 +533,6 @@ def draw_alignement_mark(self, name, iSize, iXdist, iYdist):
         mark2=self.polyline_2D(self.append_points(raw_points), name=name+"_mark_b", layer=layer_TRACK )
         self.gapObjects.append(self.unite([mark1,mark2]))
 
-@register_method
 @move
 def draw_alignement_mark_r(self, name, size, disp, suff=''):
     size, disp = parse_entry(size, disp)
@@ -632,7 +552,6 @@ def draw_alignement_mark_r(self, name, size, disp, suff=''):
         marks_mask.append(self.polyline_2D(self.append_points(self.refy_points(raw_points_mask, disp[0])), name=name+'_mask_b', layer=layer_TRACK))
         self.maskObjects.append(self.unite(marks_mask, name=name+'union_mask'+suff))
 
-@register_method
 def draw_alignement_marks(self, name, size, disp, dict_except=None):
     size, disp = parse_entry(size, disp)
     disp = Vector(disp)
@@ -651,7 +570,6 @@ def draw_alignement_marks(self, name, size, disp, dict_except=None):
     for move, direction_exp, direction_name in zip(moves, directions_exp, directions_name):
         self.draw_alignement_mark_r(name, size, disp*direction_exp+move, suff=direction_name)
 
-@register_method
 @move
 def draw_dose_test(self, name, pad_size, pad_spacing, iTrack, bridge, N, bridge_spacing, length_big_junction, length_small_junction):
     pad_size, pad_spacing, iTrack, bridge, bridge_spacing, length_big_junction, length_small_junction = parse_entry(pad_size, pad_spacing, iTrack, bridge, bridge_spacing, length_big_junction, length_small_junction)
@@ -664,7 +582,6 @@ def draw_dose_test(self, name, pad_size, pad_spacing, iTrack, bridge, N, bridge_
     snail_track = self._connect_snails2(name+'_junction', name+"_portOut1", name+"_portOut2", [20e-6,20e-6], length_big_junction, 3, length_small_junction, 1, N, bridge, bridge_spacing)#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
     return snail_track
 
-@register_method
 @move
 def draw_dose_test_junction(self, name, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0, alternate_width=True, version=0):
         pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry(pad_size, pad_spacing, width, spacing_bridge, width_bridge)
@@ -693,7 +610,6 @@ def draw_dose_test_junction(self, name, pad_size, pad_spacing, width, width_brid
             elif version==1:
                 self._connect_jct(name+"connect", name+"_portOut1", name+"_portOut2", width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True)
 
-@register_method
 @move
 def draw_selfparity(self,
                     name,
@@ -788,7 +704,6 @@ def draw_selfparity(self,
     portOut2 = self.port(name+'_portOut2', [-cutout_size[0]/2, -ind_gap/2-buffer-track/2+track_left/2], [-1,0], track_left+2*self.overdev, gap_left-2*self.overdev)
 #        self.ports[name+'_2'] = portOut2
 
-@register_method
 @move
 def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
                         loop_size, num_junctions, spacing_bridge=0):
@@ -839,7 +754,6 @@ def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
         self.rect_corner_2D([-0.5*(width[0]+0.6*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec8'+str(way+1), layer=11)
         self.rect_corner_2D([-0.5*(width[0]-0.2*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec9'+str(way+1), layer=11)
 
-@register_method
 @move
 def draw_fluxline(self, name, iTrack, iGap, length, track_flux, slope=0.5, sym='center', return_spacing=0, return_depth=0, opposite=False):
     is_fillet=False

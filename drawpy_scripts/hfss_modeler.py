@@ -23,7 +23,7 @@ from .utils import VariableString, \
                             #extract_value_dim, \
                             #rem_unit, \
 
-from .python_modeler import gen_name
+from .model_entity import gen_name
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
