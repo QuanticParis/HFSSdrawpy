@@ -10,7 +10,7 @@ from functools import wraps
 
 from . import Lib
 from ..utils import parse_entry, Vector
-from .utils import move
+from ..body import move
 from ..parameters import layer_TRACK, \
                           layer_GAP, \
                          layer_RLC, \
