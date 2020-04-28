@@ -19,9 +19,37 @@ from ..parameters import layer_TRACK, \
 
 from .utils import move
 
+#Binding the 2D elements of python_modeler
+
 def draw_cable(self, *args, **kwargs):
 
-    self.draw_cable(*args, **kwargs)
+    return self.draw_cable(*args, **kwargs)
+
+def disk_2D(self, pos, radius, axis, **kwargs):
+
+    return self.disk_2D(pos, radius, axis, **kwargs)
+
+def polyline_2D(self, points, closed=True, **kwargs):
+
+    return self.polyline_2D(points, closed, **kwargs)
+
+def path_2D(self, points, port, fillet, **kwargs):
+
+    return self.path_2D(points, port, fillet, **kwargs)
+
+def rect_corner_2D(self, pos, size, **kwargs):
+
+    return self.rect_corner_2D(pos, size, **kwargs)
+
+def rect_center_2D(self, pos, size, **kwargs):
+
+    return self.rect_center_2D(pos, size, **kwargs)
+
+def wirebond_2D(self, pos, ori, ymax, ymin, **kwargs):
+
+    return self.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
+
+#New key elements, they must be preceded by the decorator @move
 
 @move
 def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):

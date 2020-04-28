@@ -9,21 +9,20 @@ import numpy as np
 from functools import wraps
 
 from . import Lib
-from .utils import parse_entry, Vector
-from .KeyElement import move
-from .parameters import layer_TRACK, \
-                        layer_GAP, \
-                        layer_RLC, \
-                        layer_MESH, \
-                        layer_MASK, \
-                        layer_Default, \
-                        layer_PORT, \
-                        eps
+from ..utils import parse_entry, Vector
+from .utils import move
+from ..parameters import layer_TRACK, \
+                          layer_GAP, \
+                         layer_RLC, \
+                         layer_MESH, \
+                         layer_MASK, \
+                         layer_Default, \
+                         layer_PORT, \
+                         eps
 
 __methods__ = []
 register_method = Lib.register_method(__methods__)
 
-@register_method
 def draw_JJ(self, name, iInPort, iOutPort, iInduct='1nH', fillet=None):
     '''
     Draws a Joseph's Son Junction.
@@ -56,7 +55,6 @@ def draw_JJ(self, name, iInPort, iOutPort, iInduct='1nH', fillet=None):
     gap = self.rect_center_2D([0,0], [iLength, iTrack+2*iGap], name=name+'_gap', layer=layer_GAP)
     return gap, portOut1, portOut2, pads
 
-@register_method
 @move
 def draw_IBM_transmon(self,
                    name,
@@ -106,7 +104,6 @@ def draw_IBM_transmon(self,
 
     return pads, cutout, in_junction, out_junction
 
-@register_method
 @move
 def draw_cylinder_transmon(self,
                            name,
@@ -142,7 +139,6 @@ def draw_cylinder_transmon(self,
                                                fillet=None)
     return cylinder_side
 
-@register_method
 @move
 def draw_simple_transmon(self,
                    name,
@@ -202,7 +198,6 @@ def draw_simple_transmon(self,
 
 
 
-@register_method
 @move
 def draw_ZR_transmon(self,
                     name,
@@ -436,7 +431,6 @@ def draw_ZR_transmon(self,
 
     return [portOut1, portOut2, in_junction, out_junction]
 
-@register_method
 @move
 def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1, iTrack_capa=None, iGap_capa=None, premesh=True, tight=False): #iGap_capa is added gap
 
@@ -525,7 +519,6 @@ def draw_capa_inline(self, name, iTrack, iGap, capa_length, pad_spacing, n_pad=1
 
     return portOut1, portOut2
 
-@register_method
 @move
 def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_period, fillet):
     '''
@@ -630,7 +623,6 @@ def draw_capa_interdigitated(self, name, iTrack, iGap, teeth_size, gap_size, N_p
 #    self.ports[name+'_2'] = portOut2
     return portOut1, portOut2
 
-@register_method
 @move
 def draw_dose_test_Nb(self, name, pad_size, pad_spacing, array, correction='0um', alum=False, rot=False):
         pad_size, pad_spacing = parse_entry(pad_size, pad_spacing)
