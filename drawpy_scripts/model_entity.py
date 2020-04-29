@@ -64,7 +64,8 @@ class ModelEntity():
     instances_layered = {layer_TRACK:[], layer_GAP:[], layer_MASK:[],
                          layer_Default:[], layer_RLC:[]}
     dict_instances = {}
-    instances_to_move = []
+    instances_to_move = None
+
     def __init__(self, name, dimension, body, nonmodel=False,
                  layer=layer_Default, coor_sys=None, copy=None):
         name = check_name(self.__class__, name)
@@ -85,7 +86,7 @@ class ModelEntity():
             ModelEntity.instances_layered[layer]=[self]
 
         if copy is None:
-            if ModelEntity.instances_to_move != []:
+            if ModelEntity.instances_to_move is not None:
                 find_last_list(ModelEntity.instances_to_move).append(self)
         else:
             # copy is indeed the original object
@@ -115,7 +116,8 @@ class ModelEntity():
         self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
         self.instances_layered[self.layer].remove(self)
-        general_remove(self, self.instances_to_move)
+        if self.instances_to_move is not None:
+            general_remove(self, self.instances_to_move)
         del self
 
     def copy(self, new_name=None):

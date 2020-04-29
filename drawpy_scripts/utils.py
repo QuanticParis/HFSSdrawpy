@@ -24,6 +24,7 @@ RESISTANCE_UNIT = 'ohm'
 
 def find_last_list(list_entities):
     # return the last list of a set of nested lists
+
     if isinstance(list_entities, list):
         if len(list_entities)==0:
             return list_entities

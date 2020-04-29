@@ -23,14 +23,22 @@ from .parameters import layer_TRACK, \
                         layer_MESH
 
 def modelentities_to_move():
-    inter1 = ModelEntity.instances_to_move
-    inter2 = find_last_list(inter1)
-    return inter2
+    if ModelEntity.instances_to_move is None:
+        ModelEntity.instances_to_move = []
+        return ModelEntity.instances_to_move
+    else:
+        last_list = find_last_list(ModelEntity.instances_to_move)
+        last_list.append([])
+        return last_list
 
 def ports_to_move():
-    inter1 = Port.instances_to_move
-    inter2 = find_last_list(inter1)
-    return inter2
+    if Port.instances_to_move is None:
+        Port.instances_to_move = []
+        return Port.instances_to_move
+    else:
+        last_list = find_last_list(Port.instances_to_move)
+        last_list.append([])
+        return last_list
 
 def append_lists():
     """
@@ -40,8 +48,8 @@ def append_lists():
     ports_to_move().append([])
 
 def reset():
-    Port.instances_to_move = []
-    ModelEntity.instances_to_move = []
+    Port.instances_to_move = None
+    ModelEntity.instances_to_move = None
 
 def move(func):
     '''
@@ -93,7 +101,7 @@ def move(func):
     return moved
 
 class Port():
-    instances_to_move = []
+    instances_to_move = None
     dict_instances  = {}
 
     def __init__(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port, key='name'):
@@ -117,7 +125,7 @@ class Port():
             self.offsets = offsets
             self.N = 0
 
-        if Port.instances_to_move != []:
+        if Port.instances_to_move is not None:
             find_last_list(Port.instances_to_move).append(self)
         if key=='name':  # normal initialisation
             self.dict_instances[name] = self
@@ -288,15 +296,14 @@ class Body(PythonModeler, ContextDecorator):
 
     def __enter__(self):
         #1 We need to keep track of the entities created during the execution of a function
-        self.list_entities = modelentities_to_move()
+        self.list_entities = modelentities_to_move() # save "indentation level"
         self.list_ports = ports_to_move()
-        append_lists()
         return self
 
     def __exit__(self, *exc):
         #4 We move the entity that were created by the last function
-        list_entities_new = modelentities_to_move()
-        list_ports_new = ports_to_move()
+        list_entities_new = find_last_list(ModelEntity.instances_to_move)
+        list_ports_new = find_last_list(Port.instances_to_move)
         pos, angle = self.cursors[-1]
 
         #5 We move the entities_to_move with the right operation
