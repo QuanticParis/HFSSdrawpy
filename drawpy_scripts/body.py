@@ -1,6 +1,5 @@
 import numpy as np
 from functools import wraps
-from contextlib import ContextDecorator
 
 from .utils import Vector, \
                    parse_entry, \
@@ -22,32 +21,14 @@ from .parameters import layer_TRACK, \
                         layer_PORT, \
                         layer_MESH
 
-def modelentities_to_move():
-    if ModelEntity.instances_to_move is None:
-        ModelEntity.instances_to_move = []
-        return ModelEntity.instances_to_move
+def to_move(cls):
+    if cls.instances_to_move is None:
+        cls.instances_to_move = []
+        return cls.instances_to_move
     else:
-        last_list = find_last_list(ModelEntity.instances_to_move)
+        last_list = find_last_list(cls.instances_to_move)
         last_list.append([])
         return last_list
-
-def ports_to_move():
-    if Port.instances_to_move is None:
-        Port.instances_to_move = []
-        return Port.instances_to_move
-    else:
-        last_list = find_last_list(Port.instances_to_move)
-        last_list.append([])
-        return last_list
-
-def append_lists():
-    """
-    We use a tree-like architecture to store the entities and port to be moved at the right place.
-    """
-    modelentities_to_move().append([])
-    ports_to_move().append([])
-
-
 
 def find_corresponding_list(elt, nested_list):
     # return the last list of a set of nested lists
@@ -124,8 +105,6 @@ class Port():
     def reset():
         Port.instances_to_move = []
         Port.dict_instances  = {}
-
-
 
     @classmethod
     def print_instances(cls):
@@ -225,7 +204,7 @@ class Port():
                 y_min_val = _y_min_val
         return y_max, y_min
 
-class Body(PythonModeler, ContextDecorator):
+class Body(PythonModeler):
 
     dict_instances = {}
     def __init__(self, pm=None, coor_sys=None, rel_coor=None, ref_name='Global'): #network
@@ -252,7 +231,6 @@ class Body(PythonModeler, ContextDecorator):
         self.list_ports = []
         self.cursors = [] # tuple to escape list parsing
 
-
     def __call__(self, pos, ori):
         pos, ori = parse_entry(pos, ori)
         if len(pos)==2:
@@ -262,8 +240,8 @@ class Body(PythonModeler, ContextDecorator):
 
     def __enter__(self):
         #1 We need to keep track of the entities created during the execution of a function
-        self.list_entities = modelentities_to_move() # save "indentation level"
-        self.list_ports = ports_to_move()
+        self.list_entities = to_move(ModelEntity) # save "indentation level"
+        self.list_ports = to_move(Port)
         return self
 
     def __exit__(self, *exc):
@@ -298,67 +276,11 @@ class Body(PythonModeler, ContextDecorator):
 
         self.cursors.pop(-1)
         return False
-    # @classmethod
-    # def __enter__(cls):
-    #     #1 We need to keep track of the entities created during the execution of a function
-    #     cls.list_entities_old = modelentities_to_move()
-    #     cls.list_ports_old = ports_to_move()
-    #     append_lists()
-
-    #     #2 We store the current position on the chip where the piece is to be drawn.
-    #     #2 It is modified during the execution of innner functions, which forces us to store them BEFORE the execution
-    #     for key in cls.dict_instances.keys():
-    #         pos = cls.dict_instances[key].current_pos
-    #         ori = cls.dict_instances[key].current_ori
-    #         if len(pos)==2:
-    #             pos.append(0)
-    #         cls.dict_temp_pos[key] = pos
-    #         cls.dict_temp_ori[key] = ori
-    #     return cls
-
-    # @classmethod
-    # def __exit__(cls, *exc):
-    #     #4 We move the entity that were created by the last function
-    #     list_entities_new = modelentities_to_move()
-    #     list_ports_new = ports_to_move()
-
-    #     # Determine which instance of the class we operated on
-
-
-    #     #5 We move the entities_to_move with the right operation
-    #     if len(list_entities_new)>0:
-    #         args[0].rotate(list_entities_new, angle=angle)
-    #         args[0].translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
-
-    #     if len(list_ports_new)>0:
-    #         args[0].rotate_port(list_ports_new, angle)
-    #         args[0].translate_port(list_ports_new, vector=[pos[0], pos[1], pos[2]])
-
-    #     #6 We empty a part of the 'to_move' dictionnaries
-    #     if isinstance(list_entities_old[-1], list):
-    #         a = list_entities_old.pop(-1)
-    #         for entity in a:
-    #             list_entities_old.append(entity)
-    #     else:
-    #         args[0].reset()
-
-    #     if isinstance(list_ports_old[-1], list):
-    #         a = list_ports_old.pop(-1)
-    #         for entity in a:
-    #             list_ports_old.append(entity)
-    #     else:
-    #         args[0].reset()
-
-    #     #7 We reset the current_coor to the last variables saved
-    #     args[0].set_coor(pos, angle)
-    #     return False
-
 
     def move_port(func):
         @wraps(func)
         def moved(*args, **kwargs):
             new_args = [args[0], args[1]]  # args[0] = chip, args[1] = name
-
             compteur = 0
             for i, argument in enumerate(args[2:]):
                 if isinstance(argument, str) and (argument in Port.dict_instances):
@@ -372,30 +294,6 @@ class Body(PythonModeler, ContextDecorator):
                 else:
                     new_args.append(argument)
             return func(*new_args, **kwargs)
-                # else:
-                #     error = '%s arg should be a port'%str(argument)
-                #     raise Exception(error)
-#            print("compteur",compteur)
-#             if compteur==0:
-#                 raise Exception("Please indicate more than 0 port")
-
-#             previous_pos = args[0].current_pos
-#             previous_ori = args[0].current_ori
-#             #TODO
-#             if func.__name__=='draw_cable':
-#                 #TODO It depends of a parameter of drawCable
-#                 args[0].set_coor([0,0],[1,0])
-#             elif func.__name__=='find_path':
-#                 args[0].set_coor([0,0],[1,0])
-
-#             #  the following is not robust
-#             elif compteur==1:
-# #                print(new_args[2].pos)
-#                 args[0].set_coor(new_args[2].pos, new_args[2].ori)
-#             elif compteur==2:
-#                 args[0].set_coor(1/2*(new_args[2].pos+new_args[3].pos), new_args[2].ori)
-#             new_args = tuple(new_args)
-#             return KeyElement._moved(func, previous_pos, previous_ori, *new_args, **kwargs)
         return moved
 
     def port(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port):

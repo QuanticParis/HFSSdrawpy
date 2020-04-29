@@ -141,32 +141,13 @@ class PythonModeler():
             VariableString.variables[name]=value
             return VariableString.instances[name]
 
-#    def body(self, body_name, rel_coor=None, ref_name='Global'):
-#        """
-#        Creates a Body object which inherits from the current PythonModeler object.
-#        The body is associated with a coordinate system of choice.
-#        """
-#        # Note: for now coordinate systems are not reactualized at each run
-#        if rel_coor is None:
-#            rel_coor = [[0, 0, 0],  # origin
-#                        [1, 0, 0],  # new_x
-#                        [0, 1, 0]]  # new_y
-#        else:
-#            rel_coor = parse_entry(rel_coor)
-#        self.interface.create_coor_sys(coor_sys=body_name, rel_coor=rel_coor,
-#                                       ref_name=ref_name)
-#        _body = Body(self, body_name, rel_coor, ref_name)
-#        return _body
-
     def generate_gds(self, folder, filename):
         file = os.path.join(folder, filename)
         if self.mode=='gds':
             self.interface.generate_gds(file)
 
     def make_material(self, material_params, name):
-
         raise NotImplementedError()
-        #raise ImportWarning("make material is not yet implemented")
 
     ### Drawing methods
 
@@ -395,107 +376,3 @@ class PythonModeler():
         if self.mode == 'gds':
             vector = val(vector)
         self.interface.translate(entities, vector)
-
-# class Network(PythonModeler):
-#     variables= None
-#     to_bond=[]
-
-#     def __init__(self, name, coor_sys, interface, variables):
-#         self.interface = interface
-#         self.coor_sys = coor_sys
-#         self.name = name
-#         self.variables = variables
-# #        self.__class__.variables = variables
-
-
-#     def update(self, coor_sys):
-#         self.coor_sys = coor_sys
-
-#     def port(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port):
-#         return Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
-
-#     def draw_capa(self, name, iInPort, iOutPort, iLength, iWidth, iSize):
-#         '''
-#         Inputs:
-#         -------
-#         name: string name of object
-#         iIn: (position, direction, track, gap) defines the input port
-#         iOut: (position, direction, track, gap) defines the output port
-#                position and direction are None: this is calculated from
-#                other parameters
-#         iLength: (float) length of pads
-#         iWidth: (float) width of pads
-#         iSize: (float) spacing between pads (see drawing)
-
-#         Outputs:
-#         --------
-#         retIn: same as iIn, with flipped vector
-#         retOut: calculated output port to match all input dimensions
-
-#                  iSize
-#               +--+  +--+
-#               |  |  |  |
-#             +-+  |  |  +-+
-#         iIn |    |  |    | iOut
-#             +-+  |  |  +-+
-#               |  |  |  |
-#               +--+  +--+
-#         '''
-
-
-
-#         iLength, iWidth,iSize = parse_entry(iLength, iWidth, iSize)
-#         retIn = [[0,0,0], 0, iInPort.track, iInPort.gap]
-#         retOut = [[iInPort.gap+iOutPort.gap+iSize+2*iWidth,0],0 , iOutPort.track, iOutPort.gap]
-
-#         points1 = self.append_points([(iInPort.gap+iWidth, 0),
-#                                      (0, -iLength/2),
-#                                      (-iWidth, 0),
-#                                      (0, iLength/2-iInPort.track/2),
-#                                      (-iInPort.gap, 0),
-#                                      (0, iInPort.track),
-#                                      (iInPort.gap, 0),
-#                                      (0, iLength/2-iInPort.track/2),
-#                                    (iWidth, 0)])
-
-
-#         trackIn = self.polyline_2D(points1, name=name+'_track1', layer=layer_TRACK)
-# #        self.chip.trackObjects.append(trackIn)
-
-#         points2 = self.append_points([(iInPort.gap+iWidth+iSize, 0),
-#                                      (0, -iLength/2),
-#                                      (+iWidth, 0),
-#                                      (0, iLength/2-iOutPort.track/2),
-#                                      (+iOutPort.gap, 0),
-#                                      (0, iOutPort.track),
-#                                      (-iOutPort.gap, 0),
-#                                      (0, iLength/2-iOutPort.track/2),
-#                                      (-iWidth, 0)])
-#         trackOut = self.polyline_2D(points2, name=name+'_track2', layer=layer_TRACK)
-# #        self.chip.trackObjects.append(trackOut)
-
-#         points3 = self.append_points([(0, 0),
-#                                      (0, iLength/2+iInPort.gap),
-#                                      (iInPort.gap+iWidth+iSize/2, 0),
-#                                      (0, iOutPort.gap-iInPort.gap),
-#                                      (iOutPort.gap+iWidth+iSize/2, 0),
-#                                      (0, -iLength-2*iOutPort.gap),
-#                                      (-(iOutPort.gap+iWidth+iSize/2),0),
-#                                      (0, iOutPort.gap-iInPort.gap),
-#                                      (-(iInPort.gap+iWidth+iSize/2),0)
-#                                      ])
-#         gap1 = self.polyline_2D(points3, name=name+'_gap1', layer=layer_GAP)
-# #        self.chip.gapObjects.append(gap1)
-# #
-# #
-
-
-
-# #        TODO !!
-# #        if not self.is_litho:
-# #            self.draw(self.name+"_mesh", points)
-# #            self.modeler.assign_mesh_length(self.name+"_mesh",1/2*iLength)
-
-#         self.iIn = retIn
-#         self.iOut = retOut
-# #        return [retIn, retOut]
