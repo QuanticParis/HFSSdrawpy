@@ -47,58 +47,24 @@ def append_lists():
     modelentities_to_move().append([])
     ports_to_move().append([])
 
-def reset():
-    Port.instances_to_move = None
-    ModelEntity.instances_to_move = None
-
-def move(func):
-    '''
-    Decorator which moves the KeyElements and CustomElements (rotation+translation) with the parameters given by get_current_coor
-
-    Input : func to move
-    Output : moved is the composition of func with the rotation+translation of the ModeleEntities created during its execution
-    '''
-    @wraps(func)
-    # At the begining of the execution, we decide that all elements created go to instances_to_move
-    def moved(*args, **kwargs):
 
 
-
-        #3 We execute the actual function
-        result = func(*args, **kwargs)
-
-        #4 We move the entity that were created by the last function
-        list_entities_new = args[0].modelentities_to_move()
-        list_ports_new = args[0].ports_to_move()
-
-        #5 We move the entities_to_move with the right operation
-        if len(list_entities_new)>0:
-            args[0].rotate(list_entities_new, angle=angle)
-            args[0].translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
-
-        if len(list_ports_new)>0:
-            args[0].rotate_port(list_ports_new, angle)
-            args[0].translate_port(list_ports_new, vector=[pos[0], pos[1], pos[2]])
-
-        #6 We empty a part of the 'to_move' dictionnaries
-        if isinstance(list_entities_old[-1], list):
-            a = list_entities_old.pop(-1)
-            for entity in a:
-                list_entities_old.append(entity)
+def find_corresponding_list(elt, nested_list):
+    # return the last list of a set of nested lists
+    if isinstance(nested_list, list):
+        if elt in nested_list:
+            return nested_list
         else:
-            args[0].reset()
-
-        if isinstance(list_ports_old[-1], list):
-            a = list_ports_old.pop(-1)
-            for entity in a:
-                list_ports_old.append(entity)
-        else:
-            args[0].reset()
-
-        #7 We reset the current_coor to the last variables saved
-        args[0].set_coor(pos, angle)
-        return result
-    return moved
+            for elt_list in nested_list:
+                if isinstance(elt_list, list):
+                    found_list = find_corresponding_list(elt, elt_list)
+                    if found_list:
+                        break
+            else:
+                return False
+            return found_list
+    else:
+        return None
 
 class Port():
     instances_to_move = None
@@ -321,14 +287,14 @@ class Body(PythonModeler, ContextDecorator):
             for entity in a:
                 self.list_entities.append(entity)
         else:
-            reset()
+            ModelEntity.instances_to_move = None
 
         if isinstance(self.list_ports[-1], list):
             a = self.list_ports.pop(-1)
             for entity in a:
                 self.list_ports.append(entity)
         else:
-            reset()
+            Port.instances_to_move = None
 
         self.cursors.pop(-1)
         return False
@@ -504,6 +470,16 @@ class Body(PythonModeler, ContextDecorator):
             meander_offset = [meander_offset]*len(to_meander)
 
         ports = list(ports)
+
+        indent_level = find_corresponding_list(ports[0], Port.instances_to_move)
+        if indent_level is not None:
+            if indent_level:  # the found list
+                for port in ports:
+                    if not port in indent_level:
+                        msg = 'Trying to connect ports from different \
+                                indentation levels: port %s'%(port.name)
+                        raise IndentationError(msg)
+
 
         # asserts neither in nor out port are constraint_ports
         if ports[0].constraint_port and ports[-1].constraint_port:
