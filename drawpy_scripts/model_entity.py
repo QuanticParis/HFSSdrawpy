@@ -22,7 +22,7 @@ def add_to_corresponding_list(elt, nested_list, added_elt):
                 return False
             return True
     else:
-        raise TypeError('Argument is not a list')
+        pass#raise TypeError('Argument is not a list')
 
 def general_remove(elt, nested_list):
     # same as list.remove(elt) but for a nested list
@@ -85,7 +85,8 @@ class ModelEntity():
             ModelEntity.instances_layered[layer]=[self]
 
         if copy is None:
-            find_last_list(ModelEntity.instances_to_move).append(self)
+            if ModelEntity.instances_to_move != []:
+                find_last_list(ModelEntity.instances_to_move).append(self)
         else:
             # copy is indeed the original object
             # the new object should be put in the same list indent

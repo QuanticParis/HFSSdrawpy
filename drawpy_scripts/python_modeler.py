@@ -105,11 +105,6 @@ class PythonModeler():
 
     ### Utils methods
 
-    @staticmethod
-    def reset(self):
-        Port.instances_to_move = []
-        ModelEntity.instances_to_move = []
-
     def set_active_coor_system(func):
         """
         Defines a wrapper/decorator which allows the user to always work in the coordinate system of the chosen chip.

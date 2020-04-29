@@ -17,11 +17,8 @@ from ..parameters import layer_TRACK, \
                         layer_PORT, \
                         eps
 
-from ..body import move
-
 #New key elements, they must be preceded by the decorator @move
 
-@move
 def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):
     """
     Creates and draws a port
@@ -89,7 +86,6 @@ def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):
     port = self.port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
     return port
 
-@move
 def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iSlope=1, tr_line=True):
     '''
     Draws a CPW connector for inputs and outputs.
@@ -150,8 +146,8 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
         mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
 
-    self.set_coor([adaptDist+pcb_gap+iBondLength,0], [1,0])
-    portOut = create_port(self, name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
+    with self([adaptDist+pcb_gap+iBondLength,0], [1,0]):
+        portOut = create_port(self, name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
 
     if tr_line:
         ohm = self.rect_corner_2D([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
@@ -165,7 +161,6 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
     return portOut
 
-@move
 def draw_quarter_circle(self, name, layer, fillet):
     '''
     Subtract a rectangle and a filleted square of size 'fillet'
@@ -184,7 +179,6 @@ def draw_quarter_circle(self, name, layer, fillet):
     self.subtract(temp, [temp_fillet])
     return temp
 
-@move
 def cutout(self, name, zone_size):
     '''Create a mask of size 'zone_size'
     '''
@@ -193,8 +187,6 @@ def cutout(self, name, zone_size):
     #self.maskObjects.append(cutout_rect)
     return [[], [cutout_rect]]
 
-
-@move
 def draw_T(self, name, iTrack, iGap):
     if not self.is_overdev or self.val(self.overdev<0):
         cutout = self.rect_center_2D([0,self.overdev/2], [2*iGap+iTrack, 2*iGap+iTrack-self.overdev], name=name+'_cutout', layer=layer_GAP)
@@ -243,9 +235,6 @@ def draw_T(self, name, iTrack, iGap):
 
     return [[portOut1,portOut2,portOut3], [track, cutout]]
 
-
-
-@move
 def draw_end_cable(self, name, iTrack, iGap, typeEnd = 'open', fillet=None):
     iTrack, iGap = parse_entry(iTrack, iGap)
     track, mask = None, None # track is not created in every cases
@@ -305,7 +294,6 @@ def size_dc_gap(self, length, positions, widths, border):
 
     return pos_cutout, width_cutout, vec_cutout
 
-@move
 
 def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, antenna_height):
     '''
@@ -339,8 +327,6 @@ def cavity_3D(self, name, cylinder_radius, cylinder_height, antenna_radius, ante
     outer_cylinder.assign_perfect_E(name+'_PerfE')
 
     return [[],[antenna]]
-
-@move
 
 def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenna_height, insert_radius, depth):
 
@@ -377,7 +363,6 @@ def cavity_3D_simple(self, name, radius, cylinder_height, antenna_radius, antenn
 
     return [[],[cylinder, antenna]]
 
-@move
 def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param):
     '''
     cavity_param = [rext,hext, rint, hint]
@@ -434,7 +419,6 @@ def cavity_3D_with_ports(self, name, cavity_param, transmons_param, ports_param)
         self.subtract(union, to_subtract)
     return union
 
-@move
 def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
 
     """
@@ -508,7 +492,6 @@ def cable_3D(self, name, r_gaine, r_dielec, r_ame, L_cable, L_connector, axis):
 
     return gaine_probe, ame_probe
 
-@move
 def insert_transmon(self, name, cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc):
     cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc = parse_entry(cutout_size, pad_spacing, pad_size, Jwidth, track, gap, Jinduc)
     self.set_coor(pos = ['0mm', '0mm','0mm'], ori=[1,0])
@@ -517,7 +500,6 @@ def insert_transmon(self, name, cutout_size, pad_spacing, pad_size, Jwidth, trac
     box = self.box_center([0,0,-cutout_size[2]/2], cutout_size, layer=layer_Default, name=name+"transmon_box")
     self.make_material(box, "\"sapphire\"")
 
-@move
 def draw_alignement_mark(self, name, iSize, iXdist, iYdist):
         iXdist, iYdist, iSize=parse_entry(iXdist, iYdist, iSize)
         raw_points = [(iXdist,iYdist),
@@ -531,7 +513,6 @@ def draw_alignement_mark(self, name, iSize, iXdist, iYdist):
         mark2=self.polyline_2D(self.append_points(raw_points), name=name+"_mark_b", layer=layer_TRACK )
         self.gapObjects.append(self.unite([mark1,mark2]))
 
-@move
 def draw_alignement_mark_r(self, name, size, disp, suff=''):
     size, disp = parse_entry(size, disp)
     raw_points = [(*disp,),
@@ -568,7 +549,6 @@ def draw_alignement_marks(self, name, size, disp, dict_except=None):
     for move, direction_exp, direction_name in zip(moves, directions_exp, directions_name):
         self.draw_alignement_mark_r(name, size, disp*direction_exp+move, suff=direction_name)
 
-@move
 def draw_dose_test(self, name, pad_size, pad_spacing, iTrack, bridge, N, bridge_spacing, length_big_junction, length_small_junction):
     pad_size, pad_spacing, iTrack, bridge, bridge_spacing, length_big_junction, length_small_junction = parse_entry(pad_size, pad_spacing, iTrack, bridge, bridge_spacing, length_big_junction, length_small_junction)
     pad_size = Vector(pad_size)
@@ -580,7 +560,6 @@ def draw_dose_test(self, name, pad_size, pad_spacing, iTrack, bridge, N, bridge_
     snail_track = self._connect_snails2(name+'_junction', name+"_portOut1", name+"_portOut2", [20e-6,20e-6], length_big_junction, 3, length_small_junction, 1, N, bridge, bridge_spacing)#(squid_size, width_top, n_top, width_bot, n_bot, N, width_bridge)
     return snail_track
 
-@move
 def draw_dose_test_junction(self, name, pad_size, pad_spacing, width, width_bridge, n_bridge=1, spacing_bridge=0, alternate_width=True, version=0):
         pad_size, pad_spacing, width, spacing_bridge, width_bridge = parse_entry(pad_size, pad_spacing, width, spacing_bridge, width_bridge)
         pad_size = Vector(pad_size)
@@ -608,7 +587,6 @@ def draw_dose_test_junction(self, name, pad_size, pad_spacing, width, width_brid
             elif version==1:
                 self._connect_jct(name+"connect", name+"_portOut1", name+"_portOut2", width_bridge, n=n_bridge, spacing_bridge=spacing_bridge, assymetry=0, width_jct=width_jct, thin=True)
 
-@move
 def draw_selfparity(self,
                     name,
                     cutout_size,
@@ -702,7 +680,6 @@ def draw_selfparity(self,
     portOut2 = self.port(name+'_portOut2', [-cutout_size[0]/2, -ind_gap/2-buffer-track/2+track_left/2], [-1,0], track_left+2*self.overdev, gap_left-2*self.overdev)
 #        self.ports[name+'_2'] = portOut2
 
-@move
 def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
                         loop_size, num_junctions, spacing_bridge=0):
     pad_size, pad_spacing, width, spacing_bridge, width_bridge, loop_size = parse_entry(pad_size, pad_spacing, width, spacing_bridge, width_bridge, loop_size)
@@ -752,7 +729,6 @@ def draw_cos2phi(self, name, pad_size, pad_spacing, width, width_bridge,
         self.rect_corner_2D([-0.5*(width[0]+0.6*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec8'+str(way+1), layer=11)
         self.rect_corner_2D([-0.5*(width[0]-0.2*loop_size[0]), way*0.5*(3/8*loop_size[1]-width[0])], [0.2*loop_size[0]+width[0], way*width[0]], name=name+'rec9'+str(way+1), layer=11)
 
-@move
 def draw_fluxline(self, name, iTrack, iGap, length, track_flux, slope=0.5, sym='center', return_spacing=0, return_depth=0, opposite=False):
     is_fillet=False
     iTrack, iGap, length, track_flux, return_spacing, return_depth = parse_entry(iTrack, iGap, length, track_flux, return_spacing, return_depth)
