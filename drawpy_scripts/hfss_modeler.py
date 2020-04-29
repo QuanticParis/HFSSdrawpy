@@ -1165,15 +1165,10 @@ class HfssModeler(COMWrapper):
         return self.parent.eval_var_str(name, unit=unit)
 
     def fillet(self, entity, radius, vertex_indices):
-        vertices = self.get_vertex_ids(entity)
-        if isinstance(vertex_index, list):
-            to_fillet = [int(vertices[v]) for v in vertex_indices]
-        elif isinstance(vertex_index, int):
-            to_fillet = [int(vertices[vertex_index])]
-        else:
-            msg = 'Arg vertex_index should be either a list or an int. \
-                   Given %s'%type(vertex_index)
-            raise TypeError(msg)
+        hfss_vertex_indices = self.get_vertex_ids(entity)
+        if not isinstance(vertex_indices, list):
+            vertex_indices = [vertex_indices]
+        to_fillet = [int(hfss_vertex_indices[v]) for v in vertex_indices]
 
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                           ["NAME:Parameters",
@@ -1182,7 +1177,6 @@ class HfssModeler(COMWrapper):
                             "Vertices:=", to_fillet,
                             "Radius:=", radius,
                             "Setback:=", "0mm"]])
-        return None
 
     def fillets(self, entity, radius):
         vertices = self.get_vertex_ids(entity)

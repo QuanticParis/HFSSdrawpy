@@ -5,41 +5,7 @@ from .parameters import layer_TRACK, \
                         layer_RLC
 
 from .utils import Vector, parse_entry, check_name, find_last_list, \
-    add_to_corresponding_list
-
-def general_remove(elt, nested_list):
-    # same as list.remove(elt) but for a nested list
-    if isinstance(nested_list, list):
-        if elt in nested_list:
-            nested_list.remove(elt)
-            return True
-        else:
-            for elt_list in nested_list:
-                if isinstance(elt_list, list):
-                    success = general_remove(elt, elt_list)
-                    if success:
-                        break
-    else:
-        raise TypeError('Argument is not a list')
-
-def gen_name(name):
-    # routine to mimic the default naming procedure of HFSS when object
-    # already exists
-    end = ''
-    for ii in name[::-1]:
-        if ii.isdigit():
-            end+=ii
-        else:
-            break
-    if end=='':
-        return name+'1'
-    number = int(end[::-1])
-    if number==0:
-        return name+'1'
-    else:
-        prefix = name[:-len(str(number))]
-        suffix = str(number+1)
-        return prefix+suffix
+    add_to_corresponding_list, gen_name, val
 
 class ModelEntity():
     # this should be the objects we are handling on the python interface
@@ -136,13 +102,13 @@ class ModelEntity():
         copy.translate(vec)
         return copy
 
-    def fillet(self, radius, vertex_indices):
+    def fillet(self, radius, vertex_indices=None):
+        radius = parse_entry(radius)
         # fillet a subset of vertices
         # vertex_indices can be an int or a list of int
-        if self.mode=='gds':
-            raise NotImplementedError()
-        else:
-            self.body.interface.fillet(self, radius, vertex_indices)
+        if self.body.mode=='gds':
+            radius = val(radius)
+        self.body.interface.fillet(self, radius, vertex_indices)
 
     def fillets(self, radius):
         # fillet all corner of an entity

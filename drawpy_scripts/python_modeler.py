@@ -19,6 +19,7 @@ from .utils import VariableString, \
                    extract_value_dim, \
                    parse_entry, \
                    _val, val, equal_float, \
+                   entity_kwargs, \
                    way, \
                    Vector
 
@@ -35,13 +36,6 @@ from .parameters import layer_Default
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
-
-def entity_kwargs(kwargs, keys):
-    entity_kwargs = {}
-    for key in keys:
-        if key in kwargs.keys():
-            entity_kwargs[key] = kwargs[key]
-    return entity_kwargs
 
 class PythonModeler():
     """

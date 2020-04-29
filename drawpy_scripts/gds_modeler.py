@@ -273,21 +273,11 @@ class GdsModeler():
     def create_object_from_face(self, name):
         pass
 
-    def fillet(self, entity, radius, vertices):
-        raise NotImplementedError()
-        #TODO : Correct the choice of vertices
-        #1 We need to extract the associated polygon
+    def fillet(self, entity, radius, vertex_indices):
         polygon = self.gds_object_instances[entity.name]
-        points = polygon.polygons[0]
-#        print("points = ", points)
-#        #2 We adapt the format of the list of radius
-#        vertices_number = len(points)
-##        new radius = [(i in vertex_index) for i in range(vertices_number)]
-        new_radius=[0]*len(points)
-        for i in vertices:
-            new_radius[i]=radius
-#        #3 We apply fillet on the polygon
-        polygon.fillet(new_radius)
+        vertices_number = len(polygon.polygons[0])
+        radii = [radius if (ii in vertex_indices) else 0 for ii in range(vertices_number)]
+        polygon.fillet([radii], max_points=0, precision=TOLERANCE)
 
     def fillets(self, entity, radius):
         if entity.dimension==1:
