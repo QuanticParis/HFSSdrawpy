@@ -5,6 +5,8 @@ from .utils import Vector, \
                    parse_entry, \
                    check_name, \
                    find_last_list, \
+                   find_corresponding_list, \
+                   to_move, \
                    _val, \
                    val, \
                    way
@@ -20,32 +22,6 @@ from .parameters import layer_TRACK, \
                         layer_RLC, \
                         layer_PORT, \
                         layer_MESH
-
-def to_move(cls):
-    if cls.instances_to_move is None:
-        cls.instances_to_move = []
-        return cls.instances_to_move
-    else:
-        last_list = find_last_list(cls.instances_to_move)
-        last_list.append([])
-        return last_list
-
-def find_corresponding_list(elt, nested_list):
-    # return the last list of a set of nested lists
-    if isinstance(nested_list, list):
-        if elt in nested_list:
-            return nested_list
-        else:
-            for elt_list in nested_list:
-                if isinstance(elt_list, list):
-                    found_list = find_corresponding_list(elt, elt_list)
-                    if found_list:
-                        break
-            else:
-                return False
-            return found_list
-    else:
-        return None
 
 class Port():
     instances_to_move = None

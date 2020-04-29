@@ -18,7 +18,7 @@ from .utils import VariableString, \
                    extract_value_unit, \
                    extract_value_dim, \
                    parse_entry, \
-                   _val, val, \
+                   _val, val, equal_float, \
                    way, \
                    Vector
 
@@ -33,26 +33,8 @@ from .parameters import layer_Default
 
 ##IMPORT KEY / CUSTOM Elements
 
-
 ureg = UnitRegistry()
 Q = ureg.Quantity
-
-def equal_float(float1, float2):
-    if float1!=0:
-        rel_diff = abs((float1-float2)/float1)
-        if rel_diff<1e-5:
-            return True
-        else:
-            return False
-
-    elif float2!=0:
-        rel_diff = abs((float1-float2)/float2)
-        if rel_diff<1e-5:
-            return True
-        else:
-            return False
-    else:
-        return True
 
 def entity_kwargs(kwargs, keys):
     entity_kwargs = {}

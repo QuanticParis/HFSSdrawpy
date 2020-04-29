@@ -22,6 +22,15 @@ INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
+def entity_kwargs(kwargs, keys):
+    entity_kwargs = {}
+    for key in keys:
+        if key in kwargs.keys():
+            entity_kwargs[key] = kwargs[key]
+    return entity_kwargs
+
+### List handling
+# Useful function to manipulate to_move entities and ports
 def find_last_list(list_entities):
     # return the last list of a set of nested lists
 
@@ -36,6 +45,86 @@ def find_last_list(list_entities):
     else:
         raise TypeError('There are no list')
 
+def add_to_corresponding_list(elt, nested_list, added_elt):
+    # return the last list of a set of nested lists
+    if isinstance(nested_list, list):
+        if elt in nested_list:
+            index = nested_list.index(elt)
+            nested_list.insert(index+1, added_elt)
+            return True
+        else:
+            for elt_list in nested_list:
+                if isinstance(elt_list, list):
+                    if add_to_corresponding_list(elt, elt_list, added_elt):
+                        break
+            else:
+                return False
+            return True
+    else:
+        pass#raise TypeError('Argument is not a list')
+
+def general_remove(elt, nested_list):
+    # same as list.remove(elt) but for a nested list
+    if isinstance(nested_list, list):
+        if elt in nested_list:
+            nested_list.remove(elt)
+            return True
+        else:
+            for elt_list in nested_list:
+                if isinstance(elt_list, list):
+                    success = general_remove(elt, elt_list)
+                    if success:
+                        break
+    else:
+        raise TypeError('Argument is not a list')
+
+def to_move(cls):
+    if cls.instances_to_move is None:
+        cls.instances_to_move = []
+        return cls.instances_to_move
+    else:
+        last_list = find_last_list(cls.instances_to_move)
+        last_list.append([])
+        return last_list
+
+def find_corresponding_list(elt, nested_list):
+    # return the last list of a set of nested lists
+    if isinstance(nested_list, list):
+        if elt in nested_list:
+            return nested_list
+        else:
+            for elt_list in nested_list:
+                if isinstance(elt_list, list):
+                    found_list = find_corresponding_list(elt, elt_list)
+                    if found_list:
+                        break
+            else:
+                return False
+            return found_list
+    else:
+        return None
+
+### Naming
+
+def gen_name(name):
+    # routine to mimic the default naming procedure of HFSS when object
+    # already exists
+    end = ''
+    for ii in name[::-1]:
+        if ii.isdigit():
+            end+=ii
+        else:
+            break
+    if end=='':
+        return name+'1'
+    number = int(end[::-1])
+    if number==0:
+        return name+'1'
+    else:
+        prefix = name[:-len(str(number))]
+        suffix = str(number+1)
+        return prefix+suffix
+
 def check_name(_class, name):
     i = 0
     new_name = name
@@ -45,6 +134,25 @@ def check_name(_class, name):
     if new_name != name:
         print("%s: changed '%s' name into '%s'"%(_class.__name__, name, new_name))
     return new_name
+
+### Litteral Expressions
+
+def equal_float(float1, float2):
+    if float1!=0:
+        rel_diff = abs((float1-float2)/float1)
+        if rel_diff<1e-5:
+            return True
+        else:
+            return False
+
+    elif float2!=0:
+        rel_diff = abs((float1-float2)/float2)
+        if rel_diff<1e-5:
+            return True
+        else:
+            return False
+    else:
+        return True
 
 def simplify_arith_expr(expr):
     try:
@@ -133,23 +241,6 @@ def val(*entries):
         return parsed[0]
     else:
         return parsed
-
-def equal_float(float1, float2):
-    if float1!=0:
-        rel_diff = abs((float1-float2)/float1)
-        if rel_diff<1e-5:
-            return True
-        else:
-            return False
-
-    elif float2!=0:
-        rel_diff = abs((float1-float2)/float2)
-        if rel_diff<1e-5:
-            return True
-        else:
-            return False
-    else:
-        return True
 
 def way(vec):
     if vec[1] != 0:

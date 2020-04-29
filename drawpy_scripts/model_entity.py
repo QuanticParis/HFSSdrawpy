@@ -4,25 +4,8 @@ from .parameters import layer_TRACK, \
                         layer_Default, \
                         layer_RLC
 
-from .utils import Vector, parse_entry, check_name, find_last_list
-
-def add_to_corresponding_list(elt, nested_list, added_elt):
-    # return the last list of a set of nested lists
-    if isinstance(nested_list, list):
-        if elt in nested_list:
-            index = nested_list.index(elt)
-            nested_list.insert(index+1, added_elt)
-            return True
-        else:
-            for elt_list in nested_list:
-                if isinstance(elt_list, list):
-                    if add_to_corresponding_list(elt, elt_list, added_elt):
-                        break
-            else:
-                return False
-            return True
-    else:
-        pass#raise TypeError('Argument is not a list')
+from .utils import Vector, parse_entry, check_name, find_last_list, \
+    add_to_corresponding_list
 
 def general_remove(elt, nested_list):
     # same as list.remove(elt) but for a nested list
