@@ -236,14 +236,15 @@ class Body(PythonModeler):
             self.translate_port(list_ports_new, vector=[pos[0], pos[1], pos[2]])
 
         #6 We empty a part of the 'to_move' lists
-        if isinstance(self.list_entities[-1], list):
+        if len(self.list_entities) > 0 and isinstance(self.list_entities[-1], 
+                                                      list):
             a = self.list_entities.pop(-1)
             for entity in a:
                 self.list_entities.append(entity)
         else:
             ModelEntity.instances_to_move = None
-
-        if isinstance(self.list_ports[-1], list):
+        
+        if len(self.list_ports) > 0 and isinstance(self.list_ports[-1], list):
             a = self.list_ports.pop(-1)
             for entity in a:
                 self.list_ports.append(entity)
