@@ -1170,6 +1170,8 @@ class HfssModeler(COMWrapper):
             vertex_indices = [vertex_indices]
         to_fillet = [int(hfss_vertex_indices[v]) for v in vertex_indices]
 
+        pos = self._modeler.GetVertexPosition(to_fillet[0])
+            
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                           ["NAME:Parameters",
                            ["NAME:FilletParameters",
@@ -1177,6 +1179,7 @@ class HfssModeler(COMWrapper):
                             "Vertices:=", to_fillet,
                             "Radius:=", radius,
                             "Setback:=", "0mm"]])
+
 
     def fillets(self, entity, radius):
         vertices = self.get_vertex_ids(entity)
@@ -1191,7 +1194,7 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
-
+            
     def _fillet_edges(self, entity, radius, edge_index):
         edges = self.get_edge_ids(entity.name)
         if isinstance(edge_index, list):
