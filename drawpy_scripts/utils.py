@@ -182,7 +182,7 @@ def extract_value_dim(expr):
     """
     return str(Q(expr).dimensionality)
 
-def parse_entry(*entries):
+def parse_entry(*entries, marker=True):
     #should take a list of tuple of list... of int, float or str...
     parsed = []
     for entry in entries:
@@ -191,14 +191,14 @@ def parse_entry(*entries):
         else:
             if isinstance(entry, list):
                 if isinstance(entry, Vector):
-                    parsed.append(Vector(parse_entry(*entry)))
+                    parsed.append(Vector(parse_entry(*entry, marker=False)))
                 else:
-                    parsed.append(parse_entry(*entry))
+                    parsed.append(parse_entry(*entry, marker=False))
             elif isinstance(entry, tuple):
-                parsed.append(tuple(parse_entry(*entry)))
+                parsed.append(tuple(parse_entry(*entry, marker=False)))
             else:
                 raise TypeError('Not foreseen type: %s'%(type(entry)))
-    if len(parsed)==1:
+    if len(parsed)==1 and marker:
         return parsed[0]
     else:
         return parsed
@@ -221,7 +221,7 @@ def _val(elt):
     else:
         return elt
 
-def val(*entries):
+def val(*entries, marker=True):
     #should take a list of tuple of list... of int, float or str...
     parsed = []
     for entry in entries:
@@ -230,14 +230,14 @@ def val(*entries):
         else:
             if isinstance(entry, list):
                 if isinstance(entry, Vector):
-                    parsed.append(Vector(val(*entry)))
+                    parsed.append(Vector(val(*entry, marker=False)))
                 else:
-                    parsed.append(val(*entry))
+                    parsed.append(val(*entry, marker=False))
             elif isinstance(entry, tuple):
-                parsed.append(tuple(val(*entry)))
+                parsed.append(tuple(val(*entry, marker=False)))
             else:
                 raise TypeError('Not foreseen type: %s'%(type(entry)))
-    if len(parsed)==1:
+    if len(parsed)==1 and marker:
         return parsed[0]
     else:
         return parsed
@@ -296,8 +296,6 @@ class VariableString(str):
 
     def value(self):
         # print(self.variables)
-        # print(self.instances)
-        # print(self)
         try:
             _value = float(eval(str(sympy_parser.parse_expr(str(sympy_parser.parse_expr(self, self.variables)), self.variables))))
         except Exception:

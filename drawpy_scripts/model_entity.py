@@ -141,32 +141,61 @@ class ModelEntity():
         return result_index, len(vertices), is_trigo
 
     def fillet(self, radius, vertex_indices=None):
+
         assert (not self.is_fillet), 'Cannot fillet an already filleted entity'
+
+        if vertex_indices is None:
+            # filleting all vertices
+            msg = 'Should provide a single radius when filleting all vertices'
+            assert not isinstance(radius, list), msg
+            if self.body.mode=='gds':
+                radius = val(radius)
+            self.body.interface.fillet(self, radius)
+            return None
+
         if not isinstance(vertex_indices, list):
             vertex_indices = [vertex_indices]
+        if isinstance(radius, list):
+            # expect vertex_indices also a list of list
+            msg = 'a vertex_indices list should be given for each radius'
+            assert (len(radius) == len(vertex_indices)), msg
+            assert (isinstance(vertex_indices[0], list)), msg
+        else:
+            radius = [radius]
+            vertex_indices = [vertex_indices]
+
         if self.is_boolean:
             # should find the lowest/leftest vertex to have consistent behaviour
             index_start, nb_vertices, is_trigo = self.find_start_vertex()
             if not is_trigo:
-                vertex_indices = [-index for index in vertex_indices]
-            vertex_indices = [(index_start + index) % nb_vertices 
+                vertex_indices = [[-ind for ind in index]
+                                  for index in vertex_indices]
+            vertex_indices = [[(index_start + ind) % nb_vertices
+                               for ind in index]
                               for index in vertex_indices]
-        if len(vertex_indices)>0:
-            self.is_fillet = True
+
+        self.is_fillet = True
         radius = parse_entry(radius)
-        # fillet a subset of vertices
-        # vertex_indices can be an int or a list of int
+        # check that one index is not present twice
+        flat_indices = []
+        for indices in vertex_indices:
+            flat_indices += indices
+        msg = 'Vertex index is present more than once in fillet'
+        assert len(flat_indices)==len(set(flat_indices)), msg
         if self.body.mode=='gds':
             radius = val(radius)
-        self.body.interface.fillet(self, radius, vertex_indices)
-
-    def fillets(self, radius):
-        # fillet all corner of an entity
-        self.body.interface.fillets(self, radius)
-
-    # def make_rlc_boundary(self, corner, size, axis, r, l, c, name="LumpRLC"):
-    #     raise NotImplementedError()
-#        self.interface.make_rlc_boundary(corner, size, axis, r, l, c, name)
+            self.body.interface.fillet(self, radius, vertex_indices)
+        else:
+            # manipulate vertex_indices in a good way
+            past_indices = []
+            for rad, indices in zip(radius, vertex_indices):
+                new_indices = []
+                for index in indices:
+                    index += sum(i < index for i in past_indices)
+                    new_indices.append(index)
+                self.body.interface.fillet(self, rad, new_indices)
+                past_indices += indices
+        return None
 
     def assign_material(self, material):
         self.body.interface.assign_material(self, material)

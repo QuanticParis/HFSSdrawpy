@@ -1164,7 +1164,7 @@ class HfssModeler(COMWrapper):
                 return str(name)
         return self.parent.eval_var_str(name, unit=unit)
 
-    def fillet(self, entity, radius, vertex_indices):
+    def fillet(self, entity, radius, vertex_indices=None):
         # if the geometry is simple : rect, polyline, fillet indexing is consistent
         # if the geometry was subtracted/united : fillet indexing is not consistent
         # if the geometry ha a hole, should not use fillet, since un expected behaviour

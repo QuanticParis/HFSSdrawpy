@@ -230,26 +230,20 @@ class GdsModeler():
     def create_object_from_face(self, name):
         pass
 
-    def fillet(self, entity, radius, vertex_indices):
-        # if the geometry is simple : rect, polyline, fillet indexing is consistent
-        # if the geometry was subtracted/united : fillet indexing is not consistent
-        # if the geometry ha a hole, should not use fillet, since un expected behaviour
-        # if object has already been filleted should not be possible to fillet twice
+    def fillet(self, entity, radius, vertex_indices=None):
         polygon = self.gds_object_instances[entity.name]
-        vertices_number = len(polygon.polygons[0])
-        radii = [radius if (ii in vertex_indices) else 0 for ii in range(vertices_number)]
-        polygon.fillet([radii], max_points=0, precision=TOLERANCE)
-
-    def fillets(self, entity, radius):
-        if entity.dimension==1:
-            raise TypeError('Trying to gds fillet a 1D geometry')
-        else:
-            polygon = self.gds_object_instances[entity.name]
+        if vertex_indices is None:
             polygon.fillet(radius, max_points=0)
+        else:
+            vertices_number = len(polygon.polygons[0])
+            radii = [0]*vertices_number
+            for rad, indices in zip(radius, vertex_indices):
+                for index in indices:
+                    radii[index]=rad
+            polygon.fillet([radii], max_points=0, precision=TOLERANCE)
 
     def get_vertex_ids(self, entity):
         return None
-
 
     def path(self, points, port, fillet, name=''):
 

@@ -114,7 +114,8 @@ class PythonModeler():
         if not name in VariableString.variables.keys():
             return VariableString(name, value=value)
         else:
-            VariableString.variables[name]=value
+            VariableString.store_variable(name, value)
+            print('%s is redefined to %s'%(name, value))
             return VariableString.instances[name]
 
     def generate_gds(self, folder, filename):
