@@ -37,12 +37,15 @@ class ModelEntity():
         if copy is None:
             if ModelEntity.instances_to_move is not None:
                 find_last_list(ModelEntity.instances_to_move).append(self)
+            self.is_boolean = False  # did it suffer a bool operation already ?
+            self.is_fillet = False  # did it suffer a fillet operation already ?
         else:
             # copy is indeed the original object
             # the new object should be put in the same list indent
             add_to_corresponding_list(copy, ModelEntity.instances_to_move,
                                       self)
-
+            self.is_boolean = copy.is_boolean
+            self.is_fillet = copy.is_fillet
     def __str__(self):
         return self.name
 
@@ -95,14 +98,46 @@ class ModelEntity():
         raise NotImplementedError()
 
     def duplicate_along_line(self, vec):
-        # not implemented with the HFSS function for handling the copy better
         # copy and translate the copy
         vec = Vector(vec)
-        copy = entity.copy()
+        copy = self.copy()
         copy.translate(vec)
         return copy
 
+    def find_start_vertex(self):
+        # finds the lowest vertex in Y in a polygon
+        # if there are several, returns the lowest in X
+        vertices = self.body.interface.get_vertices(self)
+        min_y = vertices[0][1]
+        min_x = vertices[0][0]
+        indices = [0]
+        for ii, vertex in enumerate(vertices[1:]):
+            ii+=1
+            y = vertex[1]
+            if y < min_y:
+                indices = [ii]
+                min_y = y
+                min_x = vertex[0]
+            elif y == min_y:
+                indices.append(ii)
+
+        result_index = indices[0]
+        for index in indices[1:]:
+            x = vertices[index][0]
+            if x <= min_x:
+                min_x = x
+                result_index = index
+        return result_index, len(vertices)
+
     def fillet(self, radius, vertex_indices=None):
+        assert (not self.is_fillet), 'Cannot fillet an already filleted entity'
+        if not isinstance(vertex_indices, list):
+            vertex_indices = [vertex_indices]
+        if self.is_boolean:
+            # should find the lowest/leftest vertex to have consistent behaviour
+            index_start, nb_vertices = self.find_start_vertex()
+            vertex_indices = [(index_start + index)%nb_vertices for index in vertex_indices]
+
         radius = parse_entry(radius)
         # fillet a subset of vertices
         # vertex_indices can be an int or a list of int
@@ -113,8 +148,6 @@ class ModelEntity():
     def fillets(self, radius):
         # fillet all corner of an entity
         self.body.interface.fillets(self, radius)
-
-
 
     # def make_rlc_boundary(self, corner, size, axis, r, l, c, name="LumpRLC"):
     #     raise NotImplementedError()
@@ -174,6 +207,7 @@ class ModelEntity():
             else:
                 self.body.interface.subtract(self, tool_entities,
                                            keep_originals=True)
+                self.is_boolean = True
             if not keep_originals:
                 for ii in range(len(tool_entities)):
                     tool_entities[0].delete()

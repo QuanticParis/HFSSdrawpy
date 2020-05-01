@@ -310,8 +310,6 @@ class PythonModeler():
                 entities.remove(main)
             entities = [main] + entities
 
-        name = entities[0].name
-
         if len(entities)!=1:
             if not all([entity.dimension == entities[0].dimension
                                                     for entity in entities]):
@@ -322,6 +320,7 @@ class PythonModeler():
                     entities[0] = entities[0].copy()
 
                 union_entity = self.interface.unite(entities, keep_originals=keep_originals)
+                union_entity.is_boolean = True
 
                 if not keep_originals:
                     for ii in range(len(entities)):

@@ -1165,13 +1165,18 @@ class HfssModeler(COMWrapper):
         return self.parent.eval_var_str(name, unit=unit)
 
     def fillet(self, entity, radius, vertex_indices):
+        # if the geometry is simple : rect, polyline, fillet indexing is consistent
+        # if the geometry was subtracted/united : fillet indexing is not consistent
+        # if the geometry ha a hole, should not use fillet, since un expected behaviour
+        # if object has already been filleted should not be possible to fillet twice
+
         hfss_vertex_indices = self.get_vertex_ids(entity)
         if not isinstance(vertex_indices, list):
             vertex_indices = [vertex_indices]
         to_fillet = [int(hfss_vertex_indices[v]) for v in vertex_indices]
 
         pos = self._modeler.GetVertexPosition(to_fillet[0])
-            
+
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                           ["NAME:Parameters",
                            ["NAME:FilletParameters",
@@ -1194,7 +1199,7 @@ class HfssModeler(COMWrapper):
                                 "Vertices:=", to_fillet,
                                 "Radius:=", radius,
                                 "Setback:=", "0mm"]])
-            
+
     def _fillet_edges(self, entity, radius, edge_index):
         edges = self.get_edge_ids(entity.name)
         if isinstance(edge_index, list):
@@ -1232,6 +1237,11 @@ class HfssModeler(COMWrapper):
 
     def get_vertex_ids(self, entity):
         return self._modeler.GetVertexIDsFromObject(entity.name)
+
+    def get_vertices(self, entity):
+        vertices_ids = self.get_vertex_ids(entity)
+        return [[map(float, self._modeler.GetVertexPosition(vertex)[:2])]
+                for vertex in vertices_ids]
 
     def get_edge_ids(self, entity):
         return self._modeler.GetEdgeIDsFromObject(entity.name)

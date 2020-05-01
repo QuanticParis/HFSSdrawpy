@@ -76,6 +76,9 @@ class GdsModeler():
             gdspy.write_gds(filename, cells=[cell_name],
                             unit=1.0, precision=1e-9)
 
+    def get_vertices(self, entity):
+        polygon = self.gds_object_instances[entity.name]
+        return polygon.polygons[0]
 
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
@@ -155,23 +158,6 @@ class GdsModeler():
         polygon = self.gds_object_instances.pop(entity.name)
         self.gds_object_instances[name] = polygon
 
-    def polygonset_norm(self, polygonset):
-        if len(polygonset.polygons)==1:
-            return np.linalg.norm(polygonset.polygons)**2
-        else:
-            list_norm = []
-            for polygon in polygonset.polygons:
-                list_norm.append(np.linalg.norm(polygon)**2)
-            return np.amin(np.array(list_norm))
-
-    # def gds_boolean(self, operand1, operand2, operation, precision=0.001, max_points=199, layer=0, datatype=0):
-    #     ratio = 10**9
-    #     operand1 = operand1.scale(ratio, ratio)
-    #     operand2 = operand2.scale(ratio, ratio)
-    #     result = gdspy.boolean(operand1, operand2, operation, precision, max_points, layer, datatype)
-    #     result = result.scale(ratio**(-1), ratio**(-1))
-    #     return result
-
     def unite(self, entities, keep_originals=True):
 
         blank_entity = entities.pop(0)
@@ -200,35 +186,6 @@ class GdsModeler():
 
     def intersect(self, entities):
         raise NotImplementedError()
-        # should do intersection of all entities two by two
-
-        # if not(isinstance(entities, list)):
-        #     raise Exception('Union takes a list of entities as an argument')
-        # if len(entities)==0:
-        #     raise Exception('Union takes a non-empty list of entities as an argument')
-
-        # entity_0 = entities.pop(0)
-        # polygon_0 = self.gds_object_instances[entity_0.name]
-        # final_name = entities[0].name if name==None else name
-
-        # if len(entities)>=2:
-        #     #We fuse all gds_entities on the first element of the list
-        #     polygon_list = []
-        #     for entity in entities:
-        #         polygon_list.append(self.gds_object_instances[entity.name])
-        #     polygon_set = gdspy.PolygonSet(polygon_list)
-        #     fused_polygon = gdspy.fast_boolean(polygon_0, polygon_set , 'or')
-        #     self.cell.add(fused_polygon, polygon_0.layer)
-
-        # if not(keep_originals):
-        #     for entity in entities:
-        #         polygon = self.gds_object_instances.pop(entity.name, None)
-        #         self.cell.remove_polygons(polygon)
-        #         self.cell.remove_labels(entity.name)
-
-        # self.gds_object_instances[final_name]=fused_polygon
-
-        # return final_name
 
     def subtract(self, blank_entity, tool_entities, keep_originals=True):
         #1 We clear the cell of all elements and create lists to store the polygons
@@ -274,6 +231,10 @@ class GdsModeler():
         pass
 
     def fillet(self, entity, radius, vertex_indices):
+        # if the geometry is simple : rect, polyline, fillet indexing is consistent
+        # if the geometry was subtracted/united : fillet indexing is not consistent
+        # if the geometry ha a hole, should not use fillet, since un expected behaviour
+        # if object has already been filleted should not be possible to fillet twice
         polygon = self.gds_object_instances[entity.name]
         vertices_number = len(polygon.polygons[0])
         radii = [radius if (ii in vertex_indices) else 0 for ii in range(vertices_number)]
