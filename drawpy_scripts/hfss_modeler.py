@@ -1240,7 +1240,7 @@ class HfssModeler(COMWrapper):
 
     def get_vertices(self, entity):
         vertices_ids = self.get_vertex_ids(entity)
-        return [[map(float, self._modeler.GetVertexPosition(vertex)[:2])]
+        return [[*map(float, self._modeler.GetVertexPosition(vertex)[:2])]
                 for vertex in vertices_ids]
 
     def get_edge_ids(self, entity):

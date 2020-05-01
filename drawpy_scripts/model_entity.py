@@ -1,3 +1,5 @@
+import numpy as np
+
 from .parameters import layer_TRACK, \
                         layer_GAP, \
                         layer_MASK, \
@@ -127,7 +129,16 @@ class ModelEntity():
             if x <= min_x:
                 min_x = x
                 result_index = index
-        return result_index, len(vertices)
+        next_index = (index+1)%len(vertices)
+        prev_index = (index-1)%len(vertices)
+        dx_p = vertices[prev_index][0] - vertices[index][0]
+        dx_n = vertices[next_index][0] - vertices[index][0]
+        dy_p = vertices[prev_index][1] - vertices[index][1]
+        dy_n = vertices[next_index][1] - vertices[index][1]
+        angle_p = np.arctan2(dy_p, dx_p)
+        angle_n = np.arctan2(dy_n, dx_n)
+        is_trigo = angle_p > angle_n
+        return result_index, len(vertices), is_trigo
 
     def fillet(self, radius, vertex_indices=None):
         assert (not self.is_fillet), 'Cannot fillet an already filleted entity'
@@ -135,9 +146,13 @@ class ModelEntity():
             vertex_indices = [vertex_indices]
         if self.is_boolean:
             # should find the lowest/leftest vertex to have consistent behaviour
-            index_start, nb_vertices = self.find_start_vertex()
-            vertex_indices = [(index_start + index)%nb_vertices for index in vertex_indices]
-
+            index_start, nb_vertices, is_trigo = self.find_start_vertex()
+            if not is_trigo:
+                vertex_indices = [-index for index in vertex_indices]
+            vertex_indices = [(index_start + index) % nb_vertices 
+                              for index in vertex_indices]
+        if len(vertex_indices)>0:
+            self.is_fillet = True
         radius = parse_entry(radius)
         # fillet a subset of vertices
         # vertex_indices can be an int or a list of int
