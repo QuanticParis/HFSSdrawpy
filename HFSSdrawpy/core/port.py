@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import Vector, \
+from ..utils import Vector, \
                    parse_entry, \
                    check_name, \
                    find_last_list, \

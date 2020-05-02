@@ -1,7 +1,7 @@
 from functools import wraps
 
 
-from .utils import Vector, \
+from ..utils import Vector, \
                    parse_entry, \
                    check_name, \
                    find_last_list, \
@@ -11,14 +11,14 @@ from .utils import Vector, \
                    val, \
                    entity_kwargs, equal_float, \
                    way
-from .model_entity import ModelEntity
-from .python_modeler import PythonModeler
-from .path_finder import Path
+from .entity import Entity
+from ..modeler import Modeler
+from ..path_finding.path_finder import Path
 from .port import Port
 
-from .parameters import layer_Default, layer_PORT
+from ..parameters import layer_Default, layer_PORT
 
-class Body(PythonModeler):
+class Body(Modeler):
 
     dict_instances = {}
     def __init__(self, pm=None, name=None, rel_coor=None, ref_name='Global'): #network
@@ -53,13 +53,13 @@ class Body(PythonModeler):
 
     def __enter__(self):
         #1 We need to keep track of the entities created during the execution of a function
-        self.list_entities = to_move(ModelEntity) # save "indentation level"
+        self.list_entities = to_move(Entity) # save "indentation level"
         self.list_ports = to_move(Port)
         return self
 
     def __exit__(self, *exc):
         #4 We move the entity that were created by the last function
-        list_entities_new = find_last_list(ModelEntity.instances_to_move)
+        list_entities_new = find_last_list(Entity.instances_to_move)
         list_ports_new = find_last_list(Port.instances_to_move)
         pos, angle = self.cursors[-1]
 
@@ -79,7 +79,7 @@ class Body(PythonModeler):
             for entity in a:
                 self.list_entities.append(entity)
         else:
-            ModelEntity.instances_to_move = None
+            Entity.instances_to_move = None
 
         if len(self.list_ports) > 0 and isinstance(self.list_ports[-1], list):
             a = self.list_ports.pop(-1)
@@ -120,7 +120,7 @@ class Body(PythonModeler):
         """
         name = self.interface.box_corner_3D(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 3, self, **kwargs)
+        return Entity(name, 3, self, **kwargs)
 
     @set_body
     def box_center_3D(self, pos, size, **kwargs):
@@ -139,13 +139,13 @@ class Body(PythonModeler):
         """
         name = self.interface.box_center_3D(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 3, self, **kwargs)
+        return Entity(name, 3, self, **kwargs)
 
     @set_body
     def cylinder_3D(self, pos, radius, height, axis, **kwargs):
         name = self.interface.cylinder_3D(pos, radius, height, axis, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 3, self, **kwargs)
+        return Entity(name, 3, self, **kwargs)
 
 
     @set_body
@@ -155,7 +155,7 @@ class Body(PythonModeler):
             radius = val(radius)
         name = self.interface.disk_2D(pos, radius, axis, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 2, self, **kwargs)
+        return Entity(name, 2, self, **kwargs)
 
     @set_body
     def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
@@ -173,7 +173,7 @@ class Body(PythonModeler):
         name = self.interface.polyline_2D(points, closed, **kwargs)
         dim = closed + 1
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, dim, self, **kwargs)
+        return Entity(name, dim, self, **kwargs)
 
     @set_body
     def path_2D(self, points, port, fillet, **kwargs):
@@ -186,7 +186,7 @@ class Body(PythonModeler):
             names, layers = self.interface.path(points, _port, fillet, name=name)
             for name, layer in zip(names, layers):
                 kwargs = {'layer':layer}  # model by default for now
-                model_entities.append(ModelEntity(name, 2, self, **kwargs))
+                model_entities.append(Entity(name, 2, self, **kwargs))
         elif self.mode == 'hfss':
             # check that port is at the BEGINNING of the path (hfss only)
             ori = port.ori
@@ -221,7 +221,7 @@ class Body(PythonModeler):
             size = val(size)
         name = self.interface.rect_corner_2D(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 2, self, **kwargs)
+        return Entity(name, 2, self, **kwargs)
 
     @set_body
     def rect_center_2D(self, pos, size, **kwargs):
@@ -230,7 +230,7 @@ class Body(PythonModeler):
             size = val(size)
         name = self.interface.rect_center_2D(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return ModelEntity(name, 2, self, **kwargs)
+        return Entity(name, 2, self, **kwargs)
 
     @set_body
     def wirebond_2D(self, pos, ori, ymax, ymin, **kwargs):
@@ -238,12 +238,12 @@ class Body(PythonModeler):
             pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
             name_a, name_b = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
             kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-            return ModelEntity(name_a, 2, self, **kwargs), \
-                    ModelEntity(name_b, 2, self, **kwargs)
+            return Entity(name_a, 2, self, **kwargs), \
+                    Entity(name_b, 2, self, **kwargs)
         else:
             name = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
             kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-            return ModelEntity(name, 3, self, **kwargs)
+            return Entity(name, 3, self, **kwargs)
 
     ### Advanced methods
 

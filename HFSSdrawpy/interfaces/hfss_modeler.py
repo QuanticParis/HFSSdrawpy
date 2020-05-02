@@ -14,21 +14,17 @@ from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 from win32com.client import Dispatch, CDispatch
 
-from .utils import VariableString, \
+from ..utils import VariableString, \
                             parse_entry, \
                             var, \
-                            val
-                            #simplify_arith_expr, \
+                            val, \
+                            LENGTH_UNIT
                             #extract_value_unit, \
                             #extract_value_dim, \
                             #rem_unit, \
 
-from .model_entity import gen_name
-
 ureg = UnitRegistry()
 Q = ureg.Quantity
-
-from .utils import LENGTH_UNIT
 
 BASIS_ORDER = {"Zero Order": 0,
                "First Order": 1,

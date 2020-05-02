@@ -10,22 +10,20 @@ import numpy as np
 import os
 from inspect import currentframe, getfile
 
-from .model_entity import ModelEntity
+from .core.entity import Entity
 from .utils import VariableString, parse_entry, val
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
-class PythonModeler():
+class Modeler():
     """
-    Modeler which defines basic operations and methods to perform on ModelEntity and on the chosen interface.
+    Modeler which defines basic operations and methods to perform on Entity and on the chosen interface.
     To create a new interface, one needs to copy an existing one in a new file, and adapt all methods to the formalism of the new interface.
 
-    The PythonMdlr class is called at the beginning of a script but then it is the body that is always used.
+    The Modeler class is called at the beginning of a script but then it is the body that is always used.
     The syntax is the following:
-        import scripts
-        PM = PythonMdlr("hfss")
-        chip1 = PM.body(name, coordinate system)
+        # TODO
 
     Inputs:
     -------
@@ -39,12 +37,12 @@ class PythonModeler():
 
     def __init__(self, mode):
         """
-        Creates a PythonMdlr object based on the chosen interface.
+        Creates a Modeler object based on the chosen interface.
         For now the interface cannot be changed during an execution, only at the beginning
         """
         self.mode = mode
         if mode == "hfss":
-            from .hfss_modeler import get_active_project
+            from .interfaces.hfss_modeler import get_active_project
             project = get_active_project()
             design = project.get_active_design()
             self.design = design
@@ -53,7 +51,7 @@ class PythonModeler():
             self.modeler.delete_all_objects()
             self.interface = self.modeler
         elif mode=="gds":
-            from . import gds_modeler
+            from .interfaces import gds_modeler
             self.interface = gds_modeler.GdsModeler()
         else:
             print('Mode should be either hfss or gds')
@@ -127,7 +125,7 @@ class PythonModeler():
 
         if main is not None:
             if isinstance(main, str):
-                main = ModelEntity.dict_instances[main]
+                main = Entity.dict_instances[main]
             if main in entities:
                 entities.remove(main)
             entities = [main] + entities

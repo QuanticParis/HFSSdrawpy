@@ -80,7 +80,7 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
 
     Outputs:
     --------
-    returns created entities with formalism [Port], [ModelEntiy]
+    returns created entities with formalism [Port], [Entiy]
     '''
 
     iTrack, iGap, pcb_gap, pcb_track = parse_entry(iTrack, iGap, pcb_gap, pcb_track)

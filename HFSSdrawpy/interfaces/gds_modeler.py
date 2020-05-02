@@ -8,8 +8,8 @@ Created on Mon Nov  4 11:13:09 2019
 import numpy as np
 import gdspy
 
-from .utils import parse_entry, var, Vector
-from .model_entity import gen_name
+from ..utils import parse_entry, var, Vector
+from ..core.entity import gen_name
 
 TOLERANCE = 1e-7 # for arcs
 print("gdspy_version : ",gdspy.__version__)

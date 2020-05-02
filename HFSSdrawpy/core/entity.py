@@ -1,15 +1,15 @@
 import numpy as np
 
-from .parameters import layer_TRACK, \
+from ..parameters import layer_TRACK, \
                         layer_GAP, \
                         layer_MASK, \
                         layer_Default, \
                         layer_RLC
 
-from .utils import Vector, parse_entry, check_name, find_last_list, \
+from ..utils import Vector, parse_entry, check_name, find_last_list, \
     add_to_corresponding_list, gen_name, val, general_remove
 
-class ModelEntity():
+class Entity():
     # this should be the objects we are handling on the python interface
     # each method of this class should act in return in HFSS/GDS when possible
     instances_layered = {layer_TRACK:[], layer_GAP:[], layer_MASK:[],
@@ -26,21 +26,21 @@ class ModelEntity():
         self.nonmodel = nonmodel
         self.layer = layer
 
-        ModelEntity.dict_instances[name] = self
+        Entity.dict_instances[name] = self
         if layer in self.instances_layered.keys():
-            ModelEntity.instances_layered[layer].append(self)
+            Entity.instances_layered[layer].append(self)
         else:
-            ModelEntity.instances_layered[layer]=[self]
+            Entity.instances_layered[layer]=[self]
 
         if copy is None:
-            if ModelEntity.instances_to_move is not None:
-                find_last_list(ModelEntity.instances_to_move).append(self)
+            if Entity.instances_to_move is not None:
+                find_last_list(Entity.instances_to_move).append(self)
             self.is_boolean = False  # did it suffer a bool operation already ?
             self.is_fillet = False  # did it suffer a fillet operation already ?
         else:
             # copy is indeed the original object
             # the new object should be put in the same list indent
-            add_to_corresponding_list(copy, ModelEntity.instances_to_move,
+            add_to_corresponding_list(copy, Entity.instances_to_move,
                                       self)
             self.is_boolean = copy.is_boolean
             self.is_fillet = copy.is_fillet
@@ -54,9 +54,9 @@ class ModelEntity():
 
     @staticmethod
     def reset():
-        ModelEntity.instances_layered = {}
-        ModelEntity.dict_instances = {}
-        ModelEntity.instances_to_move = []
+        Entity.instances_layered = {}
+        Entity.dict_instances = {}
+        Entity.instances_to_move = []
 
     @classmethod
     def print_instances(cls):
@@ -66,7 +66,7 @@ class ModelEntity():
     ### Modifying methods
 
     def delete(self):
-        # deletes the modelentity and its occurences throughout the code
+        # deletes the Entity and its occurences throughout the code
         self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
         self.instances_layered[self.layer].remove(self)
@@ -77,7 +77,7 @@ class ModelEntity():
     def copy(self, new_name=None):
         generated_name = gen_name(self.name)
         self.body.interface.copy(self)
-        copied = ModelEntity(generated_name, self.dimension, self.body,
+        copied = Entity(generated_name, self.dimension, self.body,
                              nonmodel=self.nonmodel, layer=self.layer,
                              copy=self)
         if new_name is not None:
@@ -246,7 +246,7 @@ class ModelEntity():
 
     def subtract(self, tool_entities, keep_originals=False):
         """
-        tool_entities: a list of ModelEntity or a ModelEntity
+        tool_entities: a list of Entity or a Entity
         keep_originals: Boolean, True : the tool entities still exist after
                         boolean operation
         """
@@ -272,7 +272,7 @@ class ModelEntity():
 
     def unite(self, tool_entities, new_name=None):
         """
-        tool_entities: a list of ModelEntity or a ModelEntity
+        tool_entities: a list of Entity or a Entity
         if new_name (str) is provided, the tool_entities + self are kept and
         the union is named new_name
         """
