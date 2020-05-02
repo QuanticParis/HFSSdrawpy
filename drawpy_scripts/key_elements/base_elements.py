@@ -7,6 +7,10 @@ Created on Mon Oct 28 16:18:36 2019
 
 #Binding the 2D elements of python_modeler
 
+def port(self, *args, **kwargs):
+
+    return self.port(*args, **kwargs)
+
 def draw_cable(self, *args, **kwargs):
 
     return self.draw_cable(*args, **kwargs)

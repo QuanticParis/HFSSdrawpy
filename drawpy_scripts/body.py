@@ -1,5 +1,5 @@
-import numpy as np
 from functools import wraps
+
 
 from .utils import Vector, \
                    parse_entry, \
@@ -9,181 +9,19 @@ from .utils import Vector, \
                    to_move, \
                    _val, \
                    val, \
+                   entity_kwargs, equal_float, \
                    way
-
 from .model_entity import ModelEntity
 from .python_modeler import PythonModeler
 from .path_finder import Path
+from .port import Port
 
-from .parameters import layer_TRACK, \
-                        layer_GAP, \
-                        layer_MASK, \
-                        layer_Default, \
-                        layer_RLC, \
-                        layer_PORT, \
-                        layer_MESH
-
-class Port():
-    instances_to_move = None
-    dict_instances  = {}
-
-    def __init__(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port, key='name'):
-        if not (isinstance(key, Port) or key is None):
-            name = check_name(self.__class__, name)
-        self.name = name
-        self.pos = Vector(pos)
-        self.ori = Vector(ori)
-        self.constraint_port = constraint_port
-        self.save = None
-        if not constraint_port:
-            self.widths = parse_entry(widths)
-            self.subnames = subnames
-            self.layers = layers
-            self.offsets = parse_entry(offsets)
-            self.N = len(widths)
-        else:
-            self.widths = widths
-            self.subnames = subnames
-            self.layers = layers
-            self.offsets = offsets
-            self.N = 0
-
-        if Port.instances_to_move is not None:
-            find_last_list(Port.instances_to_move).append(self)
-        if key=='name':  # normal initialisation
-            self.dict_instances[name] = self
-
-            # create a reversed version of the port that can be called by either
-            # port.r or 'port_name.r'
-            reversed_ori = -self.ori
-            reversed_offsets = None
-            if self.offsets is not None:
-                reversed_offsets = []
-                for ii in range(self.N):
-                    reversed_offsets.append(-self.offsets[ii])
-            self.r = Port(self.name+'_r', self.pos, reversed_ori, self.widths,
-                          self.subnames, self.layers, reversed_offsets,
-                          self.constraint_port, key=self)
-
-        elif isinstance(key, Port):  # reverse initialisation, key is the previous port
-            self.dict_instances[name] = self
-            self.r = key
-        else:
-            pass  # when the port is only a float eval do not add it in dict
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
-
-    @staticmethod
-    def reset():
-        Port.instances_to_move = []
-        Port.dict_instances  = {}
-
-    @classmethod
-    def print_instances(cls):
-        for instance_name in cls.dict_instances:
-            print(instance_name)#, cls.dict_instances[instance_name])
-
-    def compare(self, other, pm):
-        points = []
-
-        adapt_dist = pm.set_variable(1e-5, name=self.name+'_adapt')
-        max_diff = 0
-        for ii in range(self.N):
-            if self.layers[ii]!=other.layers[ii]:
-                raise ValueError('Tried to connect ports form different \
-                                 layers: %s != %s'%(self.layers[ii],
-                                                    other.layers[ii]))
-            width1 = self.widths[ii]
-            width2 = other.widths[ii]
-
-            offset1 = self.offsets[ii]
-            offset2 = -other.offsets[ii]
-
-            if width1!=width2 or offset1!=offset2:
-                # need adaptor
-                points.append([Vector(0, offset1+width1/2).rot(self.ori)+self.pos,
-                               Vector(adapt_dist, offset2+width2/2).rot(self.ori)+self.pos,
-                               Vector(adapt_dist, offset2-width2/2).rot(self.ori)+self.pos,
-                               Vector(0, offset1-width1/2).rot(self.ori)+self.pos])
-            max_diff = max(max_diff, abs(_val(offset1+width1/2-(offset2+width2/2))),
-                           abs(_val(offset2-width2/2-(offset1-width1/2))))
-
-        adapt_dist = pm.set_variable(2*max_diff, name=self.name+'_adapt')
-
-        if len(points) != 0:
-            self.save = {'pos':self.pos, 'widths':self.widths,
-                         'offsets':self.offsets}
-            self.pos = self.pos + Vector(2*max_diff, 0).rot(self.ori)
-            self.widths = other.widths
-            self.offsets = [-offset for offset in other.offsets]
-
-            self.r.save = {'pos':self.r.pos, 'widths':self.r.widths,
-                         'offsets':self.r.offsets}
-            self.r.pos = self.pos
-            self.r.widths = self.widths
-            self.r.offsets = other.offsets
-        return points, 2*max_diff
-
-    def val(self):
-        _widths = []
-        _offsets = []
-        for ii in range(self.N):
-            width = self.widths[ii]
-            offset = self.offsets[ii]
-            _widths.append(_val(width))
-            _offsets.append(_val(offset))
-
-        _pos = []
-        for coor in self.pos:
-            _pos.append(_val(coor))
-        _pos = Vector(_pos)
-
-        _ori = []
-        for coor in self.ori:
-            _ori.append(_val(coor))
-        _ori = Vector(_ori)
-
-        return Port(self.name, _pos, _ori, _widths, self.subnames,
-                    self.layers, _offsets, self.constraint_port, key=None)
-
-    def revert(self):
-        if self.save is not None:
-            self.pos = self.save['pos']
-            self.widths = self.save['widths']
-            self.offsets = self.save['offsets']
-
-            self.r.pos = self.save['pos']
-            self.r.widths = self.save['widths']
-            reversed_offsets = []
-            for ii in range(self.N):
-                reversed_offsets.append(-self.offsets[ii])
-            self.r.offsets = reversed_offsets
-
-    def bond_params(self):
-        y_max = -np.infty
-        y_max_val = -np.infty
-        y_min = np.infty
-        y_min_val = np.infty
-        for ii in range(self.N):
-            # widths should not be negative
-            _y_max_val = _val(self.offsets[ii]+self.widths[ii]/2)
-            _y_min_val = _val(self.offsets[ii]-self.widths[ii]/2)
-            if _y_max_val > y_max_val:
-                y_max = self.offsets[ii]+self.widths[ii]/2
-                y_max_val = _y_max_val
-            if _y_min_val < y_min_val:
-                y_min = self.offsets[ii]-self.widths[ii]/2
-                y_min_val = _y_min_val
-        return y_max, y_min
+from .parameters import layer_Default, layer_PORT
 
 class Body(PythonModeler):
 
     dict_instances = {}
-    def __init__(self, pm=None, coor_sys=None, rel_coor=None, ref_name='Global'): #network
+    def __init__(self, pm=None, name=None, rel_coor=None, ref_name='Global'): #network
         # Note: for now coordinate systems are not reactualized at each run
         if rel_coor is None:
             rel_coor = [[0, 0, 0],  # origin
@@ -192,17 +30,16 @@ class Body(PythonModeler):
         else:
             rel_coor = parse_entry(rel_coor)
 
-        pm.interface.create_coor_sys(coor_sys=coor_sys, rel_coor=rel_coor,
+        pm.interface.create_coor_sys(coor_sys=name, rel_coor=rel_coor,
                                      ref_name=ref_name)
 
         self.pm = pm
-        self.coor_sys = coor_sys # also called body_name
-                                 # a body is equivalent to a coor_sys
+        self.name = name
         self.rel_coor = rel_coor
         self.ref_name = ref_name
         self.interface = pm.interface
         self.mode = pm.mode # 'hfss' or 'gds'
-        self.dict_instances[coor_sys] = self  # coor_sys is the name
+        self.dict_instances[name] = self
         self.list_entities = []
         self.list_ports = []
         self.cursors = [] # tuple to escape list parsing
@@ -232,18 +69,18 @@ class Body(PythonModeler):
             self.translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
 
         if len(list_ports_new)>0:
-            self.rotate_port(list_ports_new, angle)
-            self.translate_port(list_ports_new, vector=[pos[0], pos[1], pos[2]])
+            Port.rotate_ports(list_ports_new, angle)
+            Port.translate_ports(list_ports_new, vector=[pos[0], pos[1], pos[2]])
 
         #6 We empty a part of the 'to_move' lists
-        if len(self.list_entities) > 0 and isinstance(self.list_entities[-1], 
+        if len(self.list_entities) > 0 and isinstance(self.list_entities[-1],
                                                       list):
             a = self.list_entities.pop(-1)
             for entity in a:
                 self.list_entities.append(entity)
         else:
             ModelEntity.instances_to_move = None
-        
+
         if len(self.list_ports) > 0 and isinstance(self.list_ports[-1], list):
             a = self.list_ports.pop(-1)
             for entity in a:
@@ -254,7 +91,178 @@ class Body(PythonModeler):
         self.cursors.pop(-1)
         return False
 
+    def set_body(func):
+        """
+        Defines a wrapper/decorator which allows the user to always work in the coordinate system of the chosen chip.
+        """
+        @wraps(func)
+        def updated(*args, **kwargs):
+            args[0].interface.set_coor_sys(args[0].name)
+            return func(*args, **kwargs)
+        return updated
+
+    ### Basic drawings
+
+    @set_body
+    def box_corner_3D(self, pos, size, **kwargs):
+        """
+        Draws a 3D box based on the coordinates of its corner.
+
+        Inputs:
+        -------
+        pos: [x,y,z] the coordinates of the corner of the rectangle in the euclidian basis.
+        size: [lx,ly,lz] the dimensions of the rectangle
+
+        **kwargs include layer and name
+        Outputs:
+        -------
+        box: Corresponding 3D Model Entity
+        """
+        name = self.interface.box_corner_3D(pos, size, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 3, self, **kwargs)
+
+    @set_body
+    def box_center_3D(self, pos, size, **kwargs):
+        """
+        Draws a 3D box based on the coordinates of its center.
+
+        Inputs:
+        -------
+        pos: [x,y,z] the coordinates of the center of the rectangle in the euclidian basis.
+        size: [lx,ly,lz] the dimensions of the rectangle
+
+        **kwargs include layer and name
+        Outputs:
+        -------
+        box: Corresponding 3D Model Entity
+        """
+        name = self.interface.box_center_3D(pos, size, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 3, self, **kwargs)
+
+    @set_body
+    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
+        name = self.interface.cylinder_3D(pos, radius, height, axis, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 3, self, **kwargs)
+
+
+    @set_body
+    def disk_2D(self, pos, radius, axis, **kwargs):
+        if self.mode=='gds':
+            pos = val(pos)
+            radius = val(radius)
+        name = self.interface.disk_2D(pos, radius, axis, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
+
+    @set_body
+    def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
+        i = 0
+        while i < len(points[:-1]):
+            points_equal = [equal_float(val(p0),val(p1))
+                            for p0, p1 in zip(points[i], points[i+1])]
+            if all(points_equal):
+                points.pop(i)
+                print('Warning: Delete two coinciding points on a polyline2D')
+            else:
+                i+=1
+        if self.mode=='gds':
+            points = val(points)
+        name = self.interface.polyline_2D(points, closed, **kwargs)
+        dim = closed + 1
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, dim, self, **kwargs)
+
+    @set_body
+    def path_2D(self, points, port, fillet, **kwargs):
+        name = kwargs['name']
+        model_entities = []
+        if self.mode == 'gds':
+            points = val(points)
+            fillet = val(fillet)
+            _port = port.val()
+            names, layers = self.interface.path(points, _port, fillet, name=name)
+            for name, layer in zip(names, layers):
+                kwargs = {'layer':layer}  # model by default for now
+                model_entities.append(ModelEntity(name, 2, self, **kwargs))
+        elif self.mode == 'hfss':
+            # check that port is at the BEGINNING of the path (hfss only)
+            ori = port.ori
+            pos = port.pos
+            path_entity = self.polyline_2D(points, closed=False,
+                                           name=name, layer=layer_Default)
+            path_entity.fillet(fillet)
+
+            for ii in range(port.N):
+                offset = port.offsets[ii]
+                width = port.widths[ii]
+                subname = port.subnames[ii]
+                layer = port.layers[ii]
+                points_starter = [Vector(0, offset+width/2).rot(ori)+pos,
+                                  Vector(0, offset-width/2).rot(ori)+pos]
+                entity = self.polyline_2D(points_starter, closed=False,
+                                          name=name+'_'+subname, layer=layer)
+                path_name = name+'_'+subname+'_path'
+                current_path_entity = path_entity.copy(new_name=path_name)
+                self.interface._sweep_along_path(entity, current_path_entity)
+                current_path_entity.delete()
+                model_entities.append(entity)
+
+            path_entity.delete()
+
+        return model_entities
+
+    @set_body
+    def rect_corner_2D(self, pos, size, **kwargs):
+        if self.mode=='gds':
+            pos = val(pos)
+            size = val(size)
+        name = self.interface.rect_corner_2D(pos, size, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
+
+    @set_body
+    def rect_center_2D(self, pos, size, **kwargs):
+        if self.mode=='gds':
+            pos = val(pos)
+            size = val(size)
+        name = self.interface.rect_center_2D(pos, size, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return ModelEntity(name, 2, self, **kwargs)
+
+    @set_body
+    def wirebond_2D(self, pos, ori, ymax, ymin, **kwargs):
+        if self.mode=='gds':
+            pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
+            name_a, name_b = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
+            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+            return ModelEntity(name_a, 2, self, **kwargs), \
+                    ModelEntity(name_b, 2, self, **kwargs)
+        else:
+            name = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
+            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+            return ModelEntity(name, 3, self, **kwargs)
+
+    ### Advanced methods
+
     def move_port(func):
+        """
+        This method is supposed to be used as a decorator that helps replace
+        the deprecated class 'ConnectElt'.
+
+        Parameters
+        ----------
+        func : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
         @wraps(func)
         def moved(*args, **kwargs):
             new_args = [args[0], args[1]]  # args[0] = chip, args[1] = name
@@ -273,7 +281,67 @@ class Body(PythonModeler):
             return func(*new_args, **kwargs)
         return moved
 
-    def port(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port):
+    def port(self, name, widths=None, subnames=None, layers=None, offsets=0):
+        """
+        Creates a port and draws a small triangle for each element of the port
+
+        Parameters
+        ----------
+        name : str
+            Name of the port.
+        widths : float, 'VariableString' or list, optional
+            Width of the different elements of the port. If None, assumes the
+            creation of a constraint_port. The default is None.
+        subnames : str or list, optional
+            The cable's parts will be name cablename_subname. If None simply
+            numbering the cable parts. The default is None.
+        layers : int or list, optional
+            Each layer is described by an int that is a python constant that one
+            should import. If None, layer is the layer_Default The default is
+            None.
+        offsets : float, 'VariableString' or list, optional
+            Describes the offset of the cable part wrt the center of the cable.
+            The default is 0.
+
+        Returns
+        -------
+        'Port'
+            Returns a Port object
+
+        """
+        # logic for keyword arguments
+        if widths is None:
+            constraint_port = True
+        else:
+            constraint_port = False
+            if not isinstance(widths, list):
+                widths = [widths]
+
+            N = len(widths)
+
+            # default subnames
+            if subnames is None:
+                subnames = []
+                for ii in range(N):
+                    subnames.append(str(ii))
+            elif not isinstance(subnames, list):
+                subnames = [subnames]
+
+            if layers is None:
+                layers = [layer_Default]*N
+            elif not isinstance(layers, list):
+                layers = [layers]*N
+
+            if not isinstance(offsets, list):
+                offsets = [offsets]*N
+
+            widths, offsets = parse_entry(widths, offsets)
+
+        # actual drawing and creation
+
+        pos = [0, 0]
+        ori = [1, 0]
+
         name = check_name(Port, name)
         if constraint_port:
             pos, ori = parse_entry(pos, ori)
@@ -295,46 +363,47 @@ class Body(PythonModeler):
 
         return Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
 
-    def translate_port(self, ports, vector):
-        for port in ports:
-            port.pos = port.pos+Vector(vector)
-
-    def rotate_port(self, ports, angle):
-        if isinstance(angle, list):
-            if len(angle)==2:
-                new_angle= np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
-                new_angle= new_angle/np.pi*180
-            else:
-                raise Exception("angle should be either a float or a 2-dim array")
-        else :
-            new_angle=angle
-        rad = new_angle/180*np.pi
-        rotate_matrix = np.array([[np.cos(rad) ,np.sin(-rad)],[np.sin(rad) ,np.cos(rad)]])
-        for port in ports:
-            port.ori = rotate_matrix.dot(port.ori)
-            posx = port.pos[0]*np.cos(rad)+port.pos[1]*np.sin(-rad)
-            posy = port.pos[0]*np.sin(rad)+port.pos[1]*np.cos(rad)
-            port.pos = Vector([posx, posy])
-
     @move_port
     def draw_cable(self, name, *ports, fillet="0.3mm", is_bond=False, to_meander=[[]], meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False):
-        '''
-        Draws a CPW transmission line along the ports
+        """
 
-        Be careful: if the ports are facing eachother and offset by a small distance, sometimes the cable cannot be drawn.
 
-        Inputs:
+        Parameters
+        ----------
+        name : TYPE
+            DESCRIPTION.
+        *ports : TYPE
+            DESCRIPTION.
+        fillet : TYPE, optional
+            DESCRIPTION. The default is "0.3mm".
+        is_bond : TYPE, optional
+            DESCRIPTION. The default is False.
+        to_meander : TYPE, optional
+            DESCRIPTION. The default is [[]].
+        meander_length : TYPE, optional
+            DESCRIPTION. The default is 0.
+        meander_offset : TYPE, optional
+            DESCRIPTION. The default is 0.
+        is_mesh : TYPE, optional
+            DESCRIPTION. The default is False.
+        reverse_adaptor : TYPE, optional
+            DESCRIPTION. The default is False.
+
+        Raises
+        ------
+        IndentationError
+            DESCRIPTION.
+        ValueError
+            DESCRIPTION.
+
+        Returns
         -------
-        name: (string) base-name of object, draws 'name_adaptor' etc
-        iIn: (tuple) input port
-        iOut: (tuple) output port
-        iMaxfillet: (float), maximum fillet radius
-        reverseZ: performs a mirror operation along Z --> useful only when the thickening operation goes in the wrong direction
+        length : TYPE
+            DESCRIPTION.
 
-        '''
-        #TODO change the format of the arguments
+        """
+
         meander_length, meander_offset, fillet = parse_entry(meander_length, meander_offset, fillet)
-
         # to_meander should be a list of list
         # meander_length, meander_offset should be lists
         if not isinstance(to_meander[0], list):

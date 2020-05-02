@@ -18,71 +18,43 @@ from ..parameters import layer_TRACK, \
 
 def create_port(self, name, widths=None, subnames=None, layers=None, offsets=0):
     """
-    Creates and draws a port
-
-    A port is a set of transmission line widths, offsets, and layers.
-    A CPW-port would contain only a track and a gap that would be in layers
-    perfE and cutout respectively.
-    If all arguments are None, the port is expected to serve as a constraint and hence
-    only the current coor is important
+    Creates a port and draws a small triangle for each element of the port.
+    This does exactly the same thing as the Body method 'port' except that if
+    2 widths are provided and subnames, layers, and offsets are not, assumes
+    a CPW port with first track then gap.
 
     Parameters
     ----------
     name : str
-        Name of the port
-    widths : str, VarStr, or list of those
-        Width of each element
-    subnames : str or list of str
-        The name of each element will be 'name_subname'
-    layers : int or list of int
-        Layer number of each element
-    offsets : str, VarStr, or list of those
-        Offset of the element wrt the center of the port
+        Name of the port.
+    widths : float, 'VariableString' or list, optional
+        Width of the different elements of the port. If None, assumes the
+        creation of a constraint_port. The default is None.
+    subnames : str or list, optional
+        The cable's parts will be name cablename_subname. If None simply
+        numbering the cable parts. The default is None.
+    layers : int or list, optional
+        Each layer is described by an int that is a python constant that one
+        should import. If None, layer is the layer_Default The default is
+        None.
+    offsets : float, 'VariableString' or list, optional
+        Describes the offset of the cable part wrt the center of the cable.
+        The default is 0.
 
     Returns
     -------
-    port
-        A new port instance
+    'Port'
+        Returns a Port object
 
     """
-    if widths is None:
-        constraint_port = True
-    else:
-        constraint_port = False
-        if not isinstance(widths, list):
-            widths = [widths]
 
-        N = len(widths)
-
-        # default subnames
-        if subnames is None:
-            if N==2:
-                subnames = ['track', 'gap']
-            else:
-                subnames = []
-                for ii in range(N):
-                    subnames.append(str(ii))
-        elif not isinstance(subnames, list):
-            subnames = [subnames]
-
-        if layers is None:
-            if N==2:
-                layers = [layer_TRACK, layer_GAP]
-            else:
-                layers = [layer_Default]*N
-        elif not isinstance(layers, list):
-            layers = [layers]*N
-
-        if not isinstance(offsets, list):
-            offsets = [offsets]*N
-
-        widths, offsets = parse_entry(widths, offsets)
-    pos = [0, 0]
-    ori = [1, 0]
-
-    port = self.draw_port(name, pos, ori, widths, subnames, layers, offsets,
-                          constraint_port)
-    return port
+    if widths is not None and isinstance(widths, list) and len(widths)==2:
+        if subnames is None and layers is None :
+            subnames = ['track', 'gap']
+            layers = [layer_TRACK, layer_GAP]
+            offsets = [0, 0]
+    return self.port(name, widths=widths, subnames=subnames, layers=layers,
+                offsets=offsets)
 
 def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iSlope=1, tr_line=True):
     '''

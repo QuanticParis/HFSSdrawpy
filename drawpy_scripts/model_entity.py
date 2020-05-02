@@ -7,7 +7,7 @@ from .parameters import layer_TRACK, \
                         layer_RLC
 
 from .utils import Vector, parse_entry, check_name, find_last_list, \
-    add_to_corresponding_list, gen_name, val
+    add_to_corresponding_list, gen_name, val, general_remove
 
 class ModelEntity():
     # this should be the objects we are handling on the python interface
@@ -18,17 +18,13 @@ class ModelEntity():
     instances_to_move = None
 
     def __init__(self, name, dimension, body, nonmodel=False,
-                 layer=layer_Default, coor_sys=None, copy=None):
+                 layer=layer_Default, copy=None):
         name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
         self.body = body
         self.nonmodel = nonmodel
         self.layer = layer
-        if coor_sys is None:
-            self.coor_sys = body.coor_sys
-        else:
-            self.coor_sys = coor_sys
 
         ModelEntity.dict_instances[name] = self
         if layer in self.instances_layered.keys():
@@ -54,6 +50,8 @@ class ModelEntity():
     def __repr__(self):
         return self.name
 
+    ### General methods
+
     @staticmethod
     def reset():
         ModelEntity.instances_layered = {}
@@ -64,6 +62,8 @@ class ModelEntity():
     def print_instances(cls):
         for instance_name in cls.dict_instances:
             print(instance_name)
+
+    ### Modifying methods
 
     def delete(self):
         # deletes the modelentity and its occurences throughout the code
@@ -79,7 +79,7 @@ class ModelEntity():
         self.body.interface.copy(self)
         copied = ModelEntity(generated_name, self.dimension, self.body,
                              nonmodel=self.nonmodel, layer=self.layer,
-                             coor_sys=self.coor_sys, copy=self)
+                             copy=self)
         if new_name is not None:
             copied.rename(new_name)
         return copied

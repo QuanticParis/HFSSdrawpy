@@ -14,15 +14,6 @@ from .model_entity import gen_name
 TOLERANCE = 1e-7 # for arcs
 print("gdspy_version : ",gdspy.__version__)
 
-# Create the geometry: a single rectangle.
-#class Cell( object ):
-#    theWholeList= []
-#    def __call__( self, *args, **kw ):
-#         x= gdspy.Cell( *args, **kw )
-#         self.theWholeList.append( x )
-#         return x
-
-
 class GdsModeler():
     gds_object_instances = {}
     gds_cells  = {}
