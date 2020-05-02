@@ -322,6 +322,8 @@ class PythonModeler():
 
                 union_entity = self.interface.unite(entities, keep_originals=keep_originals)
                 union_entity.is_boolean = True
+                list_fillet = [entity.is_fillet for entity in entities]
+                union_entity.is_fillet = union_entity.is_fillet or any(list_fillet)
 
                 if not keep_originals:
                     for ii in range(len(entities)):

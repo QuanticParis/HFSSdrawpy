@@ -151,6 +151,7 @@ class ModelEntity():
             if self.body.mode=='gds':
                 radius = val(radius)
             self.body.interface.fillet(self, radius)
+            self.is_fillet = True
             return None
 
         if not isinstance(vertex_indices, list):
@@ -180,7 +181,6 @@ class ModelEntity():
                            for ind in index]
                           for index in vertex_indices]
 
-        self.is_fillet = True
         radius = parse_entry(radius)
         # check that one index is not present twice
         flat_indices = []
@@ -205,6 +205,7 @@ class ModelEntity():
                 print(new_indices)
                 self.body.interface.fillet(self, rad, new_indices)
                 past_indices += append_indices
+        self.is_fillet = True
         return None
 
     def assign_material(self, material):
@@ -261,7 +262,10 @@ class ModelEntity():
             else:
                 self.body.interface.subtract(self, tool_entities,
                                            keep_originals=True)
+                # actualize the properties of the entity
                 self.is_boolean = True
+                list_fillet = [entity.is_fillet for entity in tool_entities]
+                self.is_fillet = self.is_fillet or any(list_fillet)
             if not keep_originals:
                 for ii in range(len(tool_entities)):
                     tool_entities[0].delete()
