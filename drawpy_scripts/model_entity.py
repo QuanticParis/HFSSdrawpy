@@ -170,9 +170,15 @@ class ModelEntity():
             if not is_trigo:
                 vertex_indices = [[-ind for ind in index]
                                   for index in vertex_indices]
-            vertex_indices = [[(index_start + ind) % nb_vertices
-                               for ind in index]
-                              for index in vertex_indices]
+        else:
+            index_start = 0
+            if self.body.mode == 'gds':
+                nb_vertices = len(self.body.interface.get_vertices(self))
+            else:
+                 nb_vertices = len(self.body.interface.get_vertex_ids(self))
+        vertex_indices = [[(index_start + ind) % nb_vertices
+                           for ind in index]
+                          for index in vertex_indices]
 
         self.is_fillet = True
         radius = parse_entry(radius)
@@ -190,11 +196,15 @@ class ModelEntity():
             past_indices = []
             for rad, indices in zip(radius, vertex_indices):
                 new_indices = []
+                append_indices = []
                 for index in indices:
                     index += sum(i < index for i in past_indices)
                     new_indices.append(index)
+                    if index != 0:
+                        append_indices.append(index)
+                print(new_indices)
                 self.body.interface.fillet(self, rad, new_indices)
-                past_indices += indices
+                past_indices += append_indices
         return None
 
     def assign_material(self, material):

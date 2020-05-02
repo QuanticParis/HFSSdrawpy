@@ -218,7 +218,7 @@ class PythonModeler():
             pos = port.pos
             path_entity = self.polyline_2D(points, closed=False,
                                            name=name, layer=layer_Default)
-            path_entity.fillets(fillet)
+            path_entity.fillet(fillet)
 
             for ii in range(port.N):
                 offset = port.offsets[ii]

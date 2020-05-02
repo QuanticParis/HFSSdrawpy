@@ -1169,14 +1169,15 @@ class HfssModeler(COMWrapper):
         # if the geometry was subtracted/united : fillet indexing is not consistent
         # if the geometry ha a hole, should not use fillet, since un expected behaviour
         # if object has already been filleted should not be possible to fillet twice
-
         hfss_vertex_indices = self.get_vertex_ids(entity)
-        if not isinstance(vertex_indices, list):
-            vertex_indices = [vertex_indices]
-        to_fillet = [int(hfss_vertex_indices[v]) for v in vertex_indices]
-
-        pos = self._modeler.GetVertexPosition(to_fillet[0])
-
+        if vertex_indices is None:
+            if entity.dimension == 1:
+                hfss_vertex_indices = hfss_vertex_indices[1:-1]
+            to_fillet = [int(vertex) for vertex in hfss_vertex_indices]
+        else:
+            if not isinstance(vertex_indices, list):
+                vertex_indices = [vertex_indices]
+            to_fillet = [int(hfss_vertex_indices[v]) for v in vertex_indices]
         self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
                           ["NAME:Parameters",
                            ["NAME:FilletParameters",
@@ -1184,21 +1185,6 @@ class HfssModeler(COMWrapper):
                             "Vertices:=", to_fillet,
                             "Radius:=", radius,
                             "Setback:=", "0mm"]])
-
-
-    def fillets(self, entity, radius):
-        vertices = self.get_vertex_ids(entity)
-        if entity.dimension == 1:
-            vertices = vertices[1:-1]
-        to_fillet = [int(vertex) for vertex in vertices]
-#        print("to_fillet", to_fillet)
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
-                              ["NAME:Parameters",
-                               ["NAME:FilletParameters",
-                                "Edges:=", [],
-                                "Vertices:=", to_fillet,
-                                "Radius:=", radius,
-                                "Setback:=", "0mm"]])
 
     def _fillet_edges(self, entity, radius, edge_index):
         edges = self.get_edge_ids(entity.name)
