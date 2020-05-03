@@ -1,5 +1,7 @@
 # Compiled
 *.pyc
+# GDS
+*.gds
 .DS_Store
 # Subdirectories
 /build

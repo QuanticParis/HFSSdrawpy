@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='HFSSdrawpy_test4', # Replace with your own username
+    name='HFSSdrawpy', # Replace with your own username
     version="0.9",
     author="HQCteam",
     author_email="teamhqc@gmail.com",
@@ -19,6 +19,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    install_requires=['Pint>=0.10', 'numpy', 'sympy>=1.5.1', 'gdspy>=1.5.2',
+    install_requires=['Pint>=0.10', 'numpy', 'sympy>=1.5.1', 
+                      'gdspy>=1.5.2 ; platform_system!="Windows"',
                       'pywin32>=227 ; platform_system=="Windows"'],
 )
