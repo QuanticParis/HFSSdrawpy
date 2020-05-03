@@ -14,7 +14,7 @@ Go to the HFSSdrawpy directory and run:
 
 `python setup.py install`
 
-To easily get, the latest changes from git, run instead:
+To easily get the latest changes from git, run instead:
 
 `python setup.py develop`
 
