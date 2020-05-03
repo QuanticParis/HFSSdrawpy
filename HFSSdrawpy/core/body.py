@@ -40,6 +40,7 @@ class Body(Modeler):
         self.interface = pm.interface
         self.mode = pm.mode # 'hfss' or 'gds'
         self.dict_instances[name] = self
+        self.entities = {layer_Default:[]}  # entities sorted by layer
         self.list_entities = []
         self.list_ports = []
         self.cursors = [] # tuple to escape list parsing

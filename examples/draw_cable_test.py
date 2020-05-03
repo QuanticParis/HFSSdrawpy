@@ -45,11 +45,8 @@ with chip2(['0.5mm', '0.5mm'], [0, 1]):
     elt.draw_connector(chip2, 'in_flux_top', track, gap, bond_length, pcb_track,
                    pcb_gap, 0.5)
 
-    chip2.rect_corner_2D([0, 0], ['1mm', '1mm'], name='ga', layer=layer_TRACK)
-
     with chip2(['1.5mm', '-1.0mm'], [0, 1]):
         in_port2 = elt.create_port(chip2, 'test', [track, track+2*gap])
-        chip2.rect_corner_2D([0, 0], ['1mm', '1mm'], name='gp', layer=layer_TRACK)
 
 chip2.draw_cable('cable2', 'in_flux_top', 'test', is_bond=True, fillet='100um',
               reverse_adaptor=False, to_meander=[0, 0, 0], meander_length=0)#, is_mesh=True)
@@ -58,9 +55,9 @@ chip2.draw_cable('cable2', 'in_flux_top', 'test', is_bond=True, fillet='100um',
 chip2.box_corner_3D([0, 0, 0], ['3mm', '3mm', '-1mm'], name='box', material='silicon')
 ground_plane = chip2.rect_corner_2D([0, 0], ['3mm', '3mm'], name='ground_plane', layer=layer_TRACK)
 
-# ground_plane.subtract(ModelEntity.instances_layered[layer_GAP])
-# ground_plane.unite(ModelEntity.instances_layered[layer_TRACK])
-# ground_plane.assign_perfect_E()
+ground_plane.subtract(chip2.entities[layer_GAP])
+ground_plane.unite(chip2.entities[layer_TRACK])
+ground_plane.assign_perfect_E()
 
 # generate gds file
 pm.generate_gds(os.path.join(os.getcwd(), 'gds_files'), 'cable_test')

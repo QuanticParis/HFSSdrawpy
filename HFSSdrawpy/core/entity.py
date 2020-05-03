@@ -12,8 +12,6 @@ from ..utils import Vector, parse_entry, check_name, find_last_list, \
 class Entity():
     # this should be the objects we are handling on the python interface
     # each method of this class should act in return in HFSS/GDS when possible
-    instances_layered = {layer_TRACK:[], layer_GAP:[], layer_MASK:[],
-                         layer_Default:[], layer_RLC:[]}
     dict_instances = {}
     instances_to_move = None
 
@@ -27,10 +25,10 @@ class Entity():
         self.layer = layer
 
         Entity.dict_instances[name] = self
-        if layer in self.instances_layered.keys():
-            Entity.instances_layered[layer].append(self)
+        if layer in self.body.entities.keys():
+            self.body.entities[layer].append(self)
         else:
-            Entity.instances_layered[layer]=[self]
+            self.body.entities[layer]=[self]
 
         if copy is None:
             if Entity.instances_to_move is not None:
@@ -54,9 +52,10 @@ class Entity():
 
     @staticmethod
     def reset():
-        Entity.instances_layered = {}
-        Entity.dict_instances = {}
-        Entity.instances_to_move = []
+        raise NotImplementedError()
+        # self.body.entities = {}
+        # Entity.dict_instances = {}
+        # Entity.instances_to_move = []
 
     @classmethod
     def print_instances(cls):
@@ -69,7 +68,7 @@ class Entity():
         # deletes the Entity and its occurences throughout the code
         self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
-        self.instances_layered[self.layer].remove(self)
+        self.body.entities[self.layer].remove(self)
         if self.instances_to_move is not None:
             general_remove(self, self.instances_to_move)
         del self
