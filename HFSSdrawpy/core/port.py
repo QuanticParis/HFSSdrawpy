@@ -100,7 +100,7 @@ class Port():
                                Vector(0, offset1-width1/2).rot(self.ori)+self.pos])
             max_diff = max(max_diff, abs(_val(offset1+width1/2-(offset2+width2/2))),
                            abs(_val(offset2-width2/2-(offset1-width1/2))))
-
+        print('blah')
         adapt_dist = pm.update_variable(2*max_diff, name=self.name+'_adapt')
 
         if len(points) != 0:

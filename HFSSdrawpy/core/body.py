@@ -12,7 +12,7 @@ from ..utils import Vector, \
                    entity_kwargs, equal_float, \
                    way
 from .entity import Entity
-from ..modeler import Modeler
+from .modeler import Modeler
 from ..path_finding.path_finder import Path
 from .port import Port
 

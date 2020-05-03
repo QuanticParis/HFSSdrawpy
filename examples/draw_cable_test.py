@@ -6,12 +6,10 @@ Created on Tue Oct 29 14:05:00 2019
 """
 import os
 
-from HFSSdrawpy.modeler import Modeler
-from HFSSdrawpy.core.body import Body
+from HFSSdrawpy import Modeler, Body
 from HFSSdrawpy.parameters import layer_TRACK, layer_GAP, layer_RLC
-
 import HFSSdrawpy.libraries.example_elements as elt
-# import default_libraries.base_elements as base
+# import HFSSdrawpy.libraries.base_elements as base
 
 pm = Modeler('gds')
 

@@ -10,8 +10,8 @@ import numpy as np
 import os
 from inspect import currentframe, getfile
 
-from .core.entity import Entity
-from .utils import VariableString, parse_entry, val
+from .entity import Entity
+from ..utils import VariableString, parse_entry, val
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -42,7 +42,7 @@ class Modeler():
         """
         self.mode = mode
         if mode == "hfss":
-            from .interfaces.hfss_modeler import get_active_project
+            from ..interfaces.hfss_modeler import get_active_project
             project = get_active_project()
             design = project.get_active_design()
             self.design = design
@@ -51,7 +51,7 @@ class Modeler():
             self.modeler.delete_all_objects()
             self.interface = self.modeler
         elif mode=="gds":
-            from .interfaces import gds_modeler
+            from ..interfaces import gds_modeler
             self.interface = gds_modeler.GdsModeler()
         else:
             print('Mode should be either hfss or gds')
@@ -94,7 +94,6 @@ class Modeler():
         if self.mode == 'hfss':
             self.design.set_variable(name, value)  # for HFSS
         VariableString.store_variable(name, value)
-        print('%s is redefined to %s'%(name, value))
         return VariableString.instances[name]
 
     def generate_gds(self, folder, filename):
