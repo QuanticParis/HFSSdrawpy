@@ -2,7 +2,9 @@
 *.pyc
 .DS_Store
 # Subdirectories
-/recorded_scripts
-/archive
-/drawings
+/build
+/dist
+/HFSSdrawpy.egg-info
+Pipfile
+Pipfile.lock
 /.vscode

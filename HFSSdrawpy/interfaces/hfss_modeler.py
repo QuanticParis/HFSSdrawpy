@@ -1,4 +1,3 @@
-from __future__ import division
 import atexit
 from copy import copy
 import os
