@@ -931,7 +931,6 @@ class HfssModeler(COMWrapper):
             pos.append(0)
         if len(size)==2:
             size.append(0)
-
         kwargs2 = kwargs.copy()
         kwargs2.pop('layer', None)
         pos = parse_entry(pos)

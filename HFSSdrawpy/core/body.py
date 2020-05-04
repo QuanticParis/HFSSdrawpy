@@ -9,7 +9,7 @@ from ..utils import Vector, \
                    to_move, \
                    _val, \
                    val, \
-                   entity_kwargs, equal_float, \
+                   entity_kwargs, equal_float, gen_name, \
                    way
 from .entity import Entity
 from .modeler import Modeler
@@ -217,6 +217,7 @@ class Body(Modeler):
 
     @set_body
     def rect_corner_2D(self, pos, size, **kwargs):
+        print(kwargs)
         if self.mode=='gds':
             pos = val(pos)
             size = val(size)
