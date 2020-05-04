@@ -32,20 +32,19 @@ gap_middle = pm.set_variable('12.5um')
 offset = pm.set_variable('-50um')
 
 # chip2
-port0 = elt.create_port(chip2, [track, track+2*gap]) # default is the widths of track and gap
+port0, = elt.create_port(chip2, [track, track+2*gap]) # default is the widths of track and gap
 
 with chip2(['2.0mm', '0.0mm'], [1, 0]):
-    port1 = elt.create_port(chip2, [track, track+2*gap]) # default is the widths of track and gap
+    port1, = elt.create_port(chip2, [track, track+2*gap]) # default is the widths of track and gap
 
 bond_length, bond_slope, pcb_track, pcb_gap = '200um', 0.5, '300um', '200um'
 
 with chip2(['0.5mm', '0.5mm'], [0, 1]):
-    con_port = elt.draw_connector(chip2, track, gap, bond_length, pcb_track,
-                                  pcb_gap, 0.5)
+    con_port, = elt.draw_connector(chip2, track, gap, bond_length, pcb_track,
+                                   pcb_gap, 0.5)
 
     with chip2(['1.5mm', '-1.0mm'], [0, 1]):
-        port2 = elt.create_port(chip2, [track, track+2*gap])
-
+        port2, = elt.create_port(chip2, [track, track+2*gap])
 
 chip2.draw_cable(con_port, port2, is_bond=True, fillet='100um',
                  reverse_adaptor=False, to_meander=[0, 0, 0],

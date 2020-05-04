@@ -53,8 +53,9 @@ def create_port(self, widths=None, subnames=None, layers=None, offsets=0, name='
             subnames = ['track', 'gap']
             layers = [layer_TRACK, layer_GAP]
             offsets = [0, 0]
-    return self.port(widths=widths, subnames=subnames, layers=layers,
+    port, = self.port(widths=widths, subnames=subnames, layers=layers,
                      offsets=offsets, name=name)
+    return [port]
 
 def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
                    slope=1, tr_line=True, name='connector_0'):
@@ -120,9 +121,9 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
                                     name=name+"_mask")
 
     with self([adaptDist+pcb_gap+bond_length,0], [1,0]):
-        portOut = create_port(self, widths=[track+2*self.overdev,
-                                            2*gap+track-2*self.overdev],
-                              name=name)
+        portOut, = create_port(self, widths=[track+2*self.overdev,
+                                             2*gap+track-2*self.overdev],
+                               name=name)
 
     if tr_line:
         ohm = self.rect([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
@@ -134,7 +135,7 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
 
         ohm.assign_mesh_length(pcb_track/10)
 
-    return portOut
+    return [portOut]
 
 def draw_quarter_circle(self, name, layer, fillet):
     '''
@@ -152,7 +153,6 @@ def draw_quarter_circle(self, name, layer, fillet):
     self._fillet(fillet-eps, [0], temp_fillet)
 
     self.subtract(temp, [temp_fillet])
-    return temp
 
 def cutout(self, name, zone_size):
     '''Create a mask of size 'zone_size'

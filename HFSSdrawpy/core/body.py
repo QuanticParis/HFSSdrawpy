@@ -377,7 +377,8 @@ class Body(Modeler):
                           (0, offset-width/2)]
                 self.polyline(points, name='_'+name+'_'+subnames[ii], layer=layer_PORT, nonmodel=True)
 
-        return Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
+        result = Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
+        return [result]
 
     @move_port
     def draw_cable(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None, meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False, name='cable_0'):
@@ -545,7 +546,7 @@ class Body(Modeler):
         print('Cable "%s" length = %.3f mm'%(name, length*1000))
         return length
 
-    def draw_bond(self, to_bond, ymax, ymin, name='wb', min_dist='0.5mm'):
+    def draw_bond(self, to_bond, ymax, ymin, min_dist='0.5mm', name='wb_0'):
         # to_bond list of segments
         ymax, ymin, min_dist = parse_entry(ymax, ymin, min_dist)
 
