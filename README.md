@@ -2,21 +2,22 @@
 
 This package allows to draw circuits in HFSS using Python. It also directly generates GDS files.
 
-[Source Code](https://github.com/leghtas/HFSSdrawpy/)
+[Source Code](https://github.com/QuanticParis/HFSSdrawpy/)
 
 ## Installation
 
-Installing using pip will soon be available. Meanwhile download the [source code](https://github.com/leghtas/HFSSdrawpy/).
+Installing using pip will soon be available. Meanwhile download the [source code](https://github.com/QuanticParis/HFSSdrawpy/).
 
 ### Linux / MacOS
 
-Go to the HFSSdrawpy directory and run: 
-
-`python setup.py install`
-
-To easily get the latest changes from git, run instead:
+Go to the HFSSdrawpy directory and run:
 
 `python setup.py develop`
+
+This kind of install enables the latest changes from Github conveniently. In the near future
+when the code will be more stable we will organize a release. From then, the install wil be done by running
+
+`pip install HFSSdrawpy`
 
 ### Windows
 

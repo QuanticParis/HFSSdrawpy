@@ -95,7 +95,7 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
               (pcb_gap+iBondLength, -pcb_track/2-self.overdev),
               (pcb_gap-self.overdev, -pcb_track/2-self.overdev)]
 
-    track = self.polyline_2D(points, name=name+'_track', layer=layer_TRACK)
+    track = self.polyline(points, name=name+'_track', layer=layer_TRACK)
 
     points = [(pcb_gap/2+self.overdev, pcb_gap+pcb_track/2-self.overdev),
              (pcb_gap+iBondLength, pcb_gap+pcb_track/2-self.overdev),
@@ -104,7 +104,7 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
              (pcb_gap+iBondLength, -pcb_gap-pcb_track/2+self.overdev),
              (pcb_gap/2+self.overdev, -pcb_gap-pcb_track/2+self.overdev)]
 
-    gap = self.polyline_2D(points, name=name+'_gap', layer=layer_GAP)
+    gap = self.polyline(points, name=name+'_gap', layer=layer_GAP)
 
     if self.is_mask:
         points =[(pcb_gap/2-self.gap_mask, pcb_gap+pcb_track/2+self.gap_mask),
@@ -114,18 +114,18 @@ def draw_connector(self, name, iTrack, iGap, iBondLength, pcb_track, pcb_gap, iS
                   (pcb_gap+iBondLength, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask),
                   (pcb_gap/2-self.gap_mask, (pcb_gap)+(iTrack-pcb_track)*0.5-self.gap_mask)]
 
-        mask = self.polyline_2D(points, name=name+"_mask", layer=layer_MASK)
+        mask = self.polyline(points, name=name+"_mask", layer=layer_MASK)
 
     with self([adaptDist+pcb_gap+iBondLength,0], [1,0]):
         portOut = create_port(self, name, widths=[iTrack+2*self.overdev, 2*iGap+iTrack-2*self.overdev])
 
     if tr_line:
-        ohm = self.rect_corner_2D([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
-                                  [pcb_gap/2-2*self.overdev, -pcb_track-2*self.overdev],
-                                  name=name+'_ohm', layer=layer_RLC)
+        ohm = self.rect([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
+                        [pcb_gap/2-2*self.overdev, -pcb_track-2*self.overdev],
+                        name=name+'_ohm', layer=layer_RLC)
         points = [(pcb_gap/2+self.overdev, 0), (pcb_gap-self.overdev, 0)]
         ohm.assign_lumped_RLC(points, ('50ohm', 0, 0))
-        self.polyline_2D(points, name=name+'_line', closed=False, layer=layer_Default)
+        self.polyline(points, name=name+'_line', closed=False, layer=layer_Default)
 
         ohm.assign_mesh_length(pcb_track/10)
 

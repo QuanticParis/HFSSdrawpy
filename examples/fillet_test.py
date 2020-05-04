@@ -21,8 +21,8 @@ track = pm.set_variable('20um')
 gap = pm.set_variable('10um')
 radius = pm.set_variable('100um')
 
-rect1 = chip1.rect_corner_2D([0, 0], ['1mm', '1mm'], name='rect1', layer=layer_TRACK)
-rect2 = chip1.rect_corner_2D(['0.5mm', '0.5mm'], ['-1mm', '-1mm'], name='rect2', layer=layer_TRACK)
+rect1 = chip1.rect([0, 0], ['1mm', '1mm'], name='rect1', layer=layer_TRACK)
+rect2 = chip1.rect(['0.5mm', '0.5mm'], ['-1mm', '-1mm'], name='rect2', layer=layer_TRACK)
 
 rect1.unite(rect2)
 

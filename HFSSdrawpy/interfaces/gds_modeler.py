@@ -74,15 +74,15 @@ class GdsModeler():
     def set_units(self, units='m'):
         self.unit = self.dict_units[units]
 
-    def box_corner_3D(self, pos, size, **kwargs):
+    def box(self, pos, size, **kwargs):
         # print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
         return kwargs['name']
 
-    def box_center_3D(self, pos, size, **kwargs):
+    def box_center(self, pos, size, **kwargs):
         # print("ERROR : The function --box_center_3D-- cannot be used for GDSmodeler")
         return kwargs['name']
 
-    def polyline_2D(self, points, closed, **kwargs):
+    def polyline(self, points, closed, **kwargs):
         #TODO sace of open path
         #size is the thickness of the polyline for gds, must be a 2D-list with idential elements
         name = kwargs['name']
@@ -97,7 +97,7 @@ class GdsModeler():
         self.cell.add(poly1)
         return name
 
-    def rect_corner_2D(self, pos, size, **kwargs):
+    def rect(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
         name = kwargs['name']
         layer = kwargs['layer']
@@ -109,16 +109,16 @@ class GdsModeler():
         self.cell.add(poly1)
         return name
 
-    def rect_center_2D(self, pos, size, **kwargs):
+    def rect_center(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.rect_corner_2D(corner_pos, size, **kwargs)
+        return self.rect(corner_pos, size, **kwargs)
 
-    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
+    def cylinder(self, pos, radius, height, axis, **kwargs):
         # print("ERROR : The function --cylinder_3D-- cannot be used for GDSmodeler")
         return kwargs['name']
 
-    def disk_2D(self, pos, radius, axis, number_of_points=0, **kwargs):
+    def disk(self, pos, radius, axis, number_of_points=0, **kwargs):
         pos, radius = parse_entry(pos, radius)
         name = kwargs['name']
         layer = kwargs['layer']
@@ -128,13 +128,13 @@ class GdsModeler():
         self.cell.add(round1)
         return name
 
-    def wirebond_2D(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
+    def wirebond(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
         bond_diam = '20um'
         pos, ori, ymax, ymin, heigth, bond_diam = parse_entry((pos, ori, ymax, ymin, height, bond_diam))
         bond1 = pos + ori.orth()*(ymax+2*bond_diam)
         bond2 = pos + ori.orth()*(ymin-2*bond_diam)
-        name_a = self.disk_2D(bond1, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'a', number_of_points=6)
-        name_b = self.disk_2D(bond2, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'b', number_of_points=6)
+        name_a = self.disk(bond1, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'a', number_of_points=6)
+        name_b = self.disk(bond2, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'b', number_of_points=6)
         return name_a, name_b
 
     def connect_faces(self, entity1, entity2):

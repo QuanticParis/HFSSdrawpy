@@ -773,7 +773,7 @@ class HfssModeler(COMWrapper):
 
     def _attributes_array(self, name=None, nonmodel=False, color=None,
                           transparency=0.9, material=None, solve_inside = None,
-                          coor_sys='Global'):
+                          coor_sys='Global', **kwargs):
         arr = ["NAME:Attributes", "PartCoordinateSystem:=", coor_sys, "Coordinate System:=", coor_sys]
         if name is not None:
             arr.extend(["Name:=", name])
@@ -866,7 +866,7 @@ class HfssModeler(COMWrapper):
         self._modeler.Delete(self._selections_array(*objects))
 
     @assert_name
-    def box_corner_3D(self, pos, size, **kwargs):
+    def box(self, pos, size, **kwargs):
         if len(pos)==2:
             pos.append(0)
         if len(size)==2:
@@ -884,22 +884,20 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
 
-    def box_center_3D(self, pos, size, **kwargs):
+    def box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.box_corner_3D(corner_pos, size, **kwargs)
+        return self.box_corner(corner_pos, size, **kwargs)
 
     @assert_name
-    def polyline_2D(self, points, closed=True, **kwargs):
+    def polyline(self, points, closed=True, **kwargs):
         for i in range(len(points)):
             if isinstance(points[i], tuple) and len(points[i])==2:
                 points[i]+=(0,)
             elif isinstance(points[i], list) and len(points[i])==2:
                 points[i].append(0)
 
-        kwargs2 = kwargs.copy()
-        kwargs2.pop('layer', None)
         points = parse_entry(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
@@ -920,19 +918,17 @@ class HfssModeler(COMWrapper):
             *params_closed,
             pointsStr,
             indexsStr],
-            self._attributes_array(**kwargs2))
-        del kwargs2
+            self._attributes_array(**kwargs))
 
         return name
 
     @assert_name
-    def rect_corner_2D(self, pos, size, **kwargs):
+    def rect(self, pos, size, **kwargs):
         if len(pos)==2:
             pos.append(0)
         if len(size)==2:
             size.append(0)
-        kwargs2 = kwargs.copy()
-        kwargs2.pop('layer', None)
+        kwargs = kwargs.copy()
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
@@ -948,21 +944,18 @@ class HfssModeler(COMWrapper):
              "Width:=", size[w_idx],
              "Height:=", size[h_idx],
              "WhichAxis:=", axis],
-            self._attributes_array(**kwargs2)
+            self._attributes_array(**kwargs)
         )
-        del kwargs2
         return name
 
-    def rect_center_2D(self, pos, size, **kwargs):
+    def rect_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.rect_corner_2D(corner_pos, size, **kwargs)
+        return self.rect(corner_pos, size, **kwargs)
 
     @assert_name
-    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
-        kwargs2 = kwargs.copy()
-        kwargs2.pop('layer', None)
+    def cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
@@ -973,18 +966,18 @@ class HfssModeler(COMWrapper):
              "Height:=", height,
              "WhichAxis:=", axis,
              "NumSides:=", 0],
-            self._attributes_array(**kwargs2))
+            self._attributes_array(**kwargs))
         return name
 
-    def cylinder_center_3D(self, pos, radius, height, axis, **kwargs):
+    def cylinder_center(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
         edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
-        return self.cylinder_3D(edge_pos, radius, height, axis, **kwargs)
+        return self.cylinder(edge_pos, radius, height, axis, **kwargs)
 
     @assert_name
-    def disk_2D(self, pos, radius, axis, **kwargs):
+    def disk(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateEllipse(
             ["NAME:EllipsdeParameters",
@@ -998,7 +991,7 @@ class HfssModeler(COMWrapper):
         return name
 
     @assert_name
-    def wirebond_2D(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
+    def wirebond(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
         bond_diam = '20um'
         params = parse_entry(pos, ori, ymax, ymin, height, bond_diam)
         pos, ori, ymax, ymin, heigth, bond_diam = params
@@ -1007,10 +1000,8 @@ class HfssModeler(COMWrapper):
         direction = - ori.orth()
         xpad, ypad = bond1
         xdir, ydir = direction
-        kwargs2 = kwargs.copy()
-        kwargs2.pop('layer', None)
-        kwargs2['material'] = 'perfect conductor'
-        kwargs2['solve_inside'] = False
+        kwargs['material'] = 'perfect conductor'
+        kwargs['solve_inside'] = False
         name = self._modeler.CreateBondwire(["NAME:BondwireParameters",
                                             "WireType:=", "Low",
                                             "WireDiameter:=", bond_diam,
@@ -1027,8 +1018,7 @@ class HfssModeler(COMWrapper):
                                             "alpha:=", "80deg",
                                             "beta:=", "80deg",
                                             "WhichAxis:=", "Z"],
-                                            self._attributes_array(**kwargs2))
-        del kwargs2
+                                            self._attributes_array(**kwargs))
         return name
 
     def duplicate_along_line(self, entity, vec, n=2):

@@ -105,7 +105,7 @@ class Body(Modeler):
     ### Basic drawings
 
     @set_body
-    def box_corner_3D(self, pos, size, **kwargs):
+    def box(self, pos, size, **kwargs):
         """
         Draws a 3D box based on the coordinates of its corner.
 
@@ -119,12 +119,12 @@ class Body(Modeler):
         -------
         box: Corresponding 3D Model Entity
         """
-        name = self.interface.box_corner_3D(pos, size, **kwargs)
+        name = self.interface.box(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 3, self, **kwargs)
 
     @set_body
-    def box_center_3D(self, pos, size, **kwargs):
+    def box_center(self, pos, size, **kwargs):
         """
         Draws a 3D box based on the coordinates of its center.
 
@@ -138,28 +138,28 @@ class Body(Modeler):
         -------
         box: Corresponding 3D Model Entity
         """
-        name = self.interface.box_center_3D(pos, size, **kwargs)
+        name = self.interface.box_center(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 3, self, **kwargs)
 
     @set_body
-    def cylinder_3D(self, pos, radius, height, axis, **kwargs):
-        name = self.interface.cylinder_3D(pos, radius, height, axis, **kwargs)
+    def cylinder(self, pos, radius, height, axis, **kwargs):
+        name = self.interface.cylinder(pos, radius, height, axis, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 3, self, **kwargs)
 
 
     @set_body
-    def disk_2D(self, pos, radius, axis, **kwargs):
+    def disk(self, pos, radius, axis, **kwargs):
         if self.mode=='gds':
             pos = val(pos)
             radius = val(radius)
-        name = self.interface.disk_2D(pos, radius, axis, **kwargs)
+        name = self.interface.disk(pos, radius, axis, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 2, self, **kwargs)
 
     @set_body
-    def polyline_2D(self, points, closed=True, **kwargs): # among kwargs, name should be given
+    def polyline(self, points, closed=True, **kwargs): # among kwargs, name should be given
         i = 0
         while i < len(points[:-1]):
             points_equal = [equal_float(val(p0),val(p1))
@@ -171,13 +171,13 @@ class Body(Modeler):
                 i+=1
         if self.mode=='gds':
             points = val(points)
-        name = self.interface.polyline_2D(points, closed, **kwargs)
+        name = self.interface.polyline(points, closed, **kwargs)
         dim = closed + 1
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, dim, self, **kwargs)
 
     @set_body
-    def path_2D(self, points, port, fillet, **kwargs):
+    def path(self, points, port, fillet, **kwargs):
         name = kwargs['name']
         model_entities = []
         if self.mode == 'gds':
@@ -216,34 +216,33 @@ class Body(Modeler):
         return model_entities
 
     @set_body
-    def rect_corner_2D(self, pos, size, **kwargs):
-        print(kwargs)
+    def rect(self, pos, size, **kwargs):
         if self.mode=='gds':
             pos = val(pos)
             size = val(size)
-        name = self.interface.rect_corner_2D(pos, size, **kwargs)
+        name = self.interface.rect(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 2, self, **kwargs)
 
     @set_body
-    def rect_center_2D(self, pos, size, **kwargs):
+    def rect_center(self, pos, size, **kwargs):
         if self.mode=='gds':
             pos = val(pos)
             size = val(size)
-        name = self.interface.rect_center_2D(pos, size, **kwargs)
+        name = self.interface.rect_center(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 2, self, **kwargs)
 
     @set_body
-    def wirebond_2D(self, pos, ori, ymax, ymin, **kwargs):
+    def wirebond(self, pos, ori, ymax, ymin, **kwargs):
         if self.mode=='gds':
             pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
-            name_a, name_b = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
+            name_a, name_b = self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
             kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
             return Entity(name_a, 2, self, **kwargs), \
                     Entity(name_b, 2, self, **kwargs)
         else:
-            name = self.interface.wirebond_2D(pos, ori, ymax, ymin, **kwargs)
+            name = self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
             kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
             return Entity(name, 3, self, **kwargs)
 
@@ -352,7 +351,7 @@ class Body(Modeler):
             points = [(0, offset+width/2),
                       (width/3, offset),
                       (0, offset-width/2)]
-            self.polyline_2D(points, name='_'+name, layer=layer_PORT, nonmodel=True)
+            self.polyline(points, name='_'+name, layer=layer_PORT, nonmodel=True)
         else:
             pos, ori, widths, offsets = parse_entry(pos, ori, widths, offsets)
             for ii in range(len(widths)):
@@ -361,7 +360,7 @@ class Body(Modeler):
                 points = [(0, offset+width/2),
                           (width/3, offset),
                           (0, offset-width/2)]
-                self.polyline_2D(points, name='_'+name+'_'+subnames[ii], layer=layer_PORT, nonmodel=True)
+                self.polyline(points, name='_'+name+'_'+subnames[ii], layer=layer_PORT, nonmodel=True)
 
         return Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
 
@@ -426,7 +425,6 @@ class Body(Modeler):
                                 indentation levels: port %s'%(port.name)
                         raise IndentationError(msg)
 
-
         # asserts neither in nor out port are constraint_ports
         if ports[0].constraint_port and ports[-1].constraint_port:
             raise ValueError('At least the first (%s) or last port (%s) \
@@ -474,7 +472,6 @@ class Body(Modeler):
             meander_offset = [meander_offset[cable_portion]]
         _ports.append(ports[-1])
 
-
         # at this stage first and last port are not constraint_port and all
         # intermediate port should be constraint_port
 
@@ -490,7 +487,7 @@ class Body(Modeler):
 
         # plot adaptors
         for jj, pts in enumerate(points):
-            self.polyline_2D(pts, name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt', layer=ports[index_modified].layers[jj])
+            self.polyline(pts, name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt', layer=ports[index_modified].layers[jj])
 
         # define the constraint_port parameters
         for port in ports[1:-1]:
@@ -517,7 +514,7 @@ class Body(Modeler):
 
         total_path.clean()
         # plot cable
-        self.path_2D(total_path.points, total_path.port_in, total_path.fillet,
+        self.path(total_path.points, total_path.port_in, total_path.fillet,
                   name=name)
 
         # if bond plot bonds
@@ -553,7 +550,7 @@ class Body(Modeler):
             spacing = (B-A).norm()/n_bond
             pos = A+ori*spacing/2
             for ii in range(n_bond):
-                self.wirebond_2D(pos, ori, ymax, ymin, layer=layer_Default, name=name+'_%d'%(bond_number))
+                self.wirebond(pos, ori, ymax, ymin, layer=layer_Default, name=name+'_%d'%(bond_number))
                 bond_number += 1
                 pos = pos + ori*spacing
             jj+=1
