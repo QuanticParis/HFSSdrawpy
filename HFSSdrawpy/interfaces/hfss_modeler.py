@@ -797,11 +797,8 @@ class HfssModeler(COMWrapper):
         @wraps(func)
         def asserted_name(*args, **kwargs):
             name = func(*args, **kwargs)
-            if name != kwargs['name']:
-                msg = ('Warning: \'%s\' already exists, '
-                       'new entity named \'%s\'' % (kwargs['name'], name))
-                print(msg)
-            return name
+            msg = 'Failed at generating a name for %s'%name
+            assert name == kwargs['name'], msg
         return asserted_name
 
     def connect_faces(self, entity1, entity2):
@@ -884,6 +881,7 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
 
+    @assert_name
     def box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
@@ -928,7 +926,6 @@ class HfssModeler(COMWrapper):
             pos.append(0)
         if len(size)==2:
             size.append(0)
-        kwargs = kwargs.copy()
         pos = parse_entry(pos)
         size = parse_entry(size)
         assert ('0' in size or 0 in size)
@@ -948,6 +945,7 @@ class HfssModeler(COMWrapper):
         )
         return name
 
+    @assert_name
     def rect_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
@@ -969,6 +967,7 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
 
+    @assert_name
     def cylinder_center(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
@@ -1020,6 +1019,21 @@ class HfssModeler(COMWrapper):
                                             "WhichAxis:=", "Z"],
                                             self._attributes_array(**kwargs))
         return name
+
+    def sweep_along_path(self, entity_to_sweep, path_entity):
+#        name_temp = path_entity.name
+#        self.rename_entity(path_entity, path_entity.name+'_path')
+#        self.rename_entity(entity_to_sweep, name_temp)
+
+        names = [entity_to_sweep.name, path_entity.name]
+        self._modeler.SweepAlongPath(self._selections_array(*names),
+                                     ["NAME:PathSweepParameters",
+                                		"DraftAngle:="		, "0deg",
+                                		"DraftType:="		, "Round",
+                                		"CheckFaceFaceIntersection:=", False,
+                                		"TwistAngle:="		, "0deg"])
+        entity_to_sweep.dimension += 1
+        return entity_to_sweep.name
 
     def duplicate_along_line(self, entity, vec, n=2):
         self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", entity.name,
@@ -1323,20 +1337,7 @@ class HfssModeler(COMWrapper):
                                 ["NAME:UniteParameters",
                                  "KeepOriginals:=", keep_originals])
 
-    def _sweep_along_path(self, entity_to_sweep, path_entity):
-#        name_temp = path_entity.name
-#        self.rename_entity(path_entity, path_entity.name+'_path')
-#        self.rename_entity(entity_to_sweep, name_temp)
 
-        names = [entity_to_sweep.name, path_entity.name]
-        self._modeler.SweepAlongPath(self._selections_array(*names),
-                                     ["NAME:PathSweepParameters",
-                                		"DraftAngle:="		, "0deg",
-                                		"DraftType:="		, "Round",
-                                		"CheckFaceFaceIntersection:=", False,
-                                		"TwistAngle:="		, "0deg"])
-        entity_to_sweep.dimension += 1
-        return entity_to_sweep.name
 
     def sweep_along_vector(self, entities, vector):
         names = [entity.name for entity in entities]

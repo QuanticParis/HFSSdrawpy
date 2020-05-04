@@ -21,12 +21,12 @@ track = pm.set_variable('20um')
 gap = pm.set_variable('10um')
 radius = pm.set_variable('100um')
 
-rect1 = chip1.rect([0, 0], ['1mm', '1mm'], name='rect1', layer=layer_TRACK)
-rect2 = chip1.rect(['0.5mm', '0.5mm'], ['-1mm', '-1mm'], name='rect2', layer=layer_TRACK)
+rect1 = chip1.rect([0, 0], ['1mm', '1mm'], layer=layer_TRACK)
+rect2 = chip1.rect(['0.5mm', '0.5mm'], ['-1mm', '-1mm'], layer=layer_GAP)
 
 rect1.unite(rect2)
 
-rect1.fillet(radius, [3, 1, 2, -1])
+# rect1.fillet(radius, [3, 1, 2, -1])
 
 # generate gds file
 # pm.generate_gds(os.getcwd(), 'test')

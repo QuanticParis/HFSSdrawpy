@@ -126,11 +126,24 @@ def gen_name(name):
         return prefix+suffix
 
 def check_name(_class, name):
-    i = 0
+    end = ''
+    for ii, char in enumerate(name[::-1]):
+        if char.isdigit():
+            end+=char
+        else:
+            break
+    else:
+        ii += 1
+    if end == '':
+        radical = name
+        number = 0
+    else:
+        radical = name[:-ii]
+        number = int(end[::-1])
     new_name = name
     while(new_name in _class.dict_instances.keys()):
-        new_name = name+'_'+str(i)
-        i+=1
+        number+=1
+        new_name = radical+str(number)
     if new_name != name:
         print("%s: changed '%s' name into '%s'"%(_class.__name__, name, new_name))
     return new_name

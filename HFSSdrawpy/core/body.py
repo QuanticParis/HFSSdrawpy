@@ -105,7 +105,7 @@ class Body(Modeler):
     ### Basic drawings
 
     @set_body
-    def box(self, pos, size, **kwargs):
+    def box(self, pos, size, name='box_0', **kwargs):
         """
         Draws a 3D box based on the coordinates of its corner.
 
@@ -119,12 +119,14 @@ class Body(Modeler):
         -------
         box: Corresponding 3D Model Entity
         """
-        name = self.interface.box(pos, size, **kwargs)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        self.interface.box(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 3, self, **kwargs)
 
     @set_body
-    def box_center(self, pos, size, **kwargs):
+    def box_center(self, pos, size, name='box_0', **kwargs):
         """
         Draws a 3D box based on the coordinates of its center.
 
@@ -138,28 +140,36 @@ class Body(Modeler):
         -------
         box: Corresponding 3D Model Entity
         """
-        name = self.interface.box_center(pos, size, **kwargs)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        self.interface.box_center(pos, size, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 3, self, **kwargs)
 
     @set_body
-    def cylinder(self, pos, radius, height, axis, **kwargs):
-        name = self.interface.cylinder(pos, radius, height, axis, **kwargs)
+    def cylinder(self, pos, radius, height, axis, name='cylinder', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        self.interface.cylinder(pos, radius, height, axis, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 3, self, **kwargs)
 
 
     @set_body
-    def disk(self, pos, radius, axis, **kwargs):
+    def disk(self, pos, radius, axis, name='disk_0', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
         if self.mode=='gds':
             pos = val(pos)
             radius = val(radius)
-        name = self.interface.disk(pos, radius, axis, **kwargs)
+        self.interface.disk(pos, radius, axis, **kwargs)
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, 2, self, **kwargs)
 
     @set_body
-    def polyline(self, points, closed=True, **kwargs): # among kwargs, name should be given
+    def polyline(self, points, closed=True, name='polyline_0', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
         i = 0
         while i < len(points[:-1]):
             points_equal = [equal_float(val(p0),val(p1))
@@ -171,14 +181,52 @@ class Body(Modeler):
                 i+=1
         if self.mode=='gds':
             points = val(points)
-        name = self.interface.polyline(points, closed, **kwargs)
+        self.interface.polyline(points, closed, **kwargs)
         dim = closed + 1
         kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
         return Entity(name, dim, self, **kwargs)
 
     @set_body
-    def path(self, points, port, fillet, **kwargs):
-        name = kwargs['name']
+    def rect(self, pos, size, name='rect_0', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        if self.mode=='gds':
+            pos = val(pos)
+            size = val(size)
+        self.interface.rect(pos, size, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return Entity(name, 2, self, **kwargs)
+
+    @set_body
+    def rect_center(self, pos, size, name='rect_0', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        if self.mode=='gds':
+            pos = val(pos)
+            size = val(size)
+        self.interface.rect_center(pos, size, **kwargs)
+        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+        return Entity(name, 2, self, **kwargs)
+
+    @set_body
+    def wirebond(self, pos, ori, ymax, ymin, name='wb_0', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        if self.mode=='gds':
+            pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
+            self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
+            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+            return Entity(name+'a', 2, self, **kwargs), \
+                    Entity(name+'b', 2, self, **kwargs)
+        else:
+            self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
+            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
+            return Entity(name, 3, self, **kwargs)
+
+    @set_body
+    def path(self, points, port, fillet, name='path_0', **kwargs):
+        name = check_name(Entity, name)
+        kwargs['name'] = name
         model_entities = []
         if self.mode == 'gds':
             points = val(points)
@@ -192,7 +240,7 @@ class Body(Modeler):
             # check that port is at the BEGINNING of the path (hfss only)
             ori = port.ori
             pos = port.pos
-            path_entity = self.polyline_2D(points, closed=False,
+            path_entity = self.polyline(points, closed=False,
                                            name=name, layer=layer_Default)
             path_entity.fillet(fillet)
 
@@ -203,48 +251,17 @@ class Body(Modeler):
                 layer = port.layers[ii]
                 points_starter = [Vector(0, offset+width/2).rot(ori)+pos,
                                   Vector(0, offset-width/2).rot(ori)+pos]
-                entity = self.polyline_2D(points_starter, closed=False,
+                entity = self.polyline(points_starter, closed=False,
                                           name=name+'_'+subname, layer=layer)
                 path_name = name+'_'+subname+'_path'
                 current_path_entity = path_entity.copy(new_name=path_name)
-                self.interface._sweep_along_path(entity, current_path_entity)
+                self.interface.sweep_along_path(entity, current_path_entity)
                 current_path_entity.delete()
                 model_entities.append(entity)
 
             path_entity.delete()
 
         return model_entities
-
-    @set_body
-    def rect(self, pos, size, **kwargs):
-        if self.mode=='gds':
-            pos = val(pos)
-            size = val(size)
-        name = self.interface.rect(pos, size, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 2, self, **kwargs)
-
-    @set_body
-    def rect_center(self, pos, size, **kwargs):
-        if self.mode=='gds':
-            pos = val(pos)
-            size = val(size)
-        name = self.interface.rect_center(pos, size, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 2, self, **kwargs)
-
-    @set_body
-    def wirebond(self, pos, ori, ymax, ymin, **kwargs):
-        if self.mode=='gds':
-            pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
-            name_a, name_b = self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
-            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-            return Entity(name_a, 2, self, **kwargs), \
-                    Entity(name_b, 2, self, **kwargs)
-        else:
-            name = self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
-            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-            return Entity(name, 3, self, **kwargs)
 
     ### Advanced methods
 
@@ -266,29 +283,26 @@ class Body(Modeler):
         """
         @wraps(func)
         def moved(*args, **kwargs):
-            new_args = [args[0], args[1]]  # args[0] = chip, args[1] = name
-            compteur = 0
-            for i, argument in enumerate(args[2:]):
+            new_args = [args[0]]  # args[0] = chip, args[1] = name
+            for i, argument in enumerate(args[1:]):
                 if isinstance(argument, str) and (argument in Port.dict_instances):
                     #  if argument is the sting representation of the port
                     new_args.append(Port.dict_instances[argument])
-                    compteur+=1
                 elif isinstance(argument, Port):
                     #  it the argument is the port itself
                     new_args.append(argument)
-                    compteur+=1
                 else:
                     new_args.append(argument)
             return func(*new_args, **kwargs)
         return moved
 
-    def port(self, name, widths=None, subnames=None, layers=None, offsets=0):
+    def port(self, widths=None, subnames=None, layers=None, offsets=0, name='port_0'):
         """
         Creates a port and draws a small triangle for each element of the port
 
         Parameters
         ----------
-        name : str
+        name : str, optional
             Name of the port.
         widths : float, 'VariableString' or list, optional
             Width of the different elements of the port. If None, assumes the
@@ -344,6 +358,7 @@ class Body(Modeler):
         ori = [1, 0]
 
         name = check_name(Port, name)
+
         if constraint_port:
             pos, ori = parse_entry(pos, ori)
             offset=0
@@ -365,7 +380,7 @@ class Body(Modeler):
         return Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
 
     @move_port
-    def draw_cable(self, name, *ports, fillet="0.3mm", is_bond=False, to_meander=[[]], meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False):
+    def draw_cable(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None, meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False, name='cable_0'):
         """
 
 
@@ -407,6 +422,8 @@ class Body(Modeler):
         meander_length, meander_offset, fillet = parse_entry(meander_length, meander_offset, fillet)
         # to_meander should be a list of list
         # meander_length, meander_offset should be lists
+        if to_meander is None:
+            to_meander = [[]]
         if not isinstance(to_meander[0], list):
             to_meander = [to_meander]
         if not isinstance(meander_length, list):

@@ -75,12 +75,10 @@ class GdsModeler():
         self.unit = self.dict_units[units]
 
     def box(self, pos, size, **kwargs):
-        # print("ERROR : The function --box_corner_3D-- cannot be used for GDSmodeler")
-        return kwargs['name']
+        pass
 
     def box_center(self, pos, size, **kwargs):
-        # print("ERROR : The function --box_center_3D-- cannot be used for GDSmodeler")
-        return kwargs['name']
+        pass
 
     def polyline(self, points, closed, **kwargs):
         #TODO sace of open path
@@ -95,7 +93,6 @@ class GdsModeler():
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
-        return name
 
     def rect(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
@@ -107,16 +104,14 @@ class GdsModeler():
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
-        return name
 
     def rect_center(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.rect(corner_pos, size, **kwargs)
+        self.rect(corner_pos, size, **kwargs)
 
     def cylinder(self, pos, radius, height, axis, **kwargs):
-        # print("ERROR : The function --cylinder_3D-- cannot be used for GDSmodeler")
-        return kwargs['name']
+        pass
 
     def disk(self, pos, radius, axis, number_of_points=0, **kwargs):
         pos, radius = parse_entry(pos, radius)
@@ -126,19 +121,38 @@ class GdsModeler():
         round1 = gdspy.Round((pos[0],pos[1]), radius, layer=layer, tolerance=TOLERANCE, number_of_points=number_of_points)
         self.gds_object_instances[name] = round1
         self.cell.add(round1)
-        return name
 
     def wirebond(self, pos, ori, ymax, ymin, height='0.1mm', **kwargs): #ori should be normed
         bond_diam = '20um'
         pos, ori, ymax, ymin, heigth, bond_diam = parse_entry((pos, ori, ymax, ymin, height, bond_diam))
         bond1 = pos + ori.orth()*(ymax+2*bond_diam)
         bond2 = pos + ori.orth()*(ymin-2*bond_diam)
-        name_a = self.disk(bond1, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'a', number_of_points=6)
-        name_b = self.disk(bond2, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'b', number_of_points=6)
-        return name_a, name_b
+        self.disk(bond1, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'a', number_of_points=6)
+        self.disk(bond2, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'b', number_of_points=6)
+
+    def path(self, points, port, fillet, name=''):
+
+        # use dummy layers to recover the right elements
+        layers = [ii  for ii in range(len(port.widths))]
+        cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
+                               corners="circular bend",
+                               bend_radius=fillet, gdsii_path=False,
+                               tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
+
+        polygons = cable.get_polygons()
+        names = []
+        layers = []
+        for ii in range(len(polygons)):
+            poly = gdspy.Polygon(polygons[ii])
+            poly.layers = [port.layers[ii]]
+            current_name = name+'_'+port.subnames[ii]
+            names.append(current_name)
+            layers.append(port.layers[ii])
+            self.gds_object_instances[current_name] = poly
+            self.cell.add(poly)
+        return names, layers
 
     def connect_faces(self, entity1, entity2):
-        print("ERROR : The function --connect_faces-- cannot be used for GDSmodeler")
         pass
 
     def delete(self, entity):
@@ -236,27 +250,7 @@ class GdsModeler():
     def get_vertex_ids(self, entity):
         return None
 
-    def path(self, points, port, fillet, name=''):
 
-        # use dummy layers to recover the right elements
-        layers = [ii  for ii in range(len(port.widths))]
-        cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
-                               corners="circular bend",
-                               bend_radius=fillet, gdsii_path=False,
-                               tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
-
-        polygons = cable.get_polygons()
-        names = []
-        layers = []
-        for ii in range(len(polygons)):
-            poly = gdspy.Polygon(polygons[ii])
-            poly.layers = [port.layers[ii]]
-            current_name = name+'_'+port.subnames[ii]
-            names.append(current_name)
-            layers.append(port.layers[ii])
-            self.gds_object_instances[current_name] = poly
-            self.cell.add(poly)
-        return names, layers
 
     def sweep_along_vector(self, names, vector):
         self._modeler.SweepAlongVector(self._selections_array(*names),
