@@ -377,7 +377,9 @@ class Body(Modeler):
         return [result]
 
     @move_port
-    def draw_cable(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None, meander_length=0, meander_offset=0, is_mesh=False, reverse_adaptor=False, name='cable_0'):
+    def draw_cable(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None,
+                   meander_length=0, meander_offset=0, is_mesh=False,
+                   reverse_adaptor=False, slope=0.5, name='cable_0'):
         """
 
 
@@ -493,10 +495,12 @@ class Body(Modeler):
 
         # find and plot adaptor geometry
         if reverse_adaptor:
-            points, length_adaptor = ports[-1].compare(ports[0], self.pm)
+            points, length_adaptor = ports[-1].compare(ports[0], self.pm,
+                                                       slope=slope)
             index_modified = -1
         else:
-            points, length_adaptor = ports[0].compare(ports[-1], self.pm)
+            points, length_adaptor = ports[0].compare(ports[-1], self.pm,
+                                                      slope=slope)
             index_modified = 0
 
         # plot adaptors

@@ -76,7 +76,7 @@ class Port():
         for instance_name in cls.dict_instances:
             print(instance_name)#, cls.dict_instances[instance_name])
 
-    def compare(self, other, pm):
+    def compare(self, other, pm, slope=0.5):
         points = []
 
         adapt_dist = pm.set_variable(1e-5, name=self.name+'_adapt')
@@ -100,12 +100,12 @@ class Port():
                                Vector(0, offset1-width1/2).rot(self.ori)+self.pos])
             max_diff = max(max_diff, abs(_val(offset1+width1/2-(offset2+width2/2))),
                            abs(_val(offset2-width2/2-(offset1-width1/2))))
-        adapt_dist = pm.update_variable(2*max_diff, name=self.name+'_adapt')
+        adapt_dist = pm.update_variable(max_diff/slope, name=self.name+'_adapt')
 
         if len(points) != 0:
             self.save = {'pos':self.pos, 'widths':self.widths,
                          'offsets':self.offsets}
-            self.pos = self.pos + Vector(2*max_diff, 0).rot(self.ori)
+            self.pos = self.pos + Vector(max_diff/slope, 0).rot(self.ori)
             self.widths = other.widths
             self.offsets = [-offset for offset in other.offsets]
 
