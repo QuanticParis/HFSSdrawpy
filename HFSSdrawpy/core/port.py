@@ -5,7 +5,6 @@ from ..utils import Vector, \
                    check_name, \
                    find_last_list, \
                    find_corresponding_list, \
-                   to_move, \
                    _val, \
                    val, \
                    equal_float, \
@@ -13,10 +12,9 @@ from ..utils import Vector, \
 
 
 class Port():
-    instances_to_move = None
     dict_instances  = {}
 
-    def __init__(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port, key='name'):
+    def __init__(self, body, name, pos, ori, widths, subnames, layers, offsets, constraint_port, key='name'):
         if not (isinstance(key, Port) or key is None):
             name = check_name(self.__class__, name)
         self.name = name
@@ -24,6 +22,7 @@ class Port():
         self.ori = Vector(ori)
         self.constraint_port = constraint_port
         self.save = None
+        self.body = body
         if not constraint_port:
             self.widths = parse_entry(widths)
             self.subnames = subnames
@@ -37,8 +36,8 @@ class Port():
             self.offsets = offsets
             self.N = 0
 
-        if Port.instances_to_move is not None:
-            find_last_list(Port.instances_to_move).append(self)
+        if self.body.ports_to_move is not None:
+            find_last_list(self.body.ports_to_move).append(self)
         if key=='name':  # normal initialisation
             self.dict_instances[name] = self
 
@@ -50,9 +49,9 @@ class Port():
                 reversed_offsets = []
                 for ii in range(self.N):
                     reversed_offsets.append(-self.offsets[ii])
-            self.r = Port(self.name+'_r', self.pos, reversed_ori, self.widths,
-                          self.subnames, self.layers, reversed_offsets,
-                          self.constraint_port, key=self)
+            self.r = Port(self.body, self.name+'_r', self.pos, reversed_ori,
+                          self.widths, self.subnames, self.layers,
+                          reversed_offsets, self.constraint_port, key=self)
 
         elif isinstance(key, Port):  # reverse initialisation, key is the previous port
             self.dict_instances[name] = self
@@ -68,7 +67,6 @@ class Port():
 
     @staticmethod
     def reset():
-        Port.instances_to_move = []
         Port.dict_instances  = {}
 
     @classmethod
@@ -135,7 +133,7 @@ class Port():
             _ori.append(_val(coor))
         _ori = Vector(_ori)
 
-        return Port(self.name, _pos, _ori, _widths, self.subnames,
+        return Port(self.body, self.name, _pos, _ori, _widths, self.subnames,
                     self.layers, _offsets, self.constraint_port, key=None)
 
     def revert(self):

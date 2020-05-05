@@ -38,6 +38,25 @@ def find_last_list(list_entities):
     else:
         raise TypeError('There are no list')
 
+def find_penultimate_list(list_entities):
+    # return the last list of a set of nested lists
+    if isinstance(list_entities, list):
+        if len(list_entities)==0:
+            return False
+        else:
+            if isinstance(list_entities[-1], list):
+                if len(list_entities[-1])==0:
+                    return list_entities
+                else:
+                    if isinstance(list_entities[-1][-1], list):
+                        return find_penultimate_list(list_entities[-1])
+                    else:
+                        return list_entities
+            else:
+                return False
+    else:
+        raise TypeError('There are no list')
+
 def add_to_corresponding_list(elt, nested_list, added_elt):
     # return the last list of a set of nested lists
     if isinstance(nested_list, list):
@@ -70,15 +89,6 @@ def general_remove(elt, nested_list):
                         break
     else:
         raise TypeError('Argument is not a list')
-
-def to_move(cls):
-    if cls.instances_to_move is None:
-        cls.instances_to_move = []
-        return cls.instances_to_move
-    else:
-        last_list = find_last_list(cls.instances_to_move)
-        last_list.append([])
-        return last_list
 
 def find_corresponding_list(elt, nested_list):
     # return the last list of a set of nested lists

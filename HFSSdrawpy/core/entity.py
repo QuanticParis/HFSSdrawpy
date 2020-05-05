@@ -9,7 +9,6 @@ class Entity():
     # this should be the objects we are handling on the python interface
     # each method of this class should act in return in HFSS/GDS when possible
     dict_instances = {}
-    instances_to_move = None
 
     def __init__(self, dimension, body, nonmodel=False, layer=DEFAULT,
                  copy=None, name='entity_0', **kwargs):
@@ -27,14 +26,14 @@ class Entity():
             self.body.entities[layer]=[self]
 
         if copy is None:
-            if Entity.instances_to_move is not None:
-                find_last_list(Entity.instances_to_move).append(self)
+            if self.body.entities_to_move is not None:
+                find_last_list(self.body.entities_to_move).append(self)
             self.is_boolean = False  # did it suffer a bool operation already ?
             self.is_fillet = False  # did it suffer a fillet operation already ?
         else:
             # copy is indeed the original object
             # the new object should be put in the same list indent
-            add_to_corresponding_list(copy, Entity.instances_to_move,
+            add_to_corresponding_list(copy, self.body.entities_to_move,
                                       self)
             self.is_boolean = copy.is_boolean
             self.is_fillet = copy.is_fillet
@@ -65,8 +64,8 @@ class Entity():
         self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
         self.body.entities[self.layer].remove(self)
-        if self.instances_to_move is not None:
-            general_remove(self, self.instances_to_move)
+        if self.body.entities_to_move is not None:
+            general_remove(self, self.body.entities_to_move)
         del self
 
     def copy(self, new_name=None):

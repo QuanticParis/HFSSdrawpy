@@ -5,8 +5,8 @@ from ..utils import Vector, \
                    parse_entry, \
                    check_name, \
                    find_last_list, \
+                   find_penultimate_list, \
                    find_corresponding_list, \
-                   to_move, \
                    _val, \
                    val, \
                    equal_float, gen_name, \
@@ -41,9 +41,9 @@ class Body(Modeler):
         self.mode = pm.mode # 'hfss' or 'gds'
         self.dict_instances[name] = self
         self.entities = {DEFAULT:[]}  # entities sorted by layer
-        self.list_entities = []
-        self.list_ports = []
         self.cursors = [] # tuple to escape list parsing
+        self.ports_to_move = None
+        self.entities_to_move = None
 
     def __call__(self, pos, ori):
         pos, ori = parse_entry(pos, ori)
@@ -54,14 +54,22 @@ class Body(Modeler):
 
     def __enter__(self):
         #1 We need to keep track of the entities created during the execution of a function
-        self.list_entities = to_move(Entity) # save "indentation level"
-        self.list_ports = to_move(Port)
+        if self.entities_to_move is None:
+            self.entities_to_move = []
+        else:
+            find_last_list(self.entities_to_move).append([])
+
+        if self.ports_to_move is None:
+            self.ports_to_move = []
+        else:
+            find_last_list(self.ports_to_move).append([])
+
         return self
 
     def __exit__(self, *exc):
         #4 We move the entity that were created by the last function
-        list_entities_new = find_last_list(Entity.instances_to_move)
-        list_ports_new = find_last_list(Port.instances_to_move)
+        list_entities_new = find_last_list(self.entities_to_move)
+        list_ports_new = find_last_list(self.ports_to_move)
         pos, angle = self.cursors[-1]
 
         #5 We move the entities_to_move with the right operation
@@ -74,20 +82,21 @@ class Body(Modeler):
             Port.translate_ports(list_ports_new, vector=[pos[0], pos[1], pos[2]])
 
         #6 We empty a part of the 'to_move' lists
-        if len(self.list_entities) > 0 and isinstance(self.list_entities[-1],
-                                                      list):
-            a = self.list_entities.pop(-1)
+        penultimate_entity_list = find_penultimate_list(self.entities_to_move)
+        if penultimate_entity_list:
+            a = penultimate_entity_list.pop(-1)
             for entity in a:
-                self.list_entities.append(entity)
+                penultimate_entity_list.append(entity)
         else:
-            Entity.instances_to_move = None
+            self.entities_to_move = None
 
-        if len(self.list_ports) > 0 and isinstance(self.list_ports[-1], list):
-            a = self.list_ports.pop(-1)
+        penultimate_port_list = find_penultimate_list(self.ports_to_move)
+        if penultimate_port_list:
+            a = penultimate_port_list.pop(-1)
             for entity in a:
-                self.list_ports.append(entity)
+                penultimate_port_list.append(entity)
         else:
-            Port.instances_to_move = None
+            self.ports_to_move = None
 
         self.cursors.pop(-1)
         return False
@@ -373,7 +382,8 @@ class Body(Modeler):
                           (0, offset-width/2)]
                 self.polyline(points, name='_'+name+'_'+subnames[ii], layer=PORT, nonmodel=True)
 
-        result = Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
+        result = Port(self, name, pos, ori, widths, subnames, layers, offsets,
+                      constraint_port)
         return [result]
 
     @move_port
@@ -432,7 +442,11 @@ class Body(Modeler):
 
         ports = list(ports)
 
-        indent_level = find_corresponding_list(ports[0], Port.instances_to_move)
+        do_not_beyong = [port.name for port in ports if port.body != self]
+        if do_not_beyong:
+            raise ValueError('%s ports do not beyond to %s'%(do_not_beyong, self))
+
+        indent_level = find_corresponding_list(ports[0], self.ports_to_move)
         if indent_level is not None:
             if indent_level:  # the found list
                 for port in ports:
