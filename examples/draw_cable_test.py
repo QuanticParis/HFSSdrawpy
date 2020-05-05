@@ -7,7 +7,7 @@ Created on Tue Oct 29 14:05:00 2019
 import os
 
 from HFSSdrawpy import Modeler, Body
-from HFSSdrawpy.parameters import layer_TRACK, layer_GAP, layer_RLC
+from HFSSdrawpy.parameters import TRACK, GAP
 import HFSSdrawpy.libraries.example_elements as elt
 # import HFSSdrawpy.libraries.base_elements as base
 
@@ -53,10 +53,10 @@ chip2.draw_cable(con_port, port2, is_bond=True, fillet='100um',
 # 3D
 chip2.box([0, 0, 0], ['3mm', '3mm', '-1mm'], material='silicon')
 
-ground_plane = chip2.rect([0, 0], ['3mm', '3mm'], layer=layer_TRACK)
+ground_plane = chip2.rect([0, 0], ['3mm', '3mm'], layer=TRACK)
 
-ground_plane.subtract(chip2.entities[layer_GAP])
-ground_plane.unite(chip2.entities[layer_TRACK])
+ground_plane.subtract(chip2.entities[GAP])
+ground_plane.unite(chip2.entities[TRACK])
 ground_plane.assign_perfect_E()
 
 # generate gds file

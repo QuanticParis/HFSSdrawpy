@@ -1,10 +1,6 @@
 import numpy as np
 
-from ..parameters import layer_TRACK, \
-                        layer_GAP, \
-                        layer_MASK, \
-                        layer_Default, \
-                        layer_RLC
+from ..parameters import DEFAULT
 
 from ..utils import Vector, parse_entry, check_name, find_last_list, \
     add_to_corresponding_list, gen_name, val, general_remove
@@ -15,8 +11,8 @@ class Entity():
     dict_instances = {}
     instances_to_move = None
 
-    def __init__(self, name, dimension, body, nonmodel=False,
-                 layer=layer_Default, copy=None):
+    def __init__(self, dimension, body, nonmodel=False, layer=DEFAULT,
+                 copy=None, name='entity_0', **kwargs):
         name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
@@ -76,9 +72,9 @@ class Entity():
     def copy(self, new_name=None):
         generated_name = gen_name(self.name)
         self.body.interface.copy(self)
-        copied = Entity(generated_name, self.dimension, self.body,
+        copied = Entity(self.dimension, self.body,
                              nonmodel=self.nonmodel, layer=self.layer,
-                             copy=self)
+                             copy=self, name=generated_name)
         if new_name is not None:
             copied.rename(new_name)
         return copied
@@ -201,7 +197,6 @@ class Entity():
                     new_indices.append(index)
                     if index != 0:
                         append_indices.append(index)
-                print(new_indices)
                 self.body.interface.fillet(self, rad, new_indices)
                 past_indices += append_indices
         self.is_fillet = True

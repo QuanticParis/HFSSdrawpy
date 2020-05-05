@@ -9,14 +9,14 @@ from ..utils import Vector, \
                    to_move, \
                    _val, \
                    val, \
-                   entity_kwargs, equal_float, gen_name, \
+                   equal_float, gen_name, \
                    way
 from .entity import Entity
 from .modeler import Modeler
 from ..path_finding.path_finder import Path
 from .port import Port
 
-from ..parameters import layer_Default, layer_PORT
+from ..parameters import DEFAULT, PORT
 
 class Body(Modeler):
 
@@ -40,7 +40,7 @@ class Body(Modeler):
         self.interface = pm.interface
         self.mode = pm.mode # 'hfss' or 'gds'
         self.dict_instances[name] = self
-        self.entities = {layer_Default:[]}  # entities sorted by layer
+        self.entities = {DEFAULT:[]}  # entities sorted by layer
         self.list_entities = []
         self.list_ports = []
         self.cursors = [] # tuple to escape list parsing
@@ -99,6 +99,8 @@ class Body(Modeler):
         @wraps(func)
         def updated(*args, **kwargs):
             args[0].interface.set_coor_sys(args[0].name)
+            if not 'layer' in kwargs:
+                kwargs['layer'] = DEFAULT
             return func(*args, **kwargs)
         return updated
 
@@ -122,8 +124,7 @@ class Body(Modeler):
         name = check_name(Entity, name)
         kwargs['name'] = name
         self.interface.box(pos, size, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 3, self, **kwargs)
+        return Entity(3, self, **kwargs)
 
     @set_body
     def box_center(self, pos, size, name='box_0', **kwargs):
@@ -143,16 +144,14 @@ class Body(Modeler):
         name = check_name(Entity, name)
         kwargs['name'] = name
         self.interface.box_center(pos, size, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 3, self, **kwargs)
+        return Entity(3, self, **kwargs)
 
     @set_body
     def cylinder(self, pos, radius, height, axis, name='cylinder', **kwargs):
         name = check_name(Entity, name)
         kwargs['name'] = name
         self.interface.cylinder(pos, radius, height, axis, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 3, self, **kwargs)
+        return Entity(3, self, **kwargs)
 
 
     @set_body
@@ -163,8 +162,7 @@ class Body(Modeler):
             pos = val(pos)
             radius = val(radius)
         self.interface.disk(pos, radius, axis, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 2, self, **kwargs)
+        return Entity(2, self, **kwargs)
 
     @set_body
     def polyline(self, points, closed=True, name='polyline_0', **kwargs):
@@ -183,8 +181,7 @@ class Body(Modeler):
             points = val(points)
         self.interface.polyline(points, closed, **kwargs)
         dim = closed + 1
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, dim, self, **kwargs)
+        return Entity(dim, self, **kwargs)
 
     @set_body
     def rect(self, pos, size, name='rect_0', **kwargs):
@@ -194,8 +191,7 @@ class Body(Modeler):
             pos = val(pos)
             size = val(size)
         self.interface.rect(pos, size, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 2, self, **kwargs)
+        return Entity(2, self, **kwargs)
 
     @set_body
     def rect_center(self, pos, size, name='rect_0', **kwargs):
@@ -205,8 +201,7 @@ class Body(Modeler):
             pos = val(pos)
             size = val(size)
         self.interface.rect_center(pos, size, **kwargs)
-        kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-        return Entity(name, 2, self, **kwargs)
+        return Entity(2, self, **kwargs)
 
     @set_body
     def wirebond(self, pos, ori, ymax, ymin, name='wb_0', **kwargs):
@@ -215,13 +210,14 @@ class Body(Modeler):
         if self.mode=='gds':
             pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
             self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
-            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-            return Entity(name+'a', 2, self, **kwargs), \
-                    Entity(name+'b', 2, self, **kwargs)
+            kwargs['name'] = name+'a'
+            entity_a = Entity(2, self, **kwargs)
+            kwargs['name'] = name+'b'
+            entity_b = Entity(2, self, **kwargs)
+            return entity_a, entity_b
         else:
             self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
-            kwargs = entity_kwargs(kwargs, ['layer', 'nonmodel'])
-            return Entity(name, 3, self, **kwargs)
+            return Entity(3, self, **kwargs)
 
     @set_body
     def path(self, points, port, fillet, name='path_0', **kwargs):
@@ -234,14 +230,14 @@ class Body(Modeler):
             _port = port.val()
             names, layers = self.interface.path(points, _port, fillet, name=name)
             for name, layer in zip(names, layers):
-                kwargs = {'layer':layer}  # model by default for now
-                model_entities.append(Entity(name, 2, self, **kwargs))
+                kwargs['layer'] = layer
+                kwargs['name'] = name
+                model_entities.append(Entity(2, self, **kwargs))
         elif self.mode == 'hfss':
             # check that port is at the BEGINNING of the path (hfss only)
             ori = port.ori
             pos = port.pos
-            path_entity = self.polyline(points, closed=False,
-                                           name=name, layer=layer_Default)
+            path_entity = self.polyline(points, closed=False, name=name)
             path_entity.fillet(fillet)
 
             for ii in range(port.N):
@@ -312,7 +308,7 @@ class Body(Modeler):
             numbering the cable parts. The default is None.
         layers : int or list, optional
             Each layer is described by an int that is a python constant that one
-            should import. If None, layer is the layer_Default The default is
+            should import. If None, layer is the DEFAULT The default is
             None.
         offsets : float, 'VariableString' or list, optional
             Describes the offset of the cable part wrt the center of the cable.
@@ -343,7 +339,7 @@ class Body(Modeler):
                 subnames = [subnames]
 
             if layers is None:
-                layers = [layer_Default]*N
+                layers = [DEFAULT]*N
             elif not isinstance(layers, list):
                 layers = [layers]*N
 
@@ -366,7 +362,7 @@ class Body(Modeler):
             points = [(0, offset+width/2),
                       (width/3, offset),
                       (0, offset-width/2)]
-            self.polyline(points, name='_'+name, layer=layer_PORT, nonmodel=True)
+            self.polyline(points, name='_'+name, layer=PORT, nonmodel=True)
         else:
             pos, ori, widths, offsets = parse_entry(pos, ori, widths, offsets)
             for ii in range(len(widths)):
@@ -375,7 +371,7 @@ class Body(Modeler):
                 points = [(0, offset+width/2),
                           (width/3, offset),
                           (0, offset-width/2)]
-                self.polyline(points, name='_'+name+'_'+subnames[ii], layer=layer_PORT, nonmodel=True)
+                self.polyline(points, name='_'+name+'_'+subnames[ii], layer=PORT, nonmodel=True)
 
         result = Port(name, pos, ori, widths, subnames, layers, offsets, constraint_port)
         return [result]
@@ -568,7 +564,7 @@ class Body(Modeler):
             spacing = (B-A).norm()/n_bond
             pos = A+ori*spacing/2
             for ii in range(n_bond):
-                self.wirebond(pos, ori, ymax, ymin, layer=layer_Default, name=name+'_%d'%(bond_number))
+                self.wirebond(pos, ori, ymax, ymin, name=name+'_%d'%(bond_number))
                 bond_number += 1
                 pos = pos + ori*spacing
             jj+=1

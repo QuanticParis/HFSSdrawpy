@@ -8,13 +8,7 @@ Created on Mon Oct 28 16:18:36 2019
 import numpy as np
 
 from ..utils import parse_entry, Vector
-from ..parameters import layer_TRACK, \
-                         layer_GAP, \
-                         layer_RLC, \
-                         layer_MESH, \
-                         layer_MASK, \
-                         layer_Default, \
-                         eps
+from ..parameters import TRACK, GAP, RLC, MESH, MASK, DEFAULT, eps
 
 def create_port(self, widths=None, subnames=None, layers=None, offsets=0, name='port_0'):
     """
@@ -33,7 +27,7 @@ def create_port(self, widths=None, subnames=None, layers=None, offsets=0, name='
         numbering the cable parts. The default is None.
     layers : int or list, optional
         Each layer is described by an int that is a python constant that one
-        should import. If None, layer is the layer_Default The default is
+        should import. If None, layer is the DEFAULT The default is
         None.
     offsets : float, 'VariableString' or list, optional
         Describes the offset of the cable part wrt the center of the cable.
@@ -51,7 +45,7 @@ def create_port(self, widths=None, subnames=None, layers=None, offsets=0, name='
     if widths is not None and isinstance(widths, list) and len(widths)==2:
         if subnames is None and layers is None :
             subnames = ['track', 'gap']
-            layers = [layer_TRACK, layer_GAP]
+            layers = [TRACK, GAP]
             offsets = [0, 0]
     port, = self.port(widths=widths, subnames=subnames, layers=layers,
                      offsets=offsets, name=name)
@@ -97,7 +91,7 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
               (pcb_gap+bond_length, -pcb_track/2-self.overdev),
               (pcb_gap-self.overdev, -pcb_track/2-self.overdev)]
 
-    track_entity = self.polyline(points, layer=layer_TRACK,
+    track_entity = self.polyline(points, layer=TRACK,
                                  name=name+'_track')
 
     points = [(pcb_gap/2+self.overdev, pcb_gap+pcb_track/2-self.overdev),
@@ -107,7 +101,7 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
              (pcb_gap+bond_length, -pcb_gap-pcb_track/2+self.overdev),
              (pcb_gap/2+self.overdev, -pcb_gap-pcb_track/2+self.overdev)]
 
-    gap_entity = self.polyline(points, layer=layer_GAP, name=name+'_gap')
+    gap_entity = self.polyline(points, layer=GAP, name=name+'_gap')
 
     if self.is_mask:
         points =[(pcb_gap/2-self.gap_mask, pcb_gap+pcb_track/2+self.gap_mask),
@@ -117,7 +111,7 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
                   (pcb_gap+bond_length, (pcb_gap)+(track-pcb_track)*0.5-self.gap_mask),
                   (pcb_gap/2-self.gap_mask, (pcb_gap)+(track-pcb_track)*0.5-self.gap_mask)]
 
-        mask_entity = self.polyline(points, layer=layer_MASK,
+        mask_entity = self.polyline(points, layer=MASK,
                                     name=name+"_mask")
 
     with self([adaptDist+pcb_gap+bond_length,0], [1,0]):
@@ -128,10 +122,10 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
     if tr_line:
         ohm = self.rect([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
                         [pcb_gap/2-2*self.overdev, -pcb_track-2*self.overdev],
-                        layer=layer_RLC, name=name+'_ohm')
+                        layer=RLC, name=name+'_ohm')
         points = [(pcb_gap/2+self.overdev, 0), (pcb_gap-self.overdev, 0)]
         ohm.assign_lumped_RLC(points, ('50ohm', 0, 0))
-        self.polyline(points, name=name+'_line', closed=False, layer=layer_Default)
+        self.polyline(points, name=name+'_line', closed=False, layer=DEFAULT)
 
         ohm.assign_mesh_length(pcb_track/10)
 

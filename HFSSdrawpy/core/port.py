@@ -8,7 +8,7 @@ from ..utils import Vector, \
                    to_move, \
                    _val, \
                    val, \
-                   entity_kwargs, equal_float, \
+                   equal_float, \
                    way
 
 

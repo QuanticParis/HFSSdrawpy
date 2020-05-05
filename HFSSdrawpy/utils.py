@@ -22,13 +22,6 @@ INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
 
-def entity_kwargs(kwargs, keys):
-    entity_kwargs = {}
-    for key in keys:
-        if key in kwargs.keys():
-            entity_kwargs[key] = kwargs[key]
-    return entity_kwargs
-
 ### List handling
 # Useful function to manipulate to_move entities and ports
 def find_last_list(list_entities):
