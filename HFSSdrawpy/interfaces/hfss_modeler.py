@@ -799,6 +799,7 @@ class HfssModeler(COMWrapper):
             name = func(*args, **kwargs)
             msg = 'Failed at generating a name for %s'%name
             assert name == kwargs['name'], msg
+            return name
         return asserted_name
 
     def connect_faces(self, entity1, entity2):
@@ -950,7 +951,8 @@ class HfssModeler(COMWrapper):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.rect(corner_pos, size, **kwargs)
+        name = self.rect(corner_pos, size, **kwargs)
+        return name
 
     @assert_name
     def cylinder(self, pos, radius, height, axis, **kwargs):
