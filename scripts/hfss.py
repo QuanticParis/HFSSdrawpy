@@ -702,11 +702,19 @@ class HfssDesign(COMWrapper):
     def get_source_number(self):
         return self._solutions.GetEditSourcesCount()
     
-    def set_source(self, source_id):
-        self._solutions.EditSources([["FieldType:=", "EigenPeakElectricField"],
+    def set_source(self, source_id, source_type='peak_electric_field'):
+        if source_type=='peak_electric_field':
+            self._solutions.EditSources([["FieldType:=", "EigenPeakElectricField"],
                                      ["Name:=", "Modes",
                                       "Magnitudes:=", ["0" if (i+1)!=source_id else "1" for i in range(self.get_source_number())],
                                       "Phases:=", ["0deg" for i in range(self.get_source_number())]]])
+        elif source_type=='Stored_energy':
+            self._solutions.EditSources([["FieldType:=", "EigenStoredEnergy"],
+                                     ["Name:=", "Modes",
+                                      "Magnitudes:=", ["0" if (i+1)!=source_id else "1" for i in range(self.get_source_number())],
+                                      "Phases:=", ["0deg" for i in range(self.get_source_number())]]])
+        else:
+            raise AttributeError
     
     
 
