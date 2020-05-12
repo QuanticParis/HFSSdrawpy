@@ -244,8 +244,8 @@ class Body(Modeler):
                 model_entities.append(Entity(2, self, **kwargs))
         elif self.mode == 'hfss':
             # check that port is at the BEGINNING of the path (hfss only)
-            ori = port.ori
-            pos = port.pos
+            ori = Vector(port.ori)
+            pos = Vector(port.pos)
             path_entity = self.polyline(points, closed=False, name=name)
             path_entity.fillet(fillet)
 

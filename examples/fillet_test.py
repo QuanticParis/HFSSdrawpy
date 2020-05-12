@@ -11,7 +11,7 @@ from HFSSdrawpy.parameters import TRACK, GAP
 import HFSSdrawpy.libraries.example_elements as elt
 # import HFSSdrawpy.libraries.base_elements as base
 
-pm = Modeler('gds')
+pm = Modeler('hfss')
 
 chip1 = Body(pm, 'chip1')
 

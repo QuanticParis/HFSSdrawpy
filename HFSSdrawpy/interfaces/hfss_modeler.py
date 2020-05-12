@@ -999,8 +999,8 @@ class HfssModeler(COMWrapper):
         bond1 = pos + ori.orth()*(ymax+2*bond_diam)
         width = ymax-ymin + 4*bond_diam
         direction = - ori.orth()
-        xpad, ypad = bond1
-        xdir, ydir = direction
+        xpad, ypad, _ = bond1
+        xdir, ydir, _ = direction
         kwargs['material'] = 'perfect conductor'
         kwargs['solve_inside'] = False
         name = self._modeler.CreateBondwire(["NAME:BondwireParameters",

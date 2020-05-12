@@ -379,120 +379,237 @@ class VariableString(str):
     def __abs__(self):
         return var("abs(%s)" % self)
 
+
 class Vector(list):
-    def __init__(self, vec, vec_y=None):
+
+    """
+    Vector is a custom 3D vector class, alowing for opperations optimized to
+    interface properly with HFSS.
+    The class can be instenciate as a 2D vector, how ever, it will effectively
+    creat a 3D vector with 0 for z axis.
+    """
+
+    def __init__(self, vec, vec_y=None, vec_z=None):
+
+        """
+        Init of the 3D vector:
+
+            If vec_y, and vec_z are None, then vec must a len=2 or len=3 iterable.
+            If vec_y is not None, and vec_z is, then creat a vector [vec, vec_y, 0].
+            If vec_y and vec_z are not None, then creat a vector [vec, vec_y, vec_z].
+        """
+
         if vec_y is not None:
-            vec = [vec, vec_y]
+            vec = [vec, vec_y, 0]
+            if(vec_z is not None):
+                vec[2] = vec_z
+
+        try:
+            if(not (len(vec)==2 or len(vec)==3)):
+                raise TypeError('vec can only be 2 or 3D, not %iD' % (len(vec)))
+        except:
+            raise TypeError('vec must be iterable')
+
+        if(len(vec) == 2):
+            vec = [vec[0], vec[1], 0]
+
         super().__init__(parse_entry(vec))
 
-    def check(self, elt):
-        return isinstance(elt, (list, tuple, numpy.ndarray))
+    @staticmethod
+    def check(elt):
 
-    def check_nb(self, nb):
-        return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, VariableString)
+        """
+        Utility function to check if an element is compatible with vectors
+        opperations. It only requiers to be iterable and of len=3.
+
+        Args:
+            elt: The element to be tested
+        
+        Returns:
+            Boolean, true if elt is compatible with Vector opperations, False
+            otherwise.
+        """
+
+        try:
+            return len(elt)==3
+        except:
+            return False
 
     def __eq__(self, other):
         return (equal_float(val(self[0]), val(other[0])) and
-            equal_float(val(self[1]), val(other[1])))
+                equal_float(val(self[1]), val(other[1])) and
+                equal_float(val(self[2]), val(other[2])))
 
     def __add__(self, other):
-        if self.check(other):
-            return Vector([self[0]+other[0], self[1]+other[1]])
+        if Vector.check(other):
+            return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
         else:
-            raise TypeError('Could not perform add operation')
+            try:
+                return Vector([self[0]+other, self[1]+other, self[2]+other])
+            except:
+                raise TypeError('Could not perform add operation')
 
     def __radd__(self, other):
         return self + other
 
     def __sub__(self, other):
-        if self.check(other):
-            return Vector([self[0]-other[0], self[1]-other[1]])
+        if Vector.check(other):
+            return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
         else:
-            raise TypeError('Could not perform sub operation')
+            try:
+                Vector([self[0]-other, self[1]-other, self[2]-other])
+            except:
+                raise TypeError('Could not perform sub operation')
 
     def __neg__(self):
-        return Vector([-self[0], -self[1]])
+        return Vector([-self[0], -self[1], -self[2]])
 
     def __rsub__(self, other):
         return -self + other
 
     def __mul__(self, other):
-        if self.check(other):
-            return Vector([self[0]*other[0], self[1]*other[1]])
-        elif self.check_nb(other):
-            return Vector([other*self[0], other*self[1]])
+        if Vector.check(other):
+            return Vector([self[0]*other[0], self[1]*other[1], self[2]*other[2]])
         else:
-            raise TypeError('Could not perform mul operation')
+            try:
+                return Vector([other*self[0], other*self[1], other*self[2]])
+            except:
+                raise TypeError('Could not perform mul operation')
 
     def __rmul__(self, other):
         return self * other
 
     def __truediv__(self, other):
-        if self.check(other):
-            return Vector([self[0]/other[0], self[1]/other[1]])
-        elif self.check_nb(other):
-            return Vector([self[0]/other, self[1]/other])
+        if Vector.check(other):
+            return Vector([self[0]/other[0], self[1]/other[1], self[2]/other[2]])
         else:
-            raise TypeError('Could not perform div operation')
+            try:
+                return Vector([self[0]/other, self[1]/other, self[2]/other])
+            except:
+                raise TypeError('Could not perform div operation')
 
     def __rtruediv__(self, other):
-        if self.check(other):
-            return Vector([other[0]/self[0], other[1]/self[1]])
-        elif self.check_nb(other):
-            return Vector([other/self[0], other/self[1]])
-        else:
-            raise TypeError('Could not perform rdiv operation')
+
+        self / other
 
     def dot(self, other):
-        if self.check(other):
-            return self[0]*other[0]+self[1]*other[1]
+        if Vector.check(other):
+            return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
+        else:
+            raise TypeError('Could not perform dot operation')
+    
+    def cross(self, other):
+
+        """
+        This function returns the cross product beteween self and other.
+
+        Args:
+            other: of type Vector
+        
+        Returns:
+            type Vector, self x other
+        """
+
+        if(Vector.check(other) and Vector.check(other)):
+
+            return Vector(self[1]*other[2]-self[2]*other[1],
+                          -(self[0]*other[2]-self[2]*other[0]),
+                          self[0]*other[1]-self[1]*other[0])
         else:
             raise TypeError('Could not perform dot operation')
 
-    def cross(self, other):
-        if self.check(other):
-            return self[0]*other[1]-self[1]*other[0]
+    def scalar_cross(self, other, ref=None):
+
+        """
+        This function is a bit cryptic. It computes the signed magnitude of
+        the cross product between self and other, assuming they both are in
+        the plan orthogonal to ref.
+
+        Args:
+            other: a Vector
+            ref: an other Vector, if None, assumed to be [0, 0, 1]
+        
+        Returns:
+            dot((self x other), ref)
+        """
+
+        if(ref is None):
+            ref = Vector(0, 0, 1)
+
+        if(Vector.check(other) and Vector.check(ref)):
+            return self.cross(other).dot(ref)
         else:
             raise TypeError('Could not perform dot operation')
 
     def norm(self):
-        return (self[0]**2+self[1]**2)**0.5
+        return (self[0]**2+self[1]**2+self[2]**2)**0.5
 
     def abs(self):
-        return Vector([abs(self[0]), abs(self[1])])
+        return Vector([abs(self[0]), abs(self[1]), abs(self[2])])
 
     def unit(self):
         norm = self.norm()
-        return Vector([self[0]/norm, self[1]/norm])
+        return Vector([self[0]/norm, self[1]/norm, self[2]/norm])
 
     def orth(self):
         return Vector([-self[1], self[0]])
 
-    def rot(self, other):
-        '''
-        Inputs:
-        -------
-        other: vector
+    def rot(self, other, ref=None):
 
-        Returns
-        -------
-        vector: rotation around z of self by an angle given by other w.r.t to x
         '''
-        if self.check(other):
-            unitOther = Vector(other).unit()
-            return Vector([self.dot(unitOther.refx()), self.dot(unitOther.orth().refy())])
+        This function is just completly cryptic, I wrote it a long time ago.
+        Here is what it is doing: we assume that self is expressed in x=(100), y=(010), z=(001)
+        This function returns the coordinates of self in x'=other,y'=-(other x ref), z'=ref
+        In other words, this function computes a 3D change of coordinates.
+
+        Note:
+            This function has been writen assuming other and ref are given orthogonal.
+            Hence, if not the case, it can have unexpected behaviors.
+
+        Args:
+            other: type Vector, the new x reference vector (x')
+            ref: type Vector, the new z reference vector (z'), if None, taken to be (0,0,1)
+        
+        Returns:
+            self expressed in the new coordinate system.
+        '''
+
+        if(ref is None):
+            ref = Vector([0, 0, 1])
+
+        if(Vector.check(other) and Vector.check(ref)):
+
+            other = Vector(other).unit()
+            ortho = -other.cross(ref)
+
+            return (Vector([self.dot(other.refx()), self.dot(other.orth().refy()), 0])*ref[2] +
+                    Vector([self.dot(other.orth().refx()), 0, self.dot(other.refz())])*ref[1] +
+                    Vector([0, self.dot(other.refy()), self.dot(other.orth().refz())])*ref[0])
         else:
-            raise TypeError('Could not perform rdiv operation')
+            raise TypeError('other must be a Vector')
 
     def px(self):
-        return Vector([self[0], 0])
+        return Vector([self[0], 0, 0])
 
     def py(self):
-        return Vector([0, self[1]])
+        return Vector([0, self[1], 0])
+
+    def pz(self):
+        return Vector([0, 0, self[2]])
 
     def refx(self, offset=0):
-        return Vector([self[0], -self[1]+2*offset])
+        return Vector([self[0], -self[1]+2*offset, self[2]])
 
     def refy(self, offset=0):
-        return Vector([-self[0]+2*offset, self[1]])
+        return Vector([-self[0]+2*offset, self[1], self[2]])
 
+    def refz(self, offset=0):
+        return Vector([self[0], self[1], -self[2]+2*offset])
+
+
+if(__name__ == "__main__"):
+
+    x = Vector([1, 0, 0])
+    y = Vector([0, -1, 0])
+
+    print(x.rot(y))
