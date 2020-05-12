@@ -497,8 +497,28 @@ class Vector(list):
             return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
         else:
             raise TypeError('Could not perform dot operation')
+    
+    def cross(self, other):
 
-    def cross(self, other, ref=None):
+        """
+        This function returns the cross product beteween self and other.
+
+        Args:
+            other: of type Vector
+        
+        Returns:
+            type Vector, self x other
+        """
+
+        if(Vector.check(other) and Vector.check(other)):
+
+            return Vector(self[1]*other[2]-self[2]*other[1],
+                          -(self[0]*other[2]-self[2]*other[0]),
+                          self[0]*other[1]-self[1]*other[0])
+        else:
+            raise TypeError('Could not perform dot operation')
+
+    def scalar_cross(self, other, ref=None):
 
         """
         This function is a bit cryptic. It computes the signed magnitude of
@@ -517,14 +537,7 @@ class Vector(list):
             ref = Vector(0, 0, 1)
 
         if(Vector.check(other) and Vector.check(ref)):
-            if(ref[0] == 0 and ref[1] == 0):
-                return (self[0]*other[1]-self[1]*other[0])*ref[2]
-            elif(ref[0] == 0 and ref[2] == 0):
-                return -(self[0]*other[2]-self[2]*other[0])*ref[1]
-            elif(ref[1] == 0 and ref[2] == 0):
-                return (self[1]*other[2]-self[2]*other[1])*ref[0]
-            else:
-                raise TypeError('ref Vectore must be along x, y or z')
+            return self.cross(other).dot(ref)
         else:
             raise TypeError('Could not perform dot operation')
 
@@ -544,8 +557,21 @@ class Vector(list):
     def rot(self, other, ref=None):
 
         '''
-        This function is just completly cryptic, I wrote it a long time ago,
-        dont understand it anymore XD.
+        This function is just completly cryptic, I wrote it a long time ago.
+        Here is what it is doing: we assume that self is expressed in x=(100), y=(010), z=(001)
+        This function returns the coordinates of self in x'=other,y'=-(other x ref), z'=ref
+        In other words, this function computes a 3D change of coordinates.
+
+        Note:
+            This function has been writen assuming other and ref are given orthogonal.
+            Hence, if not the case, it can have unexpected behaviors.
+
+        Args:
+            other: type Vector, the new x reference vector (x')
+            ref: type Vector, the new z reference vector (z'), if None, taken to be (0,0,1)
+        
+        Returns:
+            self expressed in the new coordinate system.
         '''
 
         if(ref is None):
@@ -553,16 +579,12 @@ class Vector(list):
 
         if(Vector.check(other) and Vector.check(ref)):
 
-            unitOther = Vector(other).unit()
+            other = Vector(other).unit()
+            ortho = -other.cross(ref)
 
-            if(ref[0]==0 and ref[1]==0):
-                return Vector([self.dot(unitOther.refx()), self.dot(unitOther.orth().refy()), 0])
-            elif(ref[0]==0 and ref[2]==0):
-                return Vector([self.dot(unitOther.orth().refx()), 0, self.dot(unitOther.refz())])
-            elif(ref[1]==0 and ref[2]==0):
-                return Vector([0, self.dot(unitOther.refy()), self.dot(unitOther.orth().refz())])
-            else:
-                raise TypeError('ref Vectore must be along x, y or z')
+            return (Vector([self.dot(other.refx()), self.dot(other.orth().refy()), 0])*ref[2] +
+                    Vector([self.dot(other.orth().refx()), 0, self.dot(other.refz())])*ref[1] +
+                    Vector([0, self.dot(other.refy()), self.dot(other.orth().refz())])*ref[0])
         else:
             raise TypeError('other must be a Vector')
 

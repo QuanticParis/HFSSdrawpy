@@ -42,7 +42,7 @@ def right_left(points):
     vecA = vecs[0]
     r_l = [0]
     for vecB in vecs[1:]:
-        r_l.append(vecA.cross(vecB))
+        r_l.append(vecA.scalar_cross(vecB))
         vecA=vecB
     r_l.append(0)
     return r_l
