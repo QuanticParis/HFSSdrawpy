@@ -184,7 +184,7 @@ class Port():
         rad = new_angle/180*np.pi
         rotate_matrix = np.array([[np.cos(rad) ,np.sin(-rad)],[np.sin(rad) ,np.cos(rad)]])
         for port in ports:
-            port.ori = rotate_matrix.dot(port.ori)
+            port.ori = rotate_matrix.dot(port.ori[0:2])
             posx = port.pos[0]*np.cos(rad)+port.pos[1]*np.sin(-rad)
             posy = port.pos[0]*np.sin(rad)+port.pos[1]*np.cos(rad)
             port.pos = Vector([posx, posy])

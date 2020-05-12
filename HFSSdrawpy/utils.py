@@ -379,25 +379,42 @@ class VariableString(str):
     def __abs__(self):
         return var("abs(%s)" % self)
 
+
 class Vector(list):
-    def __init__(self, vec, vec_y=None):
+
+    def __init__(self, vec, vec_y=None, vec_z=None):
+
         if vec_y is not None:
-            vec = [vec, vec_y]
+            vec = [vec, vec_y, 0]
+            if(vec_z is not None):
+                vec[2] = vec_z
+
+        try:
+            if(not (len(vec)==2 or len(vec)==3)):
+                raise TypeError('vec can only be 2 or 3D, not %iD' % (len(vec)))
+        except:
+            raise TypeError('vec must be iterable')
+
+        if(len(vec) == 2):
+            vec = [vec[0], vec[1], 0]
+
         super().__init__(parse_entry(vec))
 
-    def check(self, elt):
-        return isinstance(elt, (list, tuple, numpy.ndarray))
-
-    def check_nb(self, nb):
-        return isinstance(nb, float) or isinstance(nb, int) or isinstance(nb, VariableString)
+    @staticmethod
+    def check(elt):
+        try:
+            return len(elt)==3
+        except:
+            return False
 
     def __eq__(self, other):
         return (equal_float(val(self[0]), val(other[0])) and
-            equal_float(val(self[1]), val(other[1])))
+                equal_float(val(self[1]), val(other[1])) and
+                equal_float(val(self[2]), val(other[2])))
 
     def __add__(self, other):
-        if self.check(other):
-            return Vector([self[0]+other[0], self[1]+other[1]])
+        if Vector.check(other):
+            return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
         else:
             raise TypeError('Could not perform add operation')
 
@@ -405,70 +422,84 @@ class Vector(list):
         return self + other
 
     def __sub__(self, other):
-        if self.check(other):
-            return Vector([self[0]-other[0], self[1]-other[1]])
+        if Vector.check(other):
+            return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
         else:
             raise TypeError('Could not perform sub operation')
 
     def __neg__(self):
-        return Vector([-self[0], -self[1]])
+        return Vector([-self[0], -self[1], -self[2]])
 
     def __rsub__(self, other):
         return -self + other
 
     def __mul__(self, other):
-        if self.check(other):
-            return Vector([self[0]*other[0], self[1]*other[1]])
-        elif self.check_nb(other):
-            return Vector([other*self[0], other*self[1]])
+        if Vector.check(other):
+            return Vector([self[0]*other[0], self[1]*other[1], self[2]*other[2]])
         else:
-            raise TypeError('Could not perform mul operation')
+            try:
+                return Vector([other*self[0], other*self[1], other*self[2]])
+            except:
+                raise TypeError('Could not perform mul operation')
 
     def __rmul__(self, other):
         return self * other
 
     def __truediv__(self, other):
-        if self.check(other):
-            return Vector([self[0]/other[0], self[1]/other[1]])
-        elif self.check_nb(other):
-            return Vector([self[0]/other, self[1]/other])
+        if Vector.check(other):
+            return Vector([self[0]/other[0], self[1]/other[1], self[2]/other[2]])
         else:
-            raise TypeError('Could not perform div operation')
+            try:
+                return Vector([self[0]/other, self[1]/other, self[2]/other])
+            except:
+                raise TypeError('Could not perform div operation')
 
     def __rtruediv__(self, other):
-        if self.check(other):
-            return Vector([other[0]/self[0], other[1]/self[1]])
-        elif self.check_nb(other):
-            return Vector([other/self[0], other/self[1]])
+        if Vector.check(other):
+            return Vector([other[0]/self[0], other[1]/self[1], other[2]/self[2]])
         else:
-            raise TypeError('Could not perform rdiv operation')
+            try:
+                return Vector([other/self[0], other/self[1], other/self[2]])
+            except:
+                raise TypeError('Could not perform rdiv operation')
 
     def dot(self, other):
-        if self.check(other):
-            return self[0]*other[0]+self[1]*other[1]
+        if Vector.check(other):
+            return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
         else:
             raise TypeError('Could not perform dot operation')
 
-    def cross(self, other):
-        if self.check(other):
-            return self[0]*other[1]-self[1]*other[0]
+    def cross(self, other, ref=None):
+
+        if(ref is None):
+            ref = Vector(0, 0, 1)
+
+        if(Vector.check(other) and Vector.check(ref)):
+            if(ref[0] == 0 and ref[1] == 0):
+                return (self[0]*other[1]-self[1]*other[0])*ref[2]
+            elif(ref[0] == 0 and ref[2] == 0):
+                return -(self[0]*other[2]-self[2]*other[0])*ref[1]
+            elif(ref[1] == 0 and ref[2] == 0):
+                return (self[1]*other[2]-self[2]*other[1])*ref[0]
+            else:
+                raise TypeError('ref Vectore must be along x, y or z')
         else:
             raise TypeError('Could not perform dot operation')
 
     def norm(self):
-        return (self[0]**2+self[1]**2)**0.5
+        return (self[0]**2+self[1]**2+self[2]**2)**0.5
 
     def abs(self):
-        return Vector([abs(self[0]), abs(self[1])])
+        return Vector([abs(self[0]), abs(self[1]), abs(self[2])])
 
     def unit(self):
         norm = self.norm()
-        return Vector([self[0]/norm, self[1]/norm])
+        return Vector([self[0]/norm, self[1]/norm, self[2]/norm])
 
     def orth(self):
         return Vector([-self[1], self[0]])
 
-    def rot(self, other):
+    def rot(self, other, ref=None):
         '''
         Inputs:
         -------
@@ -478,21 +509,46 @@ class Vector(list):
         -------
         vector: rotation around z of self by an angle given by other w.r.t to x
         '''
-        if self.check(other):
+        if(ref is None):
+            ref = Vector([0, 0, 1])
+
+        if(Vector.check(other) and Vector.check(ref)):
+
             unitOther = Vector(other).unit()
-            return Vector([self.dot(unitOther.refx()), self.dot(unitOther.orth().refy())])
+
+            if(ref[0]==0 and ref[1]==0):
+                return Vector([self.dot(unitOther.refx()), self.dot(unitOther.orth().refy()), 0])
+            elif(ref[0]==0 and ref[2]==0):
+                return Vector([self.dot(unitOther.orth().refx()), 0, self.dot(unitOther.refz())])
+            elif(ref[1]==0 and ref[2]==0):
+                return Vector([0, self.dot(unitOther.refy()), self.dot(unitOther.orth().refz())])
+            else:
+                raise TypeError('ref Vectore must be along x, y or z')
         else:
-            raise TypeError('Could not perform rdiv operation')
+            raise TypeError('other must be a Vector')
 
     def px(self):
-        return Vector([self[0], 0])
+        return Vector([self[0], 0, 0])
 
     def py(self):
-        return Vector([0, self[1]])
+        return Vector([0, self[1], 0])
+
+    def pz(self):
+        return Vector([0, 0, self[2]])
 
     def refx(self, offset=0):
-        return Vector([self[0], -self[1]+2*offset])
+        return Vector([self[0], -self[1]+2*offset, self[2]])
 
     def refy(self, offset=0):
-        return Vector([-self[0]+2*offset, self[1]])
+        return Vector([-self[0]+2*offset, self[1], self[2]])
 
+    def refz(self, offset=0):
+        return Vector([self[0], self[1], -self[2]+2*offset])
+
+
+if(__name__ == "__main__"):
+
+    x = Vector([1, 0, 0])
+    y = Vector([0, -1, 0])
+
+    print(x.rot(y))
