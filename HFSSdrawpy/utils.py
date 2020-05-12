@@ -382,7 +382,22 @@ class VariableString(str):
 
 class Vector(list):
 
+    """
+    Vector is a custom 3D vector class, alowing for opperations optimized to
+    interface properly with HFSS.
+    The class can be instenciate as a 2D vector, how ever, it will effectively
+    creat a 3D vector with 0 for z axis.
+    """
+
     def __init__(self, vec, vec_y=None, vec_z=None):
+
+        """
+        Init of the 3D vector:
+
+            If vec_y, and vec_z are None, then vec must a len=2 or len=3 iterable.
+            If vec_y is not None, and vec_z is, then creat a vector [vec, vec_y, 0].
+            If vec_y and vec_z are not None, then creat a vector [vec, vec_y, vec_z].
+        """
 
         if vec_y is not None:
             vec = [vec, vec_y, 0]
@@ -402,6 +417,19 @@ class Vector(list):
 
     @staticmethod
     def check(elt):
+
+        """
+        Utility function to check if an element is compatible with vectors
+        opperations. It only requiers to be iterable and of len=3.
+
+        Args:
+            elt: The element to be tested
+        
+        Returns:
+            Boolean, true if elt is compatible with Vector opperations, False
+            otherwise.
+        """
+
         try:
             return len(elt)==3
         except:
@@ -416,7 +444,10 @@ class Vector(list):
         if Vector.check(other):
             return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
         else:
-            raise TypeError('Could not perform add operation')
+            try:
+                return Vector([self[0]+other, self[1]+other, self[2]+other])
+            except:
+                raise TypeError('Could not perform add operation')
 
     def __radd__(self, other):
         return self + other
@@ -425,7 +456,10 @@ class Vector(list):
         if Vector.check(other):
             return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
         else:
-            raise TypeError('Could not perform sub operation')
+            try:
+                Vector([self[0]-other, self[1]-other, self[2]-other])
+            except:
+                raise TypeError('Could not perform sub operation')
 
     def __neg__(self):
         return Vector([-self[0], -self[1], -self[2]])
@@ -455,13 +489,8 @@ class Vector(list):
                 raise TypeError('Could not perform div operation')
 
     def __rtruediv__(self, other):
-        if Vector.check(other):
-            return Vector([other[0]/self[0], other[1]/self[1], other[2]/self[2]])
-        else:
-            try:
-                return Vector([other/self[0], other/self[1], other/self[2]])
-            except:
-                raise TypeError('Could not perform rdiv operation')
+
+        self / other
 
     def dot(self, other):
         if Vector.check(other):
@@ -470,6 +499,19 @@ class Vector(list):
             raise TypeError('Could not perform dot operation')
 
     def cross(self, other, ref=None):
+
+        """
+        This function is a bit cryptic. It computes the signed magnitude of
+        the cross product between self and other, assuming they both are in
+        the plan orthogonal to ref.
+
+        Args:
+            other: a Vector
+            ref: an other Vector, if None, assumed to be [0, 0, 1]
+        
+        Returns:
+            dot((self x other), ref)
+        """
 
         if(ref is None):
             ref = Vector(0, 0, 1)
@@ -500,15 +542,12 @@ class Vector(list):
         return Vector([-self[1], self[0]])
 
     def rot(self, other, ref=None):
-        '''
-        Inputs:
-        -------
-        other: vector
 
-        Returns
-        -------
-        vector: rotation around z of self by an angle given by other w.r.t to x
         '''
+        This function is just completly cryptic, I wrote it a long time ago,
+        dont understand it anymore XD.
+        '''
+
         if(ref is None):
             ref = Vector([0, 0, 1])
 
