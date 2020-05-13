@@ -55,6 +55,9 @@ class Modeler():
             self.interface = gds_modeler.GdsModeler()
         else:
             print('Mode should be either hfss or gds')
+        
+        #The list of bodies pointing to the current Modeler
+        self.bodies = []
 
     ### Utils methods
 

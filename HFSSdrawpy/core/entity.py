@@ -209,22 +209,48 @@ class Entity():
         self.body.interface.assign_mesh_length(self, mesh_length)
 
     def assign_lumped_RLC(self, points, rlc):
+
         points = parse_entry(points)
+        given_point_0, given_point_1 = Vector(points[0]), Vector(points[1])
+
         # move the points coordinate in the global coordinate system
-        if self.body.ref_name != 'Global':
-            # TODO do recursive to handle this
-            raise NotImplementedError('Do not handle 2nd order relative \
-                                      coordinate system yet.')
-        origin = self.body.rel_coor[0]
-        new_x = self.body.rel_coor[1]
-        new_y =self.body.rel_coor[2]
-        point_0 = []
-        point_1 = []
-        for ii in range(3):
-            point_0.append(origin[ii] + new_x[ii] * points[0][0] + new_y[ii] * points[0][1])
-            point_1.append(origin[ii] + new_x[ii] * points[1][0] + new_y[ii] * points[1][1])
+
+        point_0 = given_point_0
+        point_1 = given_point_1
+
+        pm = self.body.pm
+        current_body = self.body
+
+        while(current_body.ref_name != 'Global'):
+
+            origin = Vector(current_body.rel_coor[0])
+            new_x = Vector(current_body.rel_coor[1])
+            new_y = Vector(current_body.rel_coor[2])
+            new_z = new_x.cross(new_y)
+
+            change_matrix = np.array([new_x, new_y, new_z])
+
+            point_0 = origin + np.dot(point_0,change_matrix)
+            point_1 = origin + np.dot(point_1,change_matrix)
+
+            for body in pm.bodies:
+
+                if(body.name == current_body.ref_name):
+                    current_body = body
+                    break
+        
+        origin = Vector(current_body.rel_coor[0])
+        new_x = Vector(current_body.rel_coor[1])
+        new_y = Vector(current_body.rel_coor[2])
+        new_z = new_x.cross(new_y)
+
+        change_matrix = np.array([new_x, new_y, new_z])
+
+        point_0 = origin + np.dot(point_0, change_matrix)
+        point_1 = origin + np.dot(point_1, change_matrix)
 
         r, l, c = rlc
+
         self.body.interface.assign_lumped_rlc(self, r, l, c, point_0,
                                               point_1, name="RLC")
 

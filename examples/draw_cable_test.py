@@ -15,7 +15,7 @@ pm = Modeler('hfss')
 
 relative = pm.set_variable('1mm')
 
-chip1 = Body(pm, 'chip1')
+chip1 = Body(pm, 'chip1', rel_coor=[[0, 0, relative], [1, 0, 0], [0, 1, 0]])
 chip2 = Body(pm, 'chip2', rel_coor=[[0,0,relative], [0,1,0], [-1,0,0]])
 chip3 = Body(pm, 'chip3', rel_coor=[[0,relative,0], [1,0,0], [0,1,0]],
                 ref_name='chip2')

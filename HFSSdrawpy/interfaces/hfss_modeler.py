@@ -840,7 +840,8 @@ class HfssModeler(COMWrapper):
             self._modeler.ChangeProperty(["NAME:AllTabs",
 		["NAME:Geometry3DCSTab",
 			["NAME:PropServers", coor_sys],
-			["NAME:ChangedProps", ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
+			["NAME:ChangedProps", ["NAME:Reference CS","Value:=", ref_name],
+                                ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
                                 ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
                                 ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
 
