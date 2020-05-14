@@ -298,7 +298,14 @@ class Body(Modeler):
             points = val(points)
             fillet = val(fillet)
             _port = port.val()
-            names, layers = self.interface.path(points, _port, fillet, name=name)
+
+            #TODO, this is a dirty fixe cause of Vector3D
+            
+            points_2D = []
+            for point in points:
+                points_2D.append([point[0], point[1]])
+            
+            names, layers = self.interface.path(points_2D, _port, fillet, name=name)
             for name, layer in zip(names, layers):
                 kwargs['layer'] = layer
                 kwargs['name'] = name

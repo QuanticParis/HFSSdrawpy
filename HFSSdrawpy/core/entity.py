@@ -292,10 +292,10 @@ class Entity():
                 for ii in range(len(tool_entities)):
                     tool_entities[0].delete()
 
-    def unite(self, tool_entities, new_name=None):
+    def unite(self, tool_entities, keep_originals=False, new_name=None):
         """
         tool_entities: a list of Entity or a Entity
         if new_name (str) is provided, the tool_entities + self are kept and
         the union is named new_name
         """
-        return self.body.unite(tool_entities, main=self, new_name=new_name)
+        return self.body.unite(tool_entities, main=self, keep_originals=False, new_name=new_name)

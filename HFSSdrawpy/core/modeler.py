@@ -112,7 +112,7 @@ class Modeler():
     def intersect(self, entities, keep_originals = False):
         raise NotImplementedError()
 
-    def unite(self, entities, main=None, new_name=None):
+    def unite(self, entities, main=None, keep_originals=False, new_name=None):
         # main: name or entity that should be returned/preserved/final union
         # if new_name (str) is provided, the original entities are kept and
         # the union is named new_name
@@ -120,10 +120,10 @@ class Modeler():
             entities = [entities]
         entities = entities.copy()
 
-        if new_name is None:
-            keep_originals = False
-        else:
-            keep_originals = True
+        # if new_name is None:
+        #     keep_originals = False
+        # else:
+        #     keep_originals = True
 
         if main is not None:
             if isinstance(main, str):

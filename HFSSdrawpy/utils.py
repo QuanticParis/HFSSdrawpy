@@ -580,6 +580,10 @@ class Vector(list):
 
         if(ref is None):
             ref = Vector([0, 0, 1])
+        else:
+            ref = Vector(ref)
+
+        other = Vector(other)
 
         if(Vector.check(other) and Vector.check(ref)):
 
