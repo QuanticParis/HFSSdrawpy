@@ -17,7 +17,8 @@ from ..utils import VariableString, \
                             parse_entry, \
                             var, \
                             val, \
-                            LENGTH_UNIT
+                            LENGTH_UNIT, \
+                            Vector
                             #extract_value_unit, \
                             #extract_value_dim, \
                             #rem_unit, \

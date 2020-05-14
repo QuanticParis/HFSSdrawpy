@@ -211,7 +211,7 @@ class Entity():
     def assign_lumped_RLC(self, points, rlc):
 
         points = parse_entry(points)
-        given_point_0, given_point_1 = Vector(points[0]), Vector(points[1])
+        given_point_0, given_point_1 =Vector(points[0]),Vector(points[1])
 
         # move the points coordinate in the global coordinate system
 
@@ -221,17 +221,20 @@ class Entity():
         pm = self.body.pm
         current_body = self.body
 
-        while(current_body.ref_name != 'Global'):
+        while(True):
 
             origin = Vector(current_body.rel_coor[0])
             new_x = Vector(current_body.rel_coor[1])
             new_y = Vector(current_body.rel_coor[2])
             new_z = new_x.cross(new_y)
 
-            change_matrix = np.array([new_x, new_y, new_z])
+            change_matrix = np.array([new_x.as_nda(), new_y.as_nda(), new_z.as_nda()])
 
-            point_0 = origin + np.dot(point_0,change_matrix)
-            point_1 = origin + np.dot(point_1,change_matrix)
+            point_0 = origin + np.dot(point_0.as_nda(),change_matrix)
+            point_1 = origin + np.dot(point_1.as_nda(),change_matrix)
+
+            if(current_body.ref_name == 'Global'):
+                break
 
             for body in pm.bodies:
 
@@ -239,15 +242,15 @@ class Entity():
                     current_body = body
                     break
         
-        origin = Vector(current_body.rel_coor[0])
-        new_x = Vector(current_body.rel_coor[1])
-        new_y = Vector(current_body.rel_coor[2])
-        new_z = new_x.cross(new_y)
+        # origin = Vector(current_body.rel_coor[0])
+        # new_x = Vector(current_body.rel_coor[1])
+        # new_y = Vector(current_body.rel_coor[2])
+        # new_z = new_x.cross(new_y)
 
-        change_matrix = np.array([new_x, new_y, new_z])
+        # change_matrix = np.array([new_x.as_nda(), new_y.as_nda(), new_z.as_nda()])
 
-        point_0 = origin + np.dot(point_0, change_matrix)
-        point_1 = origin + np.dot(point_1, change_matrix)
+        # point_0 = origin + np.dot(point_0.as_nda(), change_matrix)
+        # point_1 = origin + np.dot(point_1.as_nda(), change_matrix)
 
         r, l, c = rlc
 

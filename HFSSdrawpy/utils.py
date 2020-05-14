@@ -553,6 +553,10 @@ class Vector(list):
 
     def orth(self):
         return Vector([-self[1], self[0]])
+    
+    def as_nda(self):
+
+        return numpy.array([self[0], self[1], self[2]], dtype=object)
 
     def rot(self, other, ref=None):
 
