@@ -43,7 +43,7 @@ def wirebond(self, pos, ori, ymax, ymin, **kwargs):
 
 def box(self, pos, size, **kwargs):
 
-    return self.box_corner(pos, size, **kwargs)
+    return self.box(pos, size, **kwargs)
 
 def box_center(self, pos, size, **kwargs):
 

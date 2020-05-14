@@ -888,7 +888,7 @@ class HfssModeler(COMWrapper):
         pos = parse_entry(pos)
         size = parse_entry(size)
         corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
-        return self.box_corner(corner_pos, size, **kwargs)
+        return self.box(corner_pos, size, **kwargs)
 
     @assert_name
     def polyline(self, points, closed=True, **kwargs):
