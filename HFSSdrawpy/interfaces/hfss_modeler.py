@@ -1180,13 +1180,14 @@ class HfssModeler(COMWrapper):
             if not isinstance(vertex_indices, list):
                 vertex_indices = [vertex_indices]
             to_fillet = [int(hfss_vertex_indices[v]) for v in vertex_indices]
-        self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
-                          ["NAME:Parameters",
-                           ["NAME:FilletParameters",
-                            "Edges:=", [],
-                            "Vertices:=", to_fillet,
-                            "Radius:=", radius,
-                            "Setback:=", "0mm"]])
+        if to_fillet != []:
+            self._modeler.Fillet(["NAME:Selections", "Selections:=", entity.name],
+                              ["NAME:Parameters",
+                               ["NAME:FilletParameters",
+                                "Edges:=", [],
+                                "Vertices:=", to_fillet,
+                                "Radius:=", radius,
+                                "Setback:=", "0mm"]])
 
     def _fillet_edges(self, entity, radius, edge_index):
         edges = self.get_edge_ids(entity.name)
