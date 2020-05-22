@@ -135,7 +135,7 @@ class GdsModeler():
         # use dummy layers to recover the right elements
         layers = [ii  for ii in range(len(port.widths))]
         cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
-                               corners="circular bend",
+                               corners="natural",
                                bend_radius=fillet, gdsii_path=False,
                                tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
 
