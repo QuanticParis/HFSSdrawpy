@@ -6,13 +6,9 @@ Created on Tue Apr 14 18:18:44 2020
 @author: Raphael
 """
 
-from ..utils import VariableString, \
-                             extract_value_unit, \
-                             extract_value_dim, \
-                             parse_entry, \
-                             _val, val, \
-                             way, \
-                             Vector
+from ..utils import val, \
+                    way, \
+                    Vector
 import numpy as np
 
 

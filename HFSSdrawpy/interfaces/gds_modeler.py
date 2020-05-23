@@ -8,7 +8,7 @@ Created on Mon Nov  4 11:13:09 2019
 import numpy as np
 import gdspy
 
-from ..utils import parse_entry, var, Vector
+from ..utils import parse_entry, val, Vector
 from ..core.entity import gen_name
 
 TOLERANCE = 1e-7 # for arcs
@@ -114,7 +114,7 @@ class GdsModeler():
 
     def rect_center(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
-        corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
+        corner_pos = [val(p) - val(s)/2 for p, s in zip(pos, size)]
         self.rect(corner_pos, size, **kwargs)
 
     def cylinder(self, pos, radius, height, axis, **kwargs):
@@ -292,91 +292,6 @@ class GdsModeler():
 
     def mirrorZ(self, entity):
         pass
-
-
-    def duplicate_along_line(self, obj, vec):
-        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
-                                          "NewPartsModelFlag:="	, "Model"],
-                                        	["NAME:DuplicateToAlongLineParameters",
-                                    		"CreateNewObjects:="	, True,
-                                    		"XComponent:="		, vec[0],
-                                    		"YComponent:="		, vec[1],
-                                    		"ZComponent:="		, vec[2],
-                                    		"NumClones:="		, "2"],
-                                        	["NAME:Options",
-                                        	"DuplicateAssignments:=", False],
-                                        	["CreateGroupsForNewObjects:=", False	])
-
-    def duplicate_along_line(self, obj, vec, n=2):
-        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
-                                          "NewPartsModelFlag:="	, "Model"],
-                                        	["NAME:DuplicateToAlongLineParameters",
-                                    		"CreateNewObjects:="	, True,
-                                    		"XComponent:="		, vec[0],
-                                    		"YComponent:="		, vec[1],
-                                    		"ZComponent:="		, vec[2],
-                                    		"NumClones:="		, str(n)],
-                                        	["NAME:Options",
-                                        	"DuplicateAssignments:=", False],
-                                        	["CreateGroupsForNewObjects:=", False	])
-
-    def _make_lumped_rlc(self, r, l, c, start, end, obj_arr, name="LumpLRC"):
-        name = increment_name(name, self._boundaries.GetBoundaries())
-        params = ["NAME:"+name]
-        params += obj_arr
-        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
-        params += ["UseResist:=", r != 0, "Resistance:=", r,
-                   "UseInduct:=", l != 0, "Inductance:=", l,
-                   "UseCap:=", c != 0, "Capacitance:=", c]
-        self._boundaries.AssignLumpedRLC(params)
-
-    def _make_lumped_port(self, start, end, obj_arr, z0="50ohm", name="LumpPort"):
-        name = increment_name(name, self._boundaries.GetBoundaries())
-        params = ["NAME:"+name]
-        params += obj_arr
-        params += ["RenormalizeAllTerminals:=", True, "DoDeembed:=", False,
-                   ["NAME:Modes", ["NAME:Mode1", "ModeNum:=", 1, "UseIntLine:=", True,
-                                   ["NAME:IntLine", "Start:=", start, "End:=", end],
-                                   "CharImp:=", "Zpi", "AlignmentGroup:=", 0, "RenormImp:=", "50ohm"]],
-                   "ShowReporterFilter:=", False, "ReporterFilter:=", [True],
-                   "FullResistance:=", "50ohm", "FullReactance:=", "0ohm"]
-
-        self._boundaries.AssignLumpedPort(params)
-
-    def make_material(self, obj, material):
-        self._modeler.ChangeProperty(["NAME:AllTabs",
-                                		["NAME:Geometry3DAttributeTab",
-                                			["NAME:PropServers", obj],
-                                			["NAME:ChangedProps",
-                                				["NAME:Material","Value:=", material]
-                                			]
-                                		]
-                                	])
-
-
-
-    def eval_expr(self, expr, units="mm"):
-        if not isinstance(expr, str):
-            return expr
-        return self.parent.eval_expr(expr, units)
-
-    def eval_var_str(self, name, unit=None):
-        if not isinstance(name, VariableString):
-            if unit is not None:
-                return str(name)+' '+unit
-            else:
-                return str(name)
-        return self.parent.eval_var_str(name, unit=unit)
-
-    def delete_all_objects(self):
-        objects = []
-        for ii in range(int(self._modeler.GetNumObjects())):
-            objects.append(self._modeler.GetObjectName(str(ii)))
-#        print(objects)
-        self._modeler.Delete(self._selections_array(*objects))
-
-    def get_matched_object_name(self, name):
-        return self._modeler.GetMatchedObjectName(name+'*')
 
     def translate(self, entities, vector):
         '''vector is 3-dimentional but with a z=0 component'''

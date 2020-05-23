@@ -4,12 +4,7 @@ from ..utils import Vector, \
                    parse_entry, \
                    check_name, \
                    find_last_list, \
-                   find_corresponding_list, \
-                   _val, \
-                   val, \
-                   equal_float, \
-                   way
-
+                   val
 
 class Port():
     dict_instances  = {}
@@ -96,9 +91,9 @@ class Port():
                                Vector(adapt_dist, offset2+width2/2).rot(self.ori)+self.pos,
                                Vector(adapt_dist, offset2-width2/2).rot(self.ori)+self.pos,
                                Vector(0, offset1-width1/2).rot(self.ori)+self.pos])
-            max_diff = max(max_diff, abs(_val(offset1+width1/2-(offset2+width2/2))),
-                           abs(_val(offset2-width2/2-(offset1-width1/2))))
-        adapt_dist = pm.update_variable(max_diff/slope, name=self.name+'_adapt')
+            max_diff = max(max_diff, abs(val(offset1+width1/2-(offset2+width2/2))),
+                           abs(val(offset2-width2/2-(offset1-width1/2))))
+        adapt_dist = pm.set_variable(max_diff/slope, name=self.name+'_adapt')
 
         if len(points) != 0:
             self.save = {'pos':self.pos, 'widths':self.widths,
@@ -120,17 +115,17 @@ class Port():
         for ii in range(self.N):
             width = self.widths[ii]
             offset = self.offsets[ii]
-            _widths.append(_val(width))
-            _offsets.append(_val(offset))
+            _widths.append(val(width))
+            _offsets.append(val(offset))
 
         _pos = []
         for coor in self.pos:
-            _pos.append(_val(coor))
+            _pos.append(val(coor))
         _pos = Vector(_pos)
 
         _ori = []
         for coor in self.ori:
-            _ori.append(_val(coor))
+            _ori.append(val(coor))
         _ori = Vector(_ori)
 
         return Port(self.body, self.name, _pos, _ori, _widths, self.subnames,
@@ -156,8 +151,8 @@ class Port():
         y_min_val = np.infty
         for ii in range(self.N):
             # widths should not be negative
-            _y_max_val = _val(self.offsets[ii]+self.widths[ii]/2)
-            _y_min_val = _val(self.offsets[ii]-self.widths[ii]/2)
+            _y_max_val = val(self.offsets[ii]+self.widths[ii]/2)
+            _y_min_val = val(self.offsets[ii]-self.widths[ii]/2)
             if _y_max_val > y_max_val:
                 y_max = self.offsets[ii]+self.widths[ii]/2
                 y_max_val = _y_max_val

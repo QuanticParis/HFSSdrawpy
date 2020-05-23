@@ -228,10 +228,10 @@ class Entity():
             new_y = Vector(current_body.rel_coor[2])
             new_z = new_x.cross(new_y)
 
-            change_matrix = np.array([new_x.as_nda(), new_y.as_nda(), new_z.as_nda()])
+            change_matrix = np.array([new_x, new_y, new_z])
 
-            point_0 = origin + np.dot(point_0.as_nda(),change_matrix)
-            point_1 = origin + np.dot(point_1.as_nda(),change_matrix)
+            point_0 = origin + np.dot(point_0, change_matrix)
+            point_1 = origin + np.dot(point_1, change_matrix)
 
             if(current_body.ref_name == 'Global'):
                 break
@@ -241,7 +241,7 @@ class Entity():
                 if(body.name == current_body.ref_name):
                     current_body = body
                     break
-        
+
         # origin = Vector(current_body.rel_coor[0])
         # new_x = Vector(current_body.rel_coor[1])
         # new_y = Vector(current_body.rel_coor[2])

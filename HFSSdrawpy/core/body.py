@@ -8,9 +8,8 @@ from ..utils import Vector, \
                    find_last_list, \
                    find_penultimate_list, \
                    find_corresponding_list, \
-                   _val, \
                    val, \
-                   equal_float, gen_name, \
+                   equal_float, \
                    way
 from .entity import Entity
 from .modeler import Modeler
@@ -191,6 +190,7 @@ class Body(Modeler):
         -------
         box: Corresponding 3D Model Entity
         """
+        pos, size = parse_entry(pos, size)
         name = check_name(Entity, name)
         kwargs['name'] = name
         self.interface.box(pos, size, **kwargs)
@@ -211,13 +211,13 @@ class Body(Modeler):
         -------
         box: Corresponding 3D Model Entity
         """
-        name = check_name(Entity, name)
-        kwargs['name'] = name
-        self.interface.box_center(pos, size, **kwargs)
-        return Entity(3, self, **kwargs)
+        pos, size = parse_entry(pos, size)
+        pos = [p - s/2 for p, s in zip(pos, size)]
+        return self.rect(pos, size, name=name, **kwargs)
 
     @set_body
     def cylinder(self, pos, radius, height, axis, name='cylinder', **kwargs):
+        pos, radius, height = parse_entry(pos, radius, height)
         name = check_name(Entity, name)
         kwargs['name'] = name
         self.interface.cylinder(pos, radius, height, axis, **kwargs)
@@ -226,6 +226,7 @@ class Body(Modeler):
 
     @set_body
     def disk(self, pos, radius, axis, name='disk_0', **kwargs):
+        pos, radius = parse_entry(pos, radius)
         name = check_name(Entity, name)
         kwargs['name'] = name
         if self.mode=='gds':
@@ -236,6 +237,7 @@ class Body(Modeler):
 
     @set_body
     def polyline(self, points, closed=True, name='polyline_0', **kwargs):
+        points = parse_entry(points)
         name = check_name(Entity, name)
         kwargs['name'] = name
         i = 0
@@ -255,6 +257,7 @@ class Body(Modeler):
 
     @set_body
     def rect(self, pos, size, name='rect_0', **kwargs):
+        pos, size = parse_entry(pos, size)
         name = check_name(Entity, name)
         kwargs['name'] = name
         if self.mode=='gds':
@@ -265,16 +268,13 @@ class Body(Modeler):
 
     @set_body
     def rect_center(self, pos, size, name='rect_0', **kwargs):
-        name = check_name(Entity, name)
-        kwargs['name'] = name
-        if self.mode=='gds':
-            pos = val(pos)
-            size = val(size)
-        self.interface.rect_center(pos, size, **kwargs)
-        return Entity(2, self, **kwargs)
+        pos, size = parse_entry(pos, size)
+        pos = [p - s/2 for p, s in zip(pos, size)]
+        return self.rect(pos, size, name=name, **kwargs)
 
     @set_body
     def wirebond(self, pos, ori, ymax, ymin, name='wb_0', **kwargs):
+        pos, ymax, ymin = parse_entry(pos, ymax, ymin)
         name = check_name(Entity, name)
         kwargs['name'] = name
         if self.mode=='gds':
@@ -300,11 +300,12 @@ class Body(Modeler):
             _port = port.val()
 
             #TODO, this is a dirty fixe cause of Vector3D
-            
+
+            # due to the 3D vector implementation
             points_2D = []
             for point in points:
                 points_2D.append([point[0], point[1]])
-            
+
             names, layers = self.interface.path(points_2D, _port, fillet, name=name)
             for name, layer in zip(names, layers):
                 kwargs['layer'] = layer
@@ -652,7 +653,7 @@ class Body(Modeler):
             val_BA = val(B-A)
             ori = way(val_BA)
             length = Vector(val_BA).norm()
-            n_bond = int(length/_val(min_dist))+1
+            n_bond = int(length/val(min_dist))+1
             spacing = (B-A).norm()/n_bond
             pos = A+ori*spacing/2
             for ii in range(n_bond):
