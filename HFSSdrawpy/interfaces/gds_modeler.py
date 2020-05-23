@@ -113,7 +113,7 @@ class GdsModeler():
     def cylinder(self, pos, radius, height, axis, **kwargs):
         pass
 
-    def disk(self, pos, radius, axis, number_of_points=0, **kwargs):
+    def disk(self, pos, radius, axis, number_of_points=None, **kwargs):
         pos, radius = parse_entry(pos, radius)
         name = kwargs['name']
         layer = kwargs['layer']
