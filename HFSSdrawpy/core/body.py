@@ -291,6 +291,7 @@ class Body(Modeler):
 
     @set_body
     def path(self, points, port, fillet, name='path_0', **kwargs):
+        #fillet should be either 0 or larger than half of the port width
         name = check_name(Entity, name)
         kwargs['name'] = name
         model_entities = []
@@ -305,7 +306,11 @@ class Body(Modeler):
             for point in points:
                 points_2D.append([point[0], point[1]])
             
-            names, layers = self.interface.path(points_2D, _port, fillet, name=name)
+            if fillet==0:
+                names, layers = self.interface.path(points_2D, _port, fillet, name=name, corner="natural")
+            else:
+                names, layers = self.interface.path(points_2D, _port, fillet, name=name, corner="circular bend")
+            
             for name, layer in zip(names, layers):
                 kwargs['layer'] = layer
                 kwargs['name'] = name
