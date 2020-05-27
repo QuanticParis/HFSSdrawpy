@@ -86,10 +86,17 @@ class GdsModeler():
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
+
+        #TODO, this is a dirty fixe cause of Vector3D
+
+        points_2D = []
+        for point in points:
+            points_2D.append([point[0], point[1]])
+
         if closed:
-            poly1 = gdspy.Polygon(points, layer=layer)
+            poly1 = gdspy.Polygon(points_2D, layer=layer)
         else:
-            poly1 = gdspy.FlexPath(points, 1e-9, layer=layer)
+            poly1 = gdspy.FlexPath(points_2D, 1e-9, layer=layer)
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
@@ -132,9 +139,15 @@ class GdsModeler():
 
     def path(self, points, port, fillet, name=''):
 
+        #TODO, this is a dirty fixe cause of Vector3D
+
+        points_2D = []
+        for point in points:
+            points_2D.append([point[0], point[1]])
+
         # use dummy layers to recover the right elements
         layers = [ii  for ii in range(len(port.widths))]
-        cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
+        cable = gdspy.FlexPath(points_2D, port.widths, offset=port.offsets,
                                corners="circular bend",
                                bend_radius=fillet, gdsii_path=False,
                                tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
