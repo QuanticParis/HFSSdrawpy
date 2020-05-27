@@ -228,7 +228,7 @@ def rem_unit(other):
         return other
 
 def _val(elt):
-    if isinstance(elt, (int, float, numpy.int64, numpy.float64)):
+    if isinstance(elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)):
         return elt
     else:
         return float(elt.evalf(subs=variables))
@@ -343,6 +343,17 @@ class Vector(numpy.ndarray):
         return (equal_float(val_self[0], val_other[0]) and
                 equal_float(val_self[1], val_other[1]) and
                 equal_float(val_self[2], val_other[2]))
+    
+    def index(self, elt):
+        val_self = val(self)
+        val_elt = val(elt)
+        for ii, item in enumerate(val_self):
+            if item == val_elt:
+                break
+        else:
+            return -1
+        return ii
+    
 
 #     def __add__(self, other):
 #         if Vector.check(other):
