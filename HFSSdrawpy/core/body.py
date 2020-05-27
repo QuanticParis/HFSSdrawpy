@@ -17,7 +17,7 @@ from .modeler import Modeler
 from ..path_finding.path_finder import Path
 from .port import Port
 
-from ..parameters import DEFAULT, PORT
+from ..parameters import DEFAULT, PORT, MESH
 
 class BodyMover():
 
@@ -456,8 +456,8 @@ class Body(Modeler):
 
     @move_port
     def draw_cable(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None,
-                   meander_length=0, meander_offset=0, is_mesh=False,
-                   reverse_adaptor=False, slope=0.5, name='cable_0'):
+                   meander_length=0, meander_offset=0,
+                   reverse_adaptor=False, slope=0.5, name='cable_0', mesh_size=None):
         """
 
 
@@ -496,7 +496,7 @@ class Body(Modeler):
 
         """
 
-        meander_length, meander_offset, fillet = parse_entry(meander_length, meander_offset, fillet)
+        meander_length, meander_offset, fillet, mesh_size = parse_entry(meander_length, meander_offset, fillet, mesh_size)
         # to_meander should be a list of list
         # meander_length, meander_offset should be lists
         if to_meander is None:
@@ -558,8 +558,8 @@ class Body(Modeler):
                                 to_meander=[to_meander[cable_portion]],
                                 meander_length=[meander_length[cable_portion]],
                                 meander_offset=[meander_offset[cable_portion]],
-                                is_mesh=is_mesh,
-                                reverse_adaptor=reverse_adaptor)
+                                reverse_adaptor=reverse_adaptor,
+                                mesh_size=mesh_size)
                 cable_portion += 1
                 _ports = [port.r]
 
@@ -614,8 +614,14 @@ class Body(Modeler):
 
         total_path.clean()
         # plot cable
-        self.path(total_path.points, total_path.port_in, total_path.fillet,
+        cable=self.path(total_path.points, total_path.port_in, total_path.fillet,
                   name=name)
+        
+        #assign mesh_size to the mesh layer in the new cable
+        if mesh_size is not None:
+            for entity in cable:
+                if entity.layer==MESH:
+                    entity.assign_mesh_length(mesh_size)
 
         # if bond plot bonds
         if is_bond:
