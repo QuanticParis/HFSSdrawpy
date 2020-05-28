@@ -16,7 +16,7 @@ from .modeler import Modeler
 from ..path_finding.path_finder import Path
 from .port import Port
 
-from ..parameters import DEFAULT, PORT, MESH
+from ..parameters import DEFAULT, PORT, MASK, MESH
 
 class BodyMover():
 
@@ -510,6 +510,15 @@ class Body(Modeler):
             meander_offset = [meander_offset]*len(to_meander)
 
         ports = list(ports)
+        
+        if self.is_mask:
+            for port_ in ports:
+                port_.widths.append(port_.widths[-1] + 2*self.gap_mask)
+                port_.offsets.append(0.0)
+                port_.N += 1
+                if port_.subnames[-1] != 'mask':
+                    port_.layers.append(MASK)
+                    port_.subnames.append('mask')
 
         do_not_beyong = [port.name for port in ports if port.body != self]
         if do_not_beyong:
@@ -630,6 +639,20 @@ class Body(Modeler):
 
         ports[0].revert()
         ports[-1].revert()
+        
+        # mask
+#        if self.is_mask:
+#            ports_mask = np.copy(ports)
+#            for port_ in ports_mask:
+#                port_.widths = port_.widths[1] + 2*self.gap_mask
+#                port_.layers = MASK
+#                
+#            print(ports_mask)
+#                
+#            self.draw_cable(*ports_mask, fillet=fillet, is_bond=is_bond, 
+#                            to_meander=to_meander, meander_length=meander_length, 
+#                            meander_offset=meander_offset, reverse_adaptor=reverse_adaptor, 
+#                            slope=slope, name=name+'_mask')
 
         length = total_path.length() + length_adaptor
         print('Cable "%s" length = %.3f mm'%(name, length*1000))
