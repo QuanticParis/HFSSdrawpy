@@ -155,14 +155,14 @@ def check_name(_class, name):
 ### Litteral Expressions
 
 def equal_float(float1, float2):
-    if float1!=0:
+    if abs(float1)>1e-10:
         rel_diff = abs((float1-float2)/float1)
         if rel_diff<1e-5:
             return True
         else:
             return False
 
-    elif float2!=0:
+    elif abs(float2)>1e-10:
         rel_diff = abs((float1-float2)/float2)
         if rel_diff<1e-5:
             return True
@@ -340,10 +340,11 @@ class Vector(numpy.ndarray):
     def __eq__(self, other):
         val_self = val(self)
         val_other = val(other)
-        return (equal_float(val_self[0], val_other[0]) and
+        bool_result = (equal_float(val_self[0], val_other[0]) and
                 equal_float(val_self[1], val_other[1]) and
                 equal_float(val_self[2], val_other[2]))
-    
+        return bool_result
+
     def index(self, elt):
         val_self = val(self)
         val_elt = val(elt)
@@ -353,7 +354,7 @@ class Vector(numpy.ndarray):
         else:
             return -1
         return ii
-    
+
 
 #     def __add__(self, other):
 #         if Vector.check(other):

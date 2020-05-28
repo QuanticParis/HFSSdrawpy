@@ -47,7 +47,6 @@ def displace(points, rl, min_dist, displacement=0, offset=0, n_meander=-1):
     # points is simply a segment
     # rl indicates what type of corner we have on each end
     if np.abs(val(displacement))<val(min_dist)*1.1:
-        print('here')
         displacement = min_dist*1.1
 
     elts = add_points(points, rl, min_dist, n_meander=n_meander)
@@ -131,7 +130,7 @@ def add_points(points, rl, min_dist, n_meander):
     rl=None
     indices_corners=None
 
-    print('n_add', n_add)
+    # print('n_add', n_add)
 
     if ignore:
         new_points.append(addedB)
