@@ -51,8 +51,8 @@ def create_port(self, widths=None, subnames=None, layers=None, offsets=0, name='
                      offsets=offsets, name=name)
     return [port]
 
-def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
-                   slope=1, tr_line=True, name='connector_0'):
+def draw_connector(self, pcb_track, pcb_gap, bond_length,
+                   tr_line=True, name='connector_0'):
     '''
     Draws a CPW connector for inputs and outputs.
 
@@ -60,18 +60,17 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
     -------
     name : (str) should be different from other connector's name
     iBondLength: (float) corresponds to dimension a in the drawing
-    iSlope (float): 1 is 45 degrees to adpat lengths between Bonding pad and iout
     iLineTest (Bool): unclear, keep False
 
         ground plane
         +------+
-        |       \
-        |        \
-        |   +-a-+\|
-    iIn |   |.....| iOut
-        |   +---+/|
-        |        /
-        |       /
+        |      |
+        |      |
+        |   +--+
+    iIn |   |    iOut
+        |   +--+
+        |      |
+        |      |
         +------+
 
     Outputs:
@@ -79,49 +78,30 @@ def draw_connector(self, track, gap, bond_length, pcb_track, pcb_gap,
     returns created entities with formalism [Port], [Entiy]
     '''
 
-    track, gap, pcb_gap, pcb_track = parse_entry(track, gap, pcb_gap, pcb_track)
-    bond_length, slope = parse_entry(bond_length, slope)
+    pcb_gap, pcb_track = parse_entry(pcb_gap, pcb_track)
+    bond_length = parse_entry(bond_length)
 
-    adaptDist = (pcb_track/2-track/2)/slope
+    # track
+    self.rect([pcb_gap, pcb_track/2], [bond_length, -pcb_track],
+                             layer=TRACK, name=name+'_track')
 
-    points = [(pcb_gap-self.overdev, pcb_track/2+self.overdev),
-              (pcb_gap+bond_length, pcb_track/2+self.overdev),
-              (pcb_gap+bond_length+adaptDist, self.overdev+track/2),
-              (pcb_gap+bond_length+adaptDist, -track/2-self.overdev),
-              (pcb_gap+bond_length, -pcb_track/2-self.overdev),
-              (pcb_gap-self.overdev, -pcb_track/2-self.overdev)]
-
-    track_entity = self.polyline(points, layer=TRACK,
-                                 name=name+'_track')
-
-    points = [(pcb_gap/2+self.overdev, pcb_gap+pcb_track/2-self.overdev),
-             (pcb_gap+bond_length, pcb_gap+pcb_track/2-self.overdev),
-             (pcb_gap+bond_length+adaptDist, gap+track/2-self.overdev),
-             (pcb_gap+bond_length+adaptDist, -gap-track/2+self.overdev),
-             (pcb_gap+bond_length, -pcb_gap-pcb_track/2+self.overdev),
-             (pcb_gap/2+self.overdev, -pcb_gap-pcb_track/2+self.overdev)]
-
-    gap_entity = self.polyline(points, layer=GAP, name=name+'_gap')
+    # gap
+    self.rect([pcb_gap/2, pcb_gap+pcb_track/2],
+              [pcb_gap/2 + bond_length, -(2*pcb_gap+pcb_track)],
+              layer=GAP, name=name+'_gap')
 
     if self.is_mask:
-        points =[(pcb_gap/2-self.gap_mask, pcb_gap+pcb_track/2+self.gap_mask),
-                  (pcb_gap+bond_length, pcb_gap+pcb_track/2+self.gap_mask),
-                  (pcb_gap+bond_length+adaptDist, gap+track/2+self.gap_mask),
-                  (pcb_gap+bond_length+adaptDist, -gap-self.gap_mask),
-                  (pcb_gap+bond_length, (pcb_gap)+(track-pcb_track)*0.5-self.gap_mask),
-                  (pcb_gap/2-self.gap_mask, (pcb_gap)+(track-pcb_track)*0.5-self.gap_mask)]
+        self.rect([pcb_gap/2-self.is_mask, pcb_gap+pcb_track/2+self.is_mask],
+                  [pcb_gap/2 + bond_length+2*self.is_mask, -(2*pcb_gap+pcb_track+2*self.is_mask)],
+                  layer=MASK, name=name+'_mask')
 
-        mask_entity = self.polyline(points, layer=MASK,
-                                    name=name+"_mask")
-
-    with self([adaptDist+pcb_gap+bond_length,0], [1,0]):
-        portOut, = create_port(self, widths=[track+2*self.overdev,
-                                             2*gap+track-2*self.overdev],
+    with self([pcb_gap+bond_length,0], [1,0]):
+        portOut, = create_port(self, widths=[pcb_track,2*pcb_gap+pcb_track],
                                name=name)
 
     if tr_line:
-        ohm = self.rect([pcb_gap/2+self.overdev, pcb_track/2+self.overdev],
-                        [pcb_gap/2-2*self.overdev, -pcb_track-2*self.overdev],
+        ohm = self.rect([pcb_gap/2, pcb_track/2],
+                        [pcb_gap/2, -pcb_track],
                         layer=RLC, name=name+'_ohm')
         points = [(pcb_gap/2+self.overdev, 0), (pcb_gap-self.overdev, 0)]
         ohm.assign_lumped_RLC(points, ('50ohm', 0, 0))

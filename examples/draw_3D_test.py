@@ -15,7 +15,7 @@ pm = Modeler('hfss')
 
 relative = pm.set_variable('1mm')
 
-main = Body(pm, 'main', rel_coor=[[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+main = Body(pm, 'main')
 
 chip = Body(pm, 'chip', rel_coor=[['1mm', '1mm', '1mm'], [
             1, 0, 0], [0, 0, 1]], ref_name='main')
@@ -49,8 +49,7 @@ with chip1(['2.0mm', '0.0mm'], [1, 0]):
 bond_length, bond_slope, pcb_track, pcb_gap = '200um', 0.5, '300um', '200um'
 
 with chip1(['0.5mm', '0.5mm'], [0, 1]):
-    con_port1, = elt.draw_connector(chip1, track, gap, bond_length, pcb_track,
-                                   pcb_gap, 0.5, name="con_port1")
+    con_port1, = elt.draw_connector(chip1, pcb_track, pcb_gap, bond_length, name="con_port1")
 
     with chip1(['1.5mm', '-1.0mm'], [0, 1]):
         port13, = elt.create_port(chip1, [track, track+2*gap], name="port13")
@@ -74,18 +73,16 @@ with chip2(['2.0mm', '0.0mm'], [1, 0]):
 bond_length, bond_slope, pcb_track, pcb_gap = '200um', 0.5, '300um', '200um'
 
 with chip2(['0.5mm', '0.5mm'], [0, 1]):
-    con_port2, = elt.draw_connector(chip2, track, gap, bond_length, pcb_track,
-                                   pcb_gap, 0.5, name="con_port2")
+    con_port2, = elt.draw_connector(chip2,  pcb_track, pcb_gap, bond_length, name="con_port2")
 
     with chip2(['1.5mm', '-1.0mm'], [0, 1]):
         port23, = elt.create_port(chip2, [track, track+2*gap], name="port23")
 
 chip2.draw_cable(con_port2, port23, is_bond=True, fillet='100um',
-                 reverse_adaptor=False, to_meander=[0, 0, 0],
-                 meander_length=0,
-                 name="con_port2_port23")
-
-# 3D
+                  reverse_adaptor=False, to_meander=[0, 0, 0],
+                  meander_length=0,
+                  name="con_port2_port23")
+# # 3D
 chip.box([0, 0, 0], ['3mm', '3mm', '3mm'], material='silicon')
 
 ground_plane2 = chip2.rect([0, 0], ['3mm', '3mm'], layer=TRACK, name="gp2")

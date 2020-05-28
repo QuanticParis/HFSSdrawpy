@@ -108,7 +108,7 @@ class GdsModeler():
         #This function neglects the z coordinate
         points = [(pos[0],pos[1]), (pos[0]+size[0],pos[1]+0), (pos[0]+size[0],pos[1]+size[1]), (pos[0],pos[1]+size[1])]
         poly1 = gdspy.Polygon(points, layer)
-
+        
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
 
@@ -180,6 +180,7 @@ class GdsModeler():
 
         blank_entity = entities.pop(0)
         blank_polygon = self.gds_object_instances.pop(blank_entity.name)
+        self.cell = self.gds_cells[blank_entity.body.name]
         self.cell.polygons.remove(blank_polygon)
 
         tool_polygons = []
@@ -208,6 +209,7 @@ class GdsModeler():
     def subtract(self, blank_entity, tool_entities, keep_originals=True):
         #1 We clear the cell of all elements and create lists to store the polygons
         blank_polygon = self.gds_object_instances.pop(blank_entity.name)
+        self.cell = self.gds_cells[blank_entity.body.name] # assumes blank and tool are in same body
         self.cell.polygons.remove(blank_polygon)
 
         tool_polygons = []
