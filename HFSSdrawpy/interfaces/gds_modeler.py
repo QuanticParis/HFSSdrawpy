@@ -207,44 +207,43 @@ class GdsModeler():
         raise NotImplementedError()
 
     def subtract(self, blank_entities, tool_entities, keep_originals=True):
-        #1 We clear the cell of all elements and create lists to store the polygons
-        blank_polygons = []
-        for blank_entity in blank_entities:
+        if isinstance(blank_entities, list):
+            for blank_entity in blank_entities:
+                self.subtract(blank_entity, tool_entities,
+                              keep_originals=keep_originals)
+        else:
+            blank_entity = blank_entities
+            #1 We clear the cell of all elements and create lists to store the polygons
             blank_polygon = self.gds_object_instances.pop(blank_entity.name)
-            if isinstance(blank_polygon, gdspy.PolygonSet):
-                for polygon in blank_polygon.polygons:
-                    blank_polygons.append(polygon)
-            else:
-                blank_polygons.append(blank_polygon)
             self.cell = self.gds_cells[blank_entity.body.name] # assumes blank and tool are in same body
             self.cell.polygons.remove(blank_polygon)
 
-        tool_polygons = []
-        for tool_entity in tool_entities:
-            tool_polygon = self.gds_object_instances[tool_entity.name]
-            if isinstance(tool_polygon, gdspy.PolygonSet):
-                for polygon in tool_polygon.polygons:
-                    tool_polygons.append(polygon)
+            tool_polygons = []
+            for tool_entity in tool_entities:
+                tool_polygon = self.gds_object_instances[tool_entity.name]
+                if isinstance(tool_polygon, gdspy.PolygonSet):
+                    for polygon in tool_polygon.polygons:
+                        tool_polygons.append(polygon)
+                else:
+                    tool_polygons.append(tool_polygon)
+
+
+            #2 subtract operation
+            tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
+            subtracted = gdspy.boolean(blank_polygon, tool_polygon_set, 'not',
+                                        precision=TOLERANCE, max_points=0,
+                                        layer=blank_entity.layer)
+            if subtracted is not None:
+                #3 At last we update the cell and the gds_object_instance
+                self.gds_object_instances[blank_entity.name] = subtracted
+                self.cell.add(subtracted)
             else:
-                tool_polygons.append(tool_polygon)
-
-
-        #2 subtract operation
-        layer = blank_entities[0].layer
-        assert(all([blank_entity.layer==blank_entities[0].layer
-                    for blank_entity in blank_entities]))
-        blank_polygon_set = gdspy.PolygonSet(blank_polygons, layer = layer)
-        tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = layer)
-        subtracted = gdspy.boolean(blank_polygon_set, tool_polygon_set, 'not',
-                                    precision=TOLERANCE, max_points=0,
-                                    layer=layer)
-
-        polygons = subtracted.polygons
-        #3 At last we update the cell and the gds_object_instance
-        for ii in range(len(blank_entities)):
-            polygon = gdspy.Polygon(polygons[ii], layer=layer)
-            self.gds_object_instances[blank_entities[ii].name] = polygon
-            self.cell.add(polygon)
+                print('Warning: the entity %s was fully \
+                      subtracted'%blank_entity.name)
+                dummy = gdspy.Polygon([[0, 0]])
+                self.gds_object_instances[blank_entity.name] = dummy
+                self.cell.add(dummy)
+                blank_entity.delete()
 
     def assign_material(self, material):
         pass
