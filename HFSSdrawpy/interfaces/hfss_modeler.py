@@ -1328,13 +1328,15 @@ class HfssModeler(COMWrapper):
         self._modeler.SetModelUnits(["NAME:Units Parameter",
                                      "Units:=", units,"Rescale:=",False])
 
-    def subtract(self, blank_entity, tool_entities, keep_originals=False):
+    def subtract(self, blank_entities, tool_entities, keep_originals=False):
+        blank_names = []
+        for entity in blank_entities:
+            blank_names.append(entity.name)
         tool_names = []
         for entity in tool_entities:
-            if entity!=None:
-                tool_names.append(entity.name)
+            tool_names.append(entity.name)
         selection_array= ["NAME:Selections",
-                          "Blank Parts:=", blank_entity.name,
+                          "Blank Parts:=", ",".join(blank_names),
                           "Tool Parts:=", ",".join(tool_names)]
         self._modeler.Subtract(selection_array,
                                 ["NAME:UniteParameters",

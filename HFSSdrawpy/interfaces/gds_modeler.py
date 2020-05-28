@@ -108,7 +108,7 @@ class GdsModeler():
         #This function neglects the z coordinate
         points = [(pos[0],pos[1]), (pos[0]+size[0],pos[1]+0), (pos[0]+size[0],pos[1]+size[1]), (pos[0],pos[1]+size[1])]
         poly1 = gdspy.Polygon(points, layer)
-        
+
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
 
@@ -206,11 +206,18 @@ class GdsModeler():
     def intersect(self, entities):
         raise NotImplementedError()
 
-    def subtract(self, blank_entity, tool_entities, keep_originals=True):
+    def subtract(self, blank_entities, tool_entities, keep_originals=True):
         #1 We clear the cell of all elements and create lists to store the polygons
-        blank_polygon = self.gds_object_instances.pop(blank_entity.name)
-        self.cell = self.gds_cells[blank_entity.body.name] # assumes blank and tool are in same body
-        self.cell.polygons.remove(blank_polygon)
+        blank_polygons = []
+        for blank_entity in blank_entities:
+            blank_polygon = self.gds_object_instances.pop(blank_entity.name)
+            if isinstance(blank_polygon, gdspy.PolygonSet):
+                for polygon in blank_polygon.polygons:
+                    blank_polygons.append(polygon)
+            else:
+                blank_polygons.append(blank_polygon)
+            self.cell = self.gds_cells[blank_entity.body.name] # assumes blank and tool are in same body
+            self.cell.polygons.remove(blank_polygon)
 
         tool_polygons = []
         for tool_entity in tool_entities:
@@ -223,14 +230,21 @@ class GdsModeler():
 
 
         #2 subtract operation
-        tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
-        subtracted = gdspy.boolean(blank_polygon, tool_polygon_set, 'not',
+        layer = blank_entities[0].layer
+        assert(all([blank_entity.layer==blank_entities[0].layer
+                    for blank_entity in blank_entities]))
+        blank_polygon_set = gdspy.PolygonSet(blank_polygons, layer = layer)
+        tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = layer)
+        subtracted = gdspy.boolean(blank_polygon_set, tool_polygon_set, 'not',
                                     precision=TOLERANCE, max_points=0,
-                                    layer=blank_entity.layer)
+                                    layer=layer)
 
+        polygons = subtracted.polygons
         #3 At last we update the cell and the gds_object_instance
-        self.gds_object_instances[blank_entity.name] = subtracted
-        self.cell.add(subtracted)
+        for ii in range(len(blank_entities)):
+            polygon = gdspy.Polygon(polygons[ii], layer=layer)
+            self.gds_object_instances[blank_entities[ii].name] = polygon
+            self.cell.add(polygon)
 
     def assign_material(self, material):
         pass

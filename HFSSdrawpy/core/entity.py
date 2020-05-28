@@ -61,12 +61,12 @@ class Entity():
 
     def delete(self):
         # deletes the Entity and its occurences throughout the code
+        # it does not delete the entity Python object anymore
         self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
         self.body.entities[self.layer].remove(self)
         if self.body.entities_to_move is not None:
             general_remove(self, self.body.entities_to_move)
-        del self
 
     def copy(self, new_name=None):
         generated_name = gen_name(self.name)
@@ -272,25 +272,8 @@ class Entity():
         keep_originals: Boolean, True : the tool entities still exist after
                         boolean operation
         """
-        if not isinstance(tool_entities, list):
-            tool_entities = [tool_entities]
-        if len(tool_entities)==0:
-            pass
-        else:
-            if not all([entity.dimension==self.dimension
-                                                for entity in tool_entities]):
-                raise TypeError('All subtracted elements should have the \
-                                same dimension')
-            else:
-                self.body.interface.subtract(self, tool_entities,
-                                           keep_originals=True)
-                # actualize the properties of the entity
-                self.is_boolean = True
-                list_fillet = [entity.is_fillet for entity in tool_entities]
-                self.is_fillet = self.is_fillet or any(list_fillet)
-            if not keep_originals:
-                for ii in range(len(tool_entities)):
-                    tool_entities[0].delete()
+        return self.body.subtract([self], tool_entities,
+                                  keep_originals=keep_originals)
 
     def unite(self, tool_entities, keep_originals=False, new_name=None):
         """
@@ -298,4 +281,5 @@ class Entity():
         if new_name (str) is provided, the tool_entities + self are kept and
         the union is named new_name
         """
-        return self.body.unite(tool_entities, main=self, keep_originals=False, new_name=new_name)
+        return self.body.unite(tool_entities, main=self, keep_originals=False,
+                               new_name=new_name)

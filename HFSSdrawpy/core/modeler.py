@@ -133,8 +133,8 @@ class Modeler():
                 union_entity.is_fillet = union_entity.is_fillet or any(list_fillet)
 
                 if not keep_originals:
-                    for ii in range(len(entities)):
-                        entities[ii].delete()
+                    for entity in entities:
+                        entity.delete()
         else:
             union_entity = entities[0]
 
@@ -142,6 +142,39 @@ class Modeler():
             union_entity.rename(new_name)
 
         return union_entity
+
+    def subtract(self, blank_entities, tool_entities, keep_originals=False):
+        """
+        tool_entities: a list of Entity or a Entity
+        keep_originals: Boolean, True : the tool entities still exist after
+                        boolean operation
+        """
+        if not isinstance(blank_entities, list):
+            blank_entities = [blank_entities]
+        if not isinstance(tool_entities, list):
+            tool_entities = [tool_entities]
+        if len(blank_entities)==0 or len(tool_entities)==0:
+            pass
+        else:
+            if (not all([entity.dimension==blank_entities[0].dimension
+                                                for entity in blank_entities])
+                or not all([entity.dimension==tool_entities[0].dimension
+                                                for entity in tool_entities])):
+                raise TypeError('All subtracted elements should have the \
+                                same dimension')
+            else:
+                self.interface.subtract(blank_entities, tool_entities,
+                                            keep_originals=True)
+                # actualize the properties of the blank_entities
+                list_fillet_bool = any([entity.is_fillet
+                                        for entity in tool_entities])
+                for entity in blank_entities:
+                    entity.is_boolean = True
+                    entity.is_fillet = entity.is_fillet or list_fillet_bool
+                    # this is not optimal fillet wise but hard to do better
+            if not keep_originals:
+                for tool_entity in tool_entities:
+                    tool_entity.delete()
 
     def rotate(self, entities, angle=0):
         if isinstance(angle, (list, np.ndarray)):
