@@ -13,9 +13,7 @@ from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 from win32com.client import Dispatch, CDispatch
 
-from ..utils import VariableString, \
-                            parse_entry, \
-                            var, \
+from ..utils import parse_entry, \
                             val, \
                             LENGTH_UNIT, \
                             Vector
@@ -235,10 +233,10 @@ class HfssProject(COMWrapper):
         return src_design.duplicate(name=target)
 
     def get_variable_names(self):
-        return [VariableString(s) for s in self._project.GetVariables()]
+        return [s for s in self._project.GetVariables()]
 
     def get_variables(self):
-        return {VariableString(s): self.get_variable_value(s) for s in self._project.GetVariables()}
+        return {s: self.get_variable_value(s) for s in self._project.GetVariables()}
 
     def get_variable_value(self, name):
         return self._project.GetVariableValue(name)
@@ -260,7 +258,6 @@ class HfssProject(COMWrapper):
             self.create_variable(name, value)
         else:
             self._project.SetVariableValue(name, value)
-        return VariableString(name)
 
     def get_path(self):
         return self._project.GetPath()
@@ -412,13 +409,12 @@ class HfssDesign(COMWrapper):
             self.create_variable(name, value, postprocessing=postprocessing)
         else:
             self._design.SetVariableValue(name, value)
-        return VariableString(name)
 
     def get_variable_value(self, name):
         return self._design.GetVariableValue(name)
 
     def get_variable_names(self):
-        return [VariableString(s) for s in self._design.GetVariables()+self._design.GetPostProcessingVariables()]
+        return [s for s in self._design.GetVariables()+self._design.GetPostProcessingVariables()]
 
     def get_variables(self):
         local_variables = self._design.GetVariables()+self._design.GetPostProcessingVariables()
@@ -875,12 +871,12 @@ class HfssModeler(COMWrapper):
         size = parse_entry(size)
         name = self._modeler.CreateBox(
             ["NAME:BoxParameters",
-             "XPosition:=", pos[0],
-             "YPosition:=", pos[1],
-             "ZPosition:=", pos[2],
-             "XSize:=", size[0],
-             "YSize:=", size[1],
-             "ZSize:=", size[2]],
+             "XPosition:=", str(pos[0]),
+             "YPosition:=", str(pos[1]),
+             "ZPosition:=", str(pos[2]),
+             "XSize:=", str(size[0]),
+             "YSize:=", str(size[1]),
+             "ZSize:=", str(size[2])],
             self._attributes_array(**kwargs))
         return name
 
@@ -888,7 +884,7 @@ class HfssModeler(COMWrapper):
     def box_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
-        corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
+        corner_pos = [val(p) - val(s)/2 for p, s in zip(pos, size)]
         return self.box(corner_pos, size, **kwargs)
 
     @assert_name
@@ -904,10 +900,10 @@ class HfssModeler(COMWrapper):
         indexsStr = ["NAME:PolylineSegments"]
 #        print("final_points", points)
         for ii, point in enumerate(points):
-            pointsStr.append(["NAME:PLPoint", "X:=", point[0], "Y:=", point[1], "Z:=", point[2]])
+            pointsStr.append(["NAME:PLPoint", "X:=", str(point[0]), "Y:=", str(point[1]), "Z:=", str(point[2])])
             indexsStr.append(["NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", ii, "NoOfPoints:=", 2])
         if closed:
-            pointsStr.append(["NAME:PLPoint", "X:=", points[0][0], "Y:=", points[0][1], "Z:=", points[0][2]])
+            pointsStr.append(["NAME:PLPoint", "X:=", str(points[0][0]), "Y:=", str(points[0][1]), "Z:=", str(points[0][2])])
             params_closed = ["IsPolylineCovered:=", True, "IsPolylineClosed:=", True]
         else:
             indexsStr = indexsStr[:-1]
@@ -931,18 +927,19 @@ class HfssModeler(COMWrapper):
             size.append(0)
         pos = parse_entry(pos)
         size = parse_entry(size)
-        assert ('0' in size or 0 in size)
-        axis = "XYZ"[size.index(0)]
+        index = size.index(0)
+        if index>=0:
+            axis = "XYZ"[index]
         w_idx, h_idx = {'X': (1, 2),
                         'Y': (2, 0),
                         'Z': (0, 1)}[axis]
         name = self._modeler.CreateRectangle(
             ["NAME:RectangleParameters",
-             "XStart:=", pos[0],
-             "YStart:=", pos[1],
-             "ZStart:=", pos[2],
-             "Width:=", size[w_idx],
-             "Height:=", size[h_idx],
+             "XStart:=", str(pos[0]),
+             "YStart:=", str(pos[1]),
+             "ZStart:=", str(pos[2]),
+             "Width:=", str(size[w_idx]),
+             "Height:=", str(size[h_idx]),
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs)
         )
@@ -952,7 +949,7 @@ class HfssModeler(COMWrapper):
     def rect_center(self, pos, size, **kwargs):
         pos = parse_entry(pos)
         size = parse_entry(size)
-        corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
+        corner_pos = [val(p) - val(s)/2 for p, s in zip(pos, size)]
         name = self.rect(corner_pos, size, **kwargs)
         return name
 
@@ -961,11 +958,11 @@ class HfssModeler(COMWrapper):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
-             "XCenter:=", pos[0],
-             "YCenter:=", pos[1],
-             "ZCenter:=", pos[2],
-             "Radius:=", radius,
-             "Height:=", height,
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "Radius:=", str(radius),
+             "Height:=", str(height),
              "WhichAxis:=", axis,
              "NumSides:=", 0],
             self._attributes_array(**kwargs))
@@ -976,7 +973,7 @@ class HfssModeler(COMWrapper):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
-        edge_pos[axis_idx] = var(pos[axis_idx]) - var(height)/2
+        edge_pos[axis_idx] = val(pos[axis_idx]) - val(height)/2
         return self.cylinder(edge_pos, radius, height, axis, **kwargs)
 
     @assert_name
@@ -984,10 +981,10 @@ class HfssModeler(COMWrapper):
         assert axis in "XYZ"
         name = self._modeler.CreateEllipse(
             ["NAME:EllipsdeParameters",
-             "XCenter:=", pos[0],
-             "YCenter:=", pos[1],
-             "ZCenter:=", pos[2],
-             "MajRadius:=", radius,
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "MajRadius:=", str(radius),
              "Ratio:=", 1,
              "WhichAxis:=", axis],
              self._attributes_array(**kwargs))
@@ -1007,16 +1004,16 @@ class HfssModeler(COMWrapper):
         kwargs['solve_inside'] = False
         name = self._modeler.CreateBondwire(["NAME:BondwireParameters",
                                             "WireType:=", "Low",
-                                            "WireDiameter:=", bond_diam,
+                                            "WireDiameter:=", str(bond_diam),
                                             "NumSides:=", 6,
-                                            "XPadPos:=", xpad,
-                                            "YPadPos:=", ypad,
+                                            "XPadPos:=", str(xpad),
+                                            "YPadPos:=", str(ypad),
                                             "ZPadPos:=", "0mm",
                                             "XDir:=", xdir,
                                             "YDir:=", ydir,
                                             "ZDir:=", 0,
-                                            "Distance:=", width,
-                                            "h1:=", height,
+                                            "Distance:=", str(width),
+                                            "h1:=", str(height),
                                             "h2:=", "0mm",
                                             "alpha:=", "80deg",
                                             "beta:=", "80deg",
@@ -1044,9 +1041,9 @@ class HfssModeler(COMWrapper):
                                           "NewPartsModelFlag:="	, "Model"],
                                         	["NAME:DuplicateToAlongLineParameters",
                                     		"CreateNewObjects:="	, True,
-                                    		"XComponent:="		, vec[0],
-                                    		"YComponent:="		, vec[1],
-                                    		"ZComponent:="		, vec[2],
+                                    		"XComponent:="		, str(vec[0]),
+                                    		"YComponent:="		, str(vec[1]),
+                                    		"ZComponent:="		, str(vec[2]),
                                     		"NumClones:="		, str(n)],
                                         	["NAME:Options",
                                         	"DuplicateAssignments:=", False],
@@ -1123,7 +1120,7 @@ class HfssModeler(COMWrapper):
         params += ["Objects:=", [entity.name for entity in entities]]
         params += ["RestrictElem:=", False,
 			         "RestrictLength:=",  True,
-			         "MaxLength:=", length]
+			         "MaxLength:=", str(length)]
         self._mesh.AssignLengthOp(params)
 
     def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
@@ -1159,12 +1156,13 @@ class HfssModeler(COMWrapper):
         return self.parent.eval_expr(expr, units)
 
     def eval_var_str(self, name, unit=None):
-        if not isinstance(name, VariableString):
-            if unit is not None:
-                return str(name)+' '+unit
-            else:
-                return str(name)
-        return self.parent.eval_var_str(name, unit=unit)
+        raise NotImplementedError('eval_var_str is not implemented anymore')
+        # if not isinstance(name, VariableString):
+        #     if unit is not None:
+        #         return str(name)+' '+unit
+        #     else:
+        #         return str(name)
+        # return self.parent.eval_var_str(name, unit=unit)
 
     def fillet(self, entity, radius, vertex_indices=None):
         # if the geometry is simple : rect, polyline, fillet indexing is consistent
@@ -1186,7 +1184,7 @@ class HfssModeler(COMWrapper):
                                ["NAME:FilletParameters",
                                 "Edges:=", [],
                                 "Vertices:=", to_fillet,
-                                "Radius:=", radius,
+                                "Radius:=", str(radius),
                                 "Setback:=", "0mm"]])
 
     def _fillet_edges(self, entity, radius, edge_index):
@@ -1200,7 +1198,7 @@ class HfssModeler(COMWrapper):
                                ["NAME:FilletParameters",
                                 "Edges:=", to_fillet,
                                 "Vertices:=", [],
-                                "Radius:=", radius,
+                                "Radius:=", str(radius),
                                 "Setback:=", "0mm"]])
 
     def get_faces(self, entity):
@@ -1330,13 +1328,15 @@ class HfssModeler(COMWrapper):
         self._modeler.SetModelUnits(["NAME:Units Parameter",
                                      "Units:=", units,"Rescale:=",False])
 
-    def subtract(self, blank_entity, tool_entities, keep_originals=False):
+    def subtract(self, blank_entities, tool_entities, keep_originals=False):
+        blank_names = []
+        for entity in blank_entities:
+            blank_names.append(entity.name)
         tool_names = []
         for entity in tool_entities:
-            if entity!=None:
-                tool_names.append(entity.name)
+            tool_names.append(entity.name)
         selection_array= ["NAME:Selections",
-                          "Blank Parts:=", blank_entity.name,
+                          "Blank Parts:=", ",".join(blank_names),
                           "Tool Parts:=", ",".join(tool_names)]
         self._modeler.Subtract(selection_array,
                                 ["NAME:UniteParameters",
@@ -1351,9 +1351,9 @@ class HfssModeler(COMWrapper):
                                         		"DraftAngle:="		, "0deg",
                                         		"DraftType:="		, "Round",
                                         		"CheckFaceFaceIntersection:=", False,
-                                        		"SweepVectorX:="	, vector[0],
-                                        		"SweepVectorY:="	, vector[1],
-                                        		"SweepVectorZ:="	, vector[2]
+                                        		"SweepVectorX:="	, str(vector[0]),
+                                        		"SweepVectorY:="	, str(vector[1]),
+                                        		"SweepVectorZ:="	, str(vector[2])
                                         	])
 
 
@@ -1364,7 +1364,7 @@ class HfssModeler(COMWrapper):
                                 	],
                                 	[
                                 		"NAME:SheetThickenParameters",
-                                		"Thickness:="		, thickness,
+                                		"Thickness:="		, str(thickness),
                                 		"BothSides:="		, bothsides
                                 	])
     def translate(self, entities, vector):
@@ -1373,9 +1373,9 @@ class HfssModeler(COMWrapper):
         names = [entity.name for entity in entities]
         self._modeler.Move(self._selections_array(*names),
                             ["NAME:TranslateParameters",
-                        		"TranslateVectorX:="	, vector[0],
-                        		"TranslateVectorY:="	, vector[1],
-                        		"TranslateVectorZ:="	, vector[2]])
+                        		"TranslateVectorX:="	, str(vector[0]),
+                        		"TranslateVectorY:="	, str(vector[1]),
+                        		"TranslateVectorZ:="	, str(vector[2])])
 
     def unite(self, entities, keep_originals=False):
         names = [entity.name for entity in entities]
