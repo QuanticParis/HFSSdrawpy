@@ -138,7 +138,7 @@ class Modeler():
         else:
             union_entity = entities[0]
 
-        if keep_originals:
+        if new_name:
             union_entity.rename(new_name)
 
         return union_entity

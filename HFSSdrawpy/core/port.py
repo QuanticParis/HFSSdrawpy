@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 from ..utils import Vector, \
                    parse_entry, \
@@ -180,6 +181,6 @@ class Port():
         rotate_matrix = np.array([[np.cos(rad) ,np.sin(-rad)],[np.sin(rad) ,np.cos(rad)]])
         for port in ports:
             port.ori = rotate_matrix.dot(port.ori[0:2])
-            posx = port.pos[0]*np.cos(rad)+port.pos[1]*np.sin(-rad)
-            posy = port.pos[0]*np.sin(rad)+port.pos[1]*np.cos(rad)
+            posx = port.pos[0]*math.cos(rad)+port.pos[1]*math.sin(-rad)
+            posy = port.pos[0]*math.sin(rad)+port.pos[1]*math.cos(rad)
             port.pos = Vector([posx, posy])
