@@ -11,7 +11,7 @@ from HFSSdrawpy.parameters import TRACK, GAP
 import HFSSdrawpy.libraries.example_elements as elt
 # import HFSSdrawpy.libraries.base_elements as base
 
-pm = Modeler('hfss')
+pm = Modeler('gds')
 
 relative = pm.set_variable('1mm')
 
@@ -40,8 +40,7 @@ with chip2(['2.0mm', '0.0mm'], [1, 0]):
 bond_length, bond_slope, pcb_track, pcb_gap = '200um', 0.5, '300um', '200um'
 
 with chip2(['0.5mm', '0.5mm'], [0, 1]):
-    con_port, = elt.draw_connector(chip2, track, gap, bond_length, pcb_track,
-                                   pcb_gap, 0.5)
+    con_port, = elt.draw_connector(chip2, pcb_track, pcb_gap, bond_length)
 
     with chip2(['1.5mm', '-1.0mm'], [0, 1]):
         port2, = elt.create_port(chip2, [track, track+2*gap])

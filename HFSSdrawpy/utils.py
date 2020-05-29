@@ -8,6 +8,7 @@ Created on Thu Nov 14 13:46:42 2019
 from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 import numpy
+import sympy
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -154,14 +155,14 @@ def check_name(_class, name):
 ### Litteral Expressions
 
 def equal_float(float1, float2):
-    if float1!=0:
+    if abs(float1)>1e-10:
         rel_diff = abs((float1-float2)/float1)
         if rel_diff<1e-5:
             return True
         else:
             return False
 
-    elif float2!=0:
+    elif abs(float2)>1e-10:
         rel_diff = abs((float1-float2)/float2)
         if rel_diff<1e-5:
             return True
@@ -226,29 +227,23 @@ def rem_unit(other):
     except Exception:
         return other
 
-def var(x):
-    if isinstance(x, str):
-        return VariableString(simplify_arith_expr(x))
-    return x
-
 def _val(elt):
-    if isinstance(elt, VariableString):
-        return elt.value()
-    else:
+    if isinstance(elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)):
         return elt
+    else:
+        return float(elt.evalf(subs=variables))
 
 def val(*entries, marker=True):
     #should take a list of tuple of list... of int, float or str...
     parsed = []
     for entry in entries:
-        if not isinstance(entry, list) and not isinstance(entry, tuple):
+        if not isinstance(entry, (list, tuple, Vector)):
             parsed.append(_val(entry))
         else:
-            if isinstance(entry, list):
-                if isinstance(entry, Vector):
-                    parsed.append(Vector(val(*entry, marker=False)))
-                else:
-                    parsed.append(val(*entry, marker=False))
+            if isinstance(entry, Vector):
+                parsed.append(Vector(val(*entry, marker=False)))
+            elif isinstance(entry, list):
+                parsed.append(val(*entry, marker=False))
             elif isinstance(entry, tuple):
                 parsed.append(tuple(val(*entry, marker=False)))
             else:
@@ -272,115 +267,22 @@ def way(vec):
             elif vec[0]<0:
                 return Vector(-1,0)
 
-class VariableString(str):
-    # TODO: What happen with a list (Vector in our case)
-    variables = {}
-    instances = {}
+variables = {}
 
-    def __new__(cls, name, *args, **kwargs):
-        # explicitly only pass value to the str constructor
-        return super(VariableString, cls).__new__(cls, name)
+def store_variable(symbol, value):  # put value in SI
+    if isinstance(value, str):
+        if LENGTH == extract_value_dim(value):
+            unit = LENGTH_UNIT
+        if INDUCTANCE == extract_value_dim(value):
+            unit = INDUCTANCE_UNIT
+        if CAPACITANCE == extract_value_dim(value):
+            unit = CAPACITANCE_UNIT
+        if RESISTANCE == extract_value_dim(value):
+            unit = RESISTANCE_UNIT
+        value = extract_value_unit(value, unit)
+    variables[symbol] = value
 
-    def __init__(self, name, value=None):
-        # ... and don't even call the str initializer
-        if value is not None: # do not result from a computation
-            VariableString.store_variable(self, value)
-            VariableString.instances[self] = self
-
-    @classmethod
-    def store_variable(cls, name, value):  # put value in SI
-        if not isinstance(value, VariableString):
-            if isinstance(value, (float, int)):
-                cls.variables[name] = value
-            elif isinstance(value, str):
-                if LENGTH == extract_value_dim(value):
-                    cls.variables[name] = extract_value_unit(value,
-                                                              LENGTH_UNIT)
-                if INDUCTANCE == extract_value_dim(value):
-                    cls.variables[name] = extract_value_unit(value,
-                                                              INDUCTANCE_UNIT)
-                if CAPACITANCE == extract_value_dim(value):
-                    cls.variables[name] = extract_value_unit(value,
-                                                              CAPACITANCE_UNIT)
-                if RESISTANCE == extract_value_dim(value):
-                    cls.variables[name] = extract_value_unit(value,
-                                                          RESISTANCE_UNIT)
-            else:
-                raise TypeError('Type is not expected')
-        else:
-            cls.variables[name] = value
-
-    def value(self):
-        # print(self.variables)
-        try:
-            _value = float(eval(str(sympy_parser.parse_expr(str(sympy_parser.parse_expr(self, self.variables)), self.variables))))
-        except Exception:
-            msg = ('Parsed expression contains a string which does '
-                             'not correspond to any design variable')
-            raise ValueError(msg)
-        return _value
-
-
-    def __add__(self, other):
-        other = rem_unit(other)
-        if other=="'":
-            return super(VariableString, self, other).__add__()
-        return var("(%s) + (%s)" % (self, other))
-
-    def __radd__(self, other):
-        other = rem_unit(other)
-        if other=="'":
-            return super(VariableString, self, other).__radd__()
-        return var("(%s) + (%s)" % (other, self))
-
-    def __sub__(self, other):
-        other = rem_unit(other)
-        return var("(%s) - (%s)" % (self, other))
-
-    def __rsub__(self, other):
-        other = rem_unit(other)
-        return var("(%s) - (%s)" % (other, self))
-
-    def __mul__(self, other):
-        other = rem_unit(other)
-        return var("(%s) * (%s)" % (self, other))
-
-    def __rmul__(self, other):
-        other = rem_unit(other)
-        return var("(%s) * (%s)" % (other, self))
-
-    def __div__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (self, other))
-
-    def __rdiv__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (other, self))
-
-    def __truediv__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (self, other))
-
-    def __rtruediv__(self, other):
-        other = rem_unit(other)
-        return var("(%s) / (%s)" % (other, self))
-
-    def __pow__(self, other):
-        other = rem_unit(other)
-        return var("(%s) ** (%s)" % (self, other))
-
-#    def __rpow__(self, other):
-#        other = self.rem_unit(other)
-#        return var("(%s) ** (%s)" % (other, self))
-
-    def __neg__(self):
-        return var("-(%s)" % self)
-
-    def __abs__(self):
-        return var("abs(%s)" % self)
-
-
-class Vector(list):
+class Vector(numpy.ndarray):
 
     """
     Vector is a custom 3D vector class, alowing for opperations optimized to
@@ -389,8 +291,7 @@ class Vector(list):
     creat a 3D vector with 0 for z axis.
     """
 
-    def __init__(self, vec, vec_y=None, vec_z=None):
-
+    def __new__(cls, vec, vec_y=None, vec_z=None):
         """
         Init of the 3D vector:
 
@@ -413,7 +314,8 @@ class Vector(list):
         if(len(vec) == 2):
             vec = [vec[0], vec[1], 0]
 
-        super().__init__(parse_entry(vec))
+        obj = numpy.asarray(vec).view(cls)
+        return obj
 
     @staticmethod
     def check(elt):
@@ -424,7 +326,7 @@ class Vector(list):
 
         Args:
             elt: The element to be tested
-        
+
         Returns:
             Boolean, true if elt is compatible with Vector opperations, False
             otherwise.
@@ -436,68 +338,82 @@ class Vector(list):
             return False
 
     def __eq__(self, other):
-        return (equal_float(val(self[0]), val(other[0])) and
-                equal_float(val(self[1]), val(other[1])) and
-                equal_float(val(self[2]), val(other[2])))
+        val_self = val(self)
+        val_other = val(other)
+        bool_result = (equal_float(val_self[0], val_other[0]) and
+                equal_float(val_self[1], val_other[1]) and
+                equal_float(val_self[2], val_other[2]))
+        return bool_result
 
-    def __add__(self, other):
-        if Vector.check(other):
-            return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
+    def index(self, elt):
+        val_self = val(self)
+        val_elt = val(elt)
+        for ii, item in enumerate(val_self):
+            if item == val_elt:
+                break
         else:
-            try:
-                return Vector([self[0]+other, self[1]+other, self[2]+other])
-            except:
-                raise TypeError('Could not perform add operation')
+            return -1
+        return ii
 
-    def __radd__(self, other):
-        return self + other
 
-    def __sub__(self, other):
-        if Vector.check(other):
-            return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
-        else:
-            try:
-                Vector([self[0]-other, self[1]-other, self[2]-other])
-            except:
-                raise TypeError('Could not perform sub operation')
+#     def __add__(self, other):
+#         if Vector.check(other):
+#             return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
+#         else:
+#             try:
+#                 return Vector([self[0]+other, self[1]+other, self[2]+other])
+#             except:
+#                 raise TypeError('Could not perform add operation')
 
-    def __neg__(self):
-        return Vector([-self[0], -self[1], -self[2]])
+#     def __radd__(self, other):
+#         return self + other
 
-    def __rsub__(self, other):
-        return -self + other
+#     def __sub__(self, other)    :
+#         if Vector.check(other):
+#             return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
+#         else:
+#             try:
+#                 Vector([self[0]-other, self[1]-other, self[2]-other])
+#             except:
+#                 raise TypeError('Could not perform sub operation')
 
-    def __mul__(self, other):
-        if Vector.check(other):
-            return Vector([self[0]*other[0], self[1]*other[1], self[2]*other[2]])
-        else:
-            try:
-                return Vector([other*self[0], other*self[1], other*self[2]])
-            except:
-                raise TypeError('Could not perform mul operation')
+#     def __neg__(self):
+#         return Vector([-self[0], -self[1], -self[2]])
 
-    def __rmul__(self, other):
-        return self * other
+#     def __rsub__(self, other):
+#         return -self + other
 
-    def __truediv__(self, other):
-        if Vector.check(other):
-            return Vector([self[0]/other[0], self[1]/other[1], self[2]/other[2]])
-        else:
-            try:
-                return Vector([self[0]/other, self[1]/other, self[2]/other])
-            except:
-                raise TypeError('Could not perform div operation')
+#     def __mul__(self, other):
+#         if Vector.check(other):
+#             return Vector([self[0]*other[0], self[1]*other[1], self[2]*other[2]])
+#         else:
+#             try:
+#                 return Vector([other*self[0], other*self[1], other*self[2]])
+#             except:
+#                 raise TypeError('Could not perform mul operation')
 
-    def __rtruediv__(self, other):
+#     def __rmul__(self, other):
+#         return self * other
 
-        self / other
+#     def __truediv__(self, other):
+#         if Vector.check(other):
+#             return Vector([self[0]/other[0], self[1]/other[1], self[2]/other[2]])
+#         else:
+#             try:
+#                 return Vector([self[0]/other, self[1]/other, self[2]/other])
+#             except:
+#                 raise TypeError('Could not perform div operation')
 
-    def dot(self, other):
-        if Vector.check(other):
-            return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
-        else:
-            raise TypeError('Could not perform dot operation')
-    
+#     def __rtruediv__(self, other):
+
+#         self / other
+
+#     def dot(self, other):
+#         if Vector.check(other):
+#             return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
+#         else:
+#             raise TypeError('Could not perform dot operation')
+
     def cross(self, other):
 
         """
@@ -505,7 +421,7 @@ class Vector(list):
 
         Args:
             other: of type Vector
-        
+
         Returns:
             type Vector, self x other
         """
@@ -528,7 +444,7 @@ class Vector(list):
         Args:
             other: a Vector
             ref: an other Vector, if None, assumed to be [0, 0, 1]
-        
+
         Returns:
             dot((self x other), ref)
         """
@@ -553,15 +469,15 @@ class Vector(list):
 
     def orth(self):
         return Vector([-self[1], self[0]])
-    
-    def as_nda(self):
 
-        return numpy.array([self[0], self[1], self[2]], dtype=object)
+#     def as_nda(self):
+
+#         return numpy.array([self[0], self[1], self[2]], dtype=object)
 
     def rot(self, other, ref=None):
 
         '''
-        This function is just completly cryptic, I wrote it a long time ago.
+        This function is just completly cryptic, Ulysse wrote it a long time ago.
         Here is what it is doing: we assume that self is expressed in x=(100), y=(010), z=(001)
         This function returns the coordinates of self in x'=other,y'=-(other x ref), z'=ref
         In other words, this function computes a 3D change of coordinates.
@@ -573,7 +489,7 @@ class Vector(list):
         Args:
             other: type Vector, the new x reference vector (x')
             ref: type Vector, the new z reference vector (z'), if None, taken to be (0,0,1)
-        
+
         Returns:
             self expressed in the new coordinate system.
         '''
@@ -615,9 +531,9 @@ class Vector(list):
         return Vector([self[0], self[1], -self[2]+2*offset])
 
 
-if(__name__ == "__main__"):
+# if(__name__ == "__main__"):
 
-    x = Vector([1, 0, 0])
-    y = Vector([0, -1, 0])
+#     x = Vector([1, 0, 0])
+#     y = Vector([0, -1, 0])
 
-    print(x.rot(y))
+#     print(x.rot(y))

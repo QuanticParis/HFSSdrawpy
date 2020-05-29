@@ -8,7 +8,7 @@ Created on Mon Nov  4 11:13:09 2019
 import numpy as np
 import gdspy
 
-from ..utils import parse_entry, var, Vector
+from ..utils import parse_entry, val, Vector
 from ..core.entity import gen_name
 
 TOLERANCE = 1e-7 # for arcs
@@ -86,10 +86,17 @@ class GdsModeler():
         name = kwargs['name']
         layer = kwargs['layer']
         points = parse_entry(points)
+
+        #TODO, this is a dirty fixe cause of Vector3D
+
+        points_2D = []
+        for point in points:
+            points_2D.append([point[0], point[1]])
+
         if closed:
-            poly1 = gdspy.Polygon(points, layer=layer)
+            poly1 = gdspy.Polygon(points_2D, layer=layer)
         else:
-            poly1 = gdspy.FlexPath(points, 1e-9, layer=layer)
+            poly1 = gdspy.FlexPath(points_2D, 1e-9, layer=layer)
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
@@ -107,13 +114,13 @@ class GdsModeler():
 
     def rect_center(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
-        corner_pos = [var(p) - var(s)/2 for p, s in zip(pos, size)]
+        corner_pos = [val(p) - val(s)/2 for p, s in zip(pos, size)]
         self.rect(corner_pos, size, **kwargs)
 
     def cylinder(self, pos, radius, height, axis, **kwargs):
         pass
 
-    def disk(self, pos, radius, axis, number_of_points=0, **kwargs):
+    def disk(self, pos, radius, axis, number_of_points=None, **kwargs):
         pos, radius = parse_entry(pos, radius)
         name = kwargs['name']
         layer = kwargs['layer']
@@ -132,9 +139,15 @@ class GdsModeler():
 
     def path(self, points, port, fillet, name='', corner="circular bend"):
 
+        #TODO, this is a dirty fixe cause of Vector3D
+
+        points_2D = []
+        for point in points:
+            points_2D.append([point[0], point[1]])
+
         # use dummy layers to recover the right elements
         layers = [ii  for ii in range(len(port.widths))]
-        cable = gdspy.FlexPath(points, port.widths, offset=port.offsets,
+        cable = gdspy.FlexPath(points_2D, port.widths, offset=port.offsets,
                                corners=corner,
                                bend_radius=fillet, gdsii_path=False,
                                tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
@@ -167,6 +180,7 @@ class GdsModeler():
 
         blank_entity = entities.pop(0)
         blank_polygon = self.gds_object_instances.pop(blank_entity.name)
+        self.cell = self.gds_cells[blank_entity.body.name]
         self.cell.polygons.remove(blank_polygon)
 
         tool_polygons = []
@@ -192,30 +206,44 @@ class GdsModeler():
     def intersect(self, entities):
         raise NotImplementedError()
 
-    def subtract(self, blank_entity, tool_entities, keep_originals=True):
-        #1 We clear the cell of all elements and create lists to store the polygons
-        blank_polygon = self.gds_object_instances.pop(blank_entity.name)
-        self.cell.polygons.remove(blank_polygon)
+    def subtract(self, blank_entities, tool_entities, keep_originals=True):
+        if isinstance(blank_entities, list):
+            for blank_entity in blank_entities:
+                self.subtract(blank_entity, tool_entities,
+                              keep_originals=keep_originals)
+        else:
+            blank_entity = blank_entities
+            #1 We clear the cell of all elements and create lists to store the polygons
+            blank_polygon = self.gds_object_instances.pop(blank_entity.name)
+            self.cell = self.gds_cells[blank_entity.body.name] # assumes blank and tool are in same body
+            self.cell.polygons.remove(blank_polygon)
 
-        tool_polygons = []
-        for tool_entity in tool_entities:
-            tool_polygon = self.gds_object_instances[tool_entity.name]
-            if isinstance(tool_polygon, gdspy.PolygonSet):
-                for polygon in tool_polygon.polygons:
-                    tool_polygons.append(polygon)
+            tool_polygons = []
+            for tool_entity in tool_entities:
+                tool_polygon = self.gds_object_instances[tool_entity.name]
+                if isinstance(tool_polygon, gdspy.PolygonSet):
+                    for polygon in tool_polygon.polygons:
+                        tool_polygons.append(polygon)
+                else:
+                    tool_polygons.append(tool_polygon)
+
+
+            #2 subtract operation
+            tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
+            subtracted = gdspy.boolean(blank_polygon, tool_polygon_set, 'not',
+                                        precision=TOLERANCE, max_points=0,
+                                        layer=blank_entity.layer)
+            if subtracted is not None:
+                #3 At last we update the cell and the gds_object_instance
+                self.gds_object_instances[blank_entity.name] = subtracted
+                self.cell.add(subtracted)
             else:
-                tool_polygons.append(tool_polygon)
-
-
-        #2 subtract operation
-        tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer = blank_entity.layer)
-        subtracted = gdspy.boolean(blank_polygon, tool_polygon_set, 'not',
-                                    precision=TOLERANCE, max_points=0,
-                                    layer=blank_entity.layer)
-
-        #3 At last we update the cell and the gds_object_instance
-        self.gds_object_instances[blank_entity.name] = subtracted
-        self.cell.add(subtracted)
+                print('Warning: the entity %s was fully \
+                      subtracted'%blank_entity.name)
+                dummy = gdspy.Polygon([[0, 0]])
+                self.gds_object_instances[blank_entity.name] = dummy
+                self.cell.add(dummy)
+                blank_entity.delete()
 
     def assign_material(self, material):
         pass
@@ -277,91 +305,6 @@ class GdsModeler():
 
     def mirrorZ(self, entity):
         pass
-
-
-    def duplicate_along_line(self, obj, vec):
-        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
-                                          "NewPartsModelFlag:="	, "Model"],
-                                        	["NAME:DuplicateToAlongLineParameters",
-                                    		"CreateNewObjects:="	, True,
-                                    		"XComponent:="		, vec[0],
-                                    		"YComponent:="		, vec[1],
-                                    		"ZComponent:="		, vec[2],
-                                    		"NumClones:="		, "2"],
-                                        	["NAME:Options",
-                                        	"DuplicateAssignments:=", False],
-                                        	["CreateGroupsForNewObjects:=", False	])
-
-    def duplicate_along_line(self, obj, vec, n=2):
-        self._modeler.DuplicateAlongLine(["NAME:Selections","Selections:=", obj,
-                                          "NewPartsModelFlag:="	, "Model"],
-                                        	["NAME:DuplicateToAlongLineParameters",
-                                    		"CreateNewObjects:="	, True,
-                                    		"XComponent:="		, vec[0],
-                                    		"YComponent:="		, vec[1],
-                                    		"ZComponent:="		, vec[2],
-                                    		"NumClones:="		, str(n)],
-                                        	["NAME:Options",
-                                        	"DuplicateAssignments:=", False],
-                                        	["CreateGroupsForNewObjects:=", False	])
-
-    def _make_lumped_rlc(self, r, l, c, start, end, obj_arr, name="LumpLRC"):
-        name = increment_name(name, self._boundaries.GetBoundaries())
-        params = ["NAME:"+name]
-        params += obj_arr
-        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
-        params += ["UseResist:=", r != 0, "Resistance:=", r,
-                   "UseInduct:=", l != 0, "Inductance:=", l,
-                   "UseCap:=", c != 0, "Capacitance:=", c]
-        self._boundaries.AssignLumpedRLC(params)
-
-    def _make_lumped_port(self, start, end, obj_arr, z0="50ohm", name="LumpPort"):
-        name = increment_name(name, self._boundaries.GetBoundaries())
-        params = ["NAME:"+name]
-        params += obj_arr
-        params += ["RenormalizeAllTerminals:=", True, "DoDeembed:=", False,
-                   ["NAME:Modes", ["NAME:Mode1", "ModeNum:=", 1, "UseIntLine:=", True,
-                                   ["NAME:IntLine", "Start:=", start, "End:=", end],
-                                   "CharImp:=", "Zpi", "AlignmentGroup:=", 0, "RenormImp:=", "50ohm"]],
-                   "ShowReporterFilter:=", False, "ReporterFilter:=", [True],
-                   "FullResistance:=", "50ohm", "FullReactance:=", "0ohm"]
-
-        self._boundaries.AssignLumpedPort(params)
-
-    def make_material(self, obj, material):
-        self._modeler.ChangeProperty(["NAME:AllTabs",
-                                		["NAME:Geometry3DAttributeTab",
-                                			["NAME:PropServers", obj],
-                                			["NAME:ChangedProps",
-                                				["NAME:Material","Value:=", material]
-                                			]
-                                		]
-                                	])
-
-
-
-    def eval_expr(self, expr, units="mm"):
-        if not isinstance(expr, str):
-            return expr
-        return self.parent.eval_expr(expr, units)
-
-    def eval_var_str(self, name, unit=None):
-        if not isinstance(name, VariableString):
-            if unit is not None:
-                return str(name)+' '+unit
-            else:
-                return str(name)
-        return self.parent.eval_var_str(name, unit=unit)
-
-    def delete_all_objects(self):
-        objects = []
-        for ii in range(int(self._modeler.GetNumObjects())):
-            objects.append(self._modeler.GetObjectName(str(ii)))
-#        print(objects)
-        self._modeler.Delete(self._selections_array(*objects))
-
-    def get_matched_object_name(self, name):
-        return self._modeler.GetMatchedObjectName(name+'*')
 
     def translate(self, entities, vector):
         '''vector is 3-dimentional but with a z=0 component'''

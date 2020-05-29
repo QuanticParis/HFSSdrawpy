@@ -9,12 +9,12 @@ from pint import UnitRegistry
 import numpy as np
 import os
 from inspect import currentframe, getfile
+import sympy
 
 from .entity import Entity
-from ..utils import VariableString, parse_entry, val
+from ..utils import variables, store_variable, parse_entry, val
 
-ureg = UnitRegistry()
-Q = ureg.Quantity
+sympy.init_printing(use_latex=False)
 
 class Modeler():
     """
@@ -55,7 +55,7 @@ class Modeler():
             self.interface = gds_modeler.GdsModeler()
         else:
             print('Mode should be either hfss or gds')
-        
+
         #The list of bodies pointing to the current Modeler
         self.bodies = []
 
@@ -81,23 +81,9 @@ class Modeler():
 
         if self.mode == 'hfss':
             self.design.set_variable(name, value)  # for HFSS
-        if not name in VariableString.variables.keys():
-            return VariableString(name, value=value)
-        else:
-            VariableString.store_variable(name, value)
-            print('%s is redefined to %s'%(name, value))
-            return VariableString.instances[name]
-
-    def update_variable(self, value, name):
-        """
-        name (str): name of the variable in HFSS e.g. 'chip_length'
-        value (str, VarStr, float): value of the variable
-                                    if str will try to analyse the unit
-        """
-        if self.mode == 'hfss':
-            self.design.set_variable(name, value)  # for HFSS
-        VariableString.store_variable(name, value)
-        return VariableString.instances[name]
+        symbol = sympy.symbols(name)
+        store_variable(symbol, value)
+        return symbol
 
     def generate_gds(self, folder, filename):
         file = os.path.join(folder, filename)
@@ -147,8 +133,8 @@ class Modeler():
                 union_entity.is_fillet = union_entity.is_fillet or any(list_fillet)
 
                 if not keep_originals:
-                    for ii in range(len(entities)):
-                        entities[ii].delete()
+                    for entity in entities:
+                        entity.delete()
         else:
             union_entity = entities[0]
 
@@ -157,6 +143,39 @@ class Modeler():
 
         return union_entity
 
+    def subtract(self, blank_entities, tool_entities, keep_originals=False):
+        """
+        tool_entities: a list of Entity or a Entity
+        keep_originals: Boolean, True : the tool entities still exist after
+                        boolean operation
+        """
+        if not isinstance(blank_entities, list):
+            blank_entities = [blank_entities]
+        if not isinstance(tool_entities, list):
+            tool_entities = [tool_entities]
+        if len(blank_entities)==0 or len(tool_entities)==0:
+            pass
+        else:
+            if (not all([entity.dimension==blank_entities[0].dimension
+                                                for entity in blank_entities])
+                or not all([entity.dimension==tool_entities[0].dimension
+                                                for entity in tool_entities])):
+                raise TypeError('All subtracted elements should have the \
+                                same dimension')
+            else:
+                self.interface.subtract(blank_entities, tool_entities,
+                                            keep_originals=True)
+                # actualize the properties of the blank_entities
+                list_fillet_bool = any([entity.is_fillet
+                                        for entity in tool_entities])
+                for entity in blank_entities:
+                    entity.is_boolean = True
+                    entity.is_fillet = entity.is_fillet or list_fillet_bool
+                    # this is not optimal fillet wise but hard to do better
+            if not keep_originals:
+                for tool_entity in tool_entities:
+                    tool_entity.delete()
+
     def rotate(self, entities, angle=0):
         if isinstance(angle, (list, np.ndarray)):
             if len(angle)==2:
@@ -164,7 +183,7 @@ class Modeler():
                 angle = angle/np.pi*180
             else:
                 raise Exception("angle should be either a float or a 2-dim array")
-        elif not isinstance(angle, (float, int, VariableString)):
+        elif not isinstance(angle, (float, int)):
             raise Exception("angle should be either a float or a 2-dim array")
         if self.mode == 'gds':
             angle = val(angle)
