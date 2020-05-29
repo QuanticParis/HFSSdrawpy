@@ -6,6 +6,7 @@ from ..utils import Vector, \
                    check_name, \
                    find_last_list, \
                    val
+from drawpylib.parameters import TRACK, GAP
 
 class Port():
     dict_instances  = {}
@@ -184,3 +185,49 @@ class Port():
             posx = port.pos[0]*math.cos(rad)+port.pos[1]*math.sin(-rad)
             posy = port.pos[0]*math.sin(rad)+port.pos[1]*math.cos(rad)
             port.pos = Vector([posx, posy])
+
+    def split(self, subnames=[], gap=None):
+        """
+        Creates CPW like ports out of the listed subports
+
+        Parameters
+        ----------
+        subnames : list of str, must be part of eponymous instance attribute
+                   if empty, split all ports
+                   if -1 is passed, split all ports but last
+        gap      : str, gap size for the output CPW ports
+                   if None, track size is used
+        Returns
+        -------
+        subports : list of Port instances
+
+        """
+
+        if not subnames:
+            subnames = self.subnames
+        elif subnames == -1:
+            subnames = self.subnames[:-1]
+        if not all(sub in self.subnames for sub in subnames):
+            raise ValueError('Split ports must belong to '+str(self.subnames))
+
+        self.save = {'name':self.name, 'pos':self.pos, 'widths':self.widths,
+                     'subnames':self.subnames, 'offsets':self.offsets}
+
+        subports = []
+        for sub in subnames:
+            isub     = self.subnames.index(sub)
+            if gap is None:
+                gap = self.widths[isub]
+            name     = self.name+'_'+sub
+            pos      = self.pos + Vector([0,self.offsets[isub]]).rot(self.ori)
+            widths   = [self.widths[isub], self.widths[isub]+2*gap]
+            layers   = [TRACK, GAP]
+            subnames = ['track', 'gap']
+            offsets  = [0, 0]
+            subports.append(Port(body=self.body, name=name, pos=pos,
+                                 ori=self.ori, widths=widths, layers=layers,
+                                 offsets=offsets, subnames=subnames,
+                                 constraint_port=False))
+        return subports
+
+
