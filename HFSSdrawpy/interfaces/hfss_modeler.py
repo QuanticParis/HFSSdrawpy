@@ -1356,7 +1356,7 @@ class HfssModeler(COMWrapper):
                                         		"SweepVectorZ:="	, str(vector[2])
                                         	])
 
-
+    #typically use for trenching of the gapobjects.
     def thicken_sheet(self, entity, thickness, bothsides=False):
         self._modeler.ThickenSheet([
                                 		"NAME:Selections", "Selections:=", entity.name,
