@@ -137,7 +137,7 @@ class GdsModeler():
         self.disk(bond1, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'a', number_of_points=6)
         self.disk(bond2, bond_diam/2, 'Z', layer=kwargs['layer'], name=kwargs['name']+'b', number_of_points=6)
 
-    def path(self, points, port, fillet, name=''):
+    def path(self, points, port, fillet, name='', corner="circular bend"):
 
         #TODO, this is a dirty fixe cause of Vector3D
 
@@ -148,7 +148,7 @@ class GdsModeler():
         # use dummy layers to recover the right elements
         layers = [ii  for ii in range(len(port.widths))]
         cable = gdspy.FlexPath(points_2D, port.widths, offset=port.offsets,
-                               corners="circular bend",
+                               corners=corner,
                                bend_radius=fillet, gdsii_path=False,
                                tolerance=TOLERANCE, layer=layers, max_points=0) # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
 

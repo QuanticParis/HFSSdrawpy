@@ -291,6 +291,7 @@ class Body(Modeler):
 
     @set_body
     def path(self, points, port, fillet, name='path_0', **kwargs):
+        #fillet should be either 0 or larger than half of the port width
         name = check_name(Entity, name)
         kwargs['name'] = name
         model_entities = []
@@ -306,7 +307,11 @@ class Body(Modeler):
             for point in points:
                 points_2D.append([point[0], point[1]])
 
-            names, layers = self.interface.path(points_2D, _port, fillet, name=name)
+            if fillet==0:
+                names, layers = self.interface.path(points_2D, _port, fillet, name=name, corner="natural")
+            else:
+                names, layers = self.interface.path(points_2D, _port, fillet, name=name, corner="circular bend")
+
             for name, layer in zip(names, layers):
                 kwargs['layer'] = layer
                 kwargs['name'] = name
@@ -510,7 +515,7 @@ class Body(Modeler):
             meander_offset = [meander_offset]*len(to_meander)
 
         ports = list(ports)
-        
+
         if self.is_mask:
             for port_ in ports:
                 port_.widths.append(port_.widths[-1] + 2*self.gap_mask)
@@ -627,7 +632,7 @@ class Body(Modeler):
         # plot cable
         cable=self.path(total_path.points, total_path.port_in, total_path.fillet,
                   name=name)
-        
+
         #assign mesh_size to the mesh layer in the new cable
         if mesh_size is not None:
             for entity in cable:
@@ -640,19 +645,19 @@ class Body(Modeler):
 
         ports[0].revert()
         ports[-1].revert()
-        
+
         # mask
 #        if self.is_mask:
 #            ports_mask = np.copy(ports)
 #            for port_ in ports_mask:
 #                port_.widths = port_.widths[1] + 2*self.gap_mask
 #                port_.layers = MASK
-#                
+#
 #            print(ports_mask)
-#                
-#            self.draw_cable(*ports_mask, fillet=fillet, is_bond=is_bond, 
-#                            to_meander=to_meander, meander_length=meander_length, 
-#                            meander_offset=meander_offset, reverse_adaptor=reverse_adaptor, 
+#
+#            self.draw_cable(*ports_mask, fillet=fillet, is_bond=is_bond,
+#                            to_meander=to_meander, meander_length=meander_length,
+#                            meander_offset=meander_offset, reverse_adaptor=reverse_adaptor,
 #                            slope=slope, name=name+'_mask')
 
         length = total_path.length() + length_adaptor
