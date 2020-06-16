@@ -1133,9 +1133,9 @@ class HfssModeler(COMWrapper):
         params = ["NAME:"+entity.name+'_'+name, "Objects:="]
         params.append([entity.name])
         params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
-        params += ["UseResist:=", r != 0, "Resistance:=", r,
-                   "UseInduct:=", l != 0, "Inductance:=", l,
-                   "UseCap:=", c != 0, "Capacitance:=", c]
+        params += ["UseResist:=", r != 0, "Resistance:=", str(r),
+                   "UseInduct:=", l != 0, "Inductance:=", str(l),
+                   "UseCap:=", c != 0, "Capacitance:=", str(c)]
         self._boundaries.AssignLumpedRLC(params)
 
 
@@ -1356,7 +1356,7 @@ class HfssModeler(COMWrapper):
                                         		"SweepVectorZ:="	, str(vector[2])
                                         	])
 
-
+    #typically use for trenching of the gapobjects.
     def thicken_sheet(self, entity, thickness, bothsides=False):
         self._modeler.ThickenSheet([
                                 		"NAME:Selections", "Selections:=", entity.name,

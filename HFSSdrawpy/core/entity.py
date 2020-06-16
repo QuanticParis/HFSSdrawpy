@@ -85,7 +85,7 @@ class Entity():
         self.name = new_name
 
     def thicken_sheet(self, thickness, bothsides=False):
-        raise NotImplementedError()
+        self.body.interface.thicken_sheet(self, thickness, bothsides=False)
 
     def assign_perfect_E(self, suffix='perfE'):
         self.body.interface.assign_perfect_E(self, self.name+'_'+suffix)

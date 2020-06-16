@@ -568,13 +568,14 @@ class Body(Modeler):
             if not port.constraint_port:
                 print(to_meander[cable_portion])
                 print(meander_length[cable_portion])
-                self.draw_cable(name+'_%d'%cable_portion, *_ports,
+                self.draw_cable(*_ports,
                                 fillet=fillet, is_bond=is_bond,
                                 to_meander=[to_meander[cable_portion]],
                                 meander_length=[meander_length[cable_portion]],
                                 meander_offset=[meander_offset[cable_portion]],
                                 reverse_adaptor=reverse_adaptor,
-                                mesh_size=mesh_size)
+                                mesh_size=mesh_size,
+                                name=name+'_%d'%cable_portion)
                 cable_portion += 1
                 _ports = [port.r]
 
