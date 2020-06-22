@@ -267,6 +267,21 @@ class Body(Modeler):
         return Entity(2, self, **kwargs)
 
     @set_body
+    #####draw arrays of rectangles with dimension (colums x row) with spacing given by a list [x_spacing,y_spacing]
+    def rect_array(self, pos, size, columns, rows, spacing, name='rect_array_0', **kwargs):
+        if self.mode=='gds':
+            pos, size, spacing = parse_entry(pos, size, spacing)
+            name = check_name(Entity, name)
+            kwargs['name'] = name
+            pos = val(pos)
+            size = val(size)
+            spacing = val(spacing)
+            self.interface.rect_array(pos, size, columns, rows, spacing, **kwargs)
+            return Entity(2, self, **kwargs)
+        else:
+            pass
+
+    @set_body
     def rect_center(self, pos, size, name='rect_0', **kwargs):
         pos, size = parse_entry(pos, size)
         pos = [p - s/2 for p, s in zip(pos, size)]
