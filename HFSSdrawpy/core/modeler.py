@@ -42,13 +42,15 @@ class Modeler():
         """
         self.mode = mode
         if mode == "hfss":
-            from ..interfaces.hfss_modeler import get_active_project
-            project = get_active_project()
+            from ..interfaces.hfss_modeler import get_desktop
+            desktop = get_desktop()
+            project = desktop.get_active_project()
             design = project.get_active_design()
             self.design = design
             self.modeler = design.modeler
             self.modeler.set_units('mm')
             self.modeler.delete_all_objects()
+            desktop.clear_all_messages()
             self.interface = self.modeler
         elif mode=="gds":
             from ..interfaces import gds_modeler
