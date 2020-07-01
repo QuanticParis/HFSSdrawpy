@@ -133,7 +133,8 @@ class Modeler():
                 union_entity.is_fillet = union_entity.is_fillet or any(list_fillet)
 
                 if not keep_originals:
-                    for entity in entities:
+                    ents = entities.copy()
+                    for entity in ents:
                         entity.delete()
         else:
             union_entity = entities[0]
@@ -173,7 +174,8 @@ class Modeler():
                     entity.is_fillet = entity.is_fillet or list_fillet_bool
                     # this is not optimal fillet wise but hard to do better
             if not keep_originals:
-                for tool_entity in tool_entities:
+                tools = tool_entities.copy()
+                for tool_entity in tools:
                     tool_entity.delete()
 
     def rotate(self, entities, angle=0):
