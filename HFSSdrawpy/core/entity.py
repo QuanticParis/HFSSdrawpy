@@ -281,5 +281,6 @@ class Entity():
         if new_name (str) is provided, the tool_entities + self are kept and
         the union is named new_name
         """
-        return self.body.unite(tool_entities, main=self, keep_originals=False,
+        return self.body.unite(tool_entities, main=self,
+                               keep_originals=keep_originals,
                                new_name=new_name)

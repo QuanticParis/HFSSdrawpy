@@ -325,12 +325,26 @@ class GdsModeler():
             gds_entity.rotate(angle/360*2*np.pi)
 
 
+    def rect_array(self, pos, size, columns,rows,spacing, origin=(0, 0), **kwargs):
+        pos, size = parse_entry(pos, size)
+        name = kwargs['name']
+        layer = kwargs['layer']
+        points = [(pos[0],pos[1]), (pos[0]+size[0],pos[1]+0), (pos[0]+size[0],pos[1]+size[1]), (pos[0],pos[1]+size[1])]
+        poly1 = gdspy.Polygon(points, layer)
+
+        self.gds_object_instances[name] = poly1
 
 
+        cell_to_copy = gdspy.Cell('cell_to_copy')
+        self.gds_cells['cell_to_copy'] = cell_to_copy
+        cell_to_copy.add(poly1)
 
 
+        spacing = parse_entry(spacing)
 
+        cell_array=gdspy.CellArray(cell_to_copy, columns, rows, spacing, origin)
+        polygon_list=cell_array.get_polygons()
+        poly2 = gdspy.PolygonSet(polygon_list, layer)
+        self.cell.add(poly2)
 
-
-
-
+        self.gds_object_instances[name] = poly2

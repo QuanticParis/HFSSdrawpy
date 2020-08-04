@@ -17,11 +17,13 @@ LENGTH = '[length]'
 INDUCTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2'
 CAPACITANCE = '[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]'
 RESISTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3'
+DIMENSIONLESS = 'dimensionless'
 
 LENGTH_UNIT = 'meter'
 INDUCTANCE_UNIT = 'nH'
 CAPACITANCE_UNIT = 'fF'
 RESISTANCE_UNIT = 'ohm'
+DIMENSIONLESS_UNIT = ''
 
 ### List handling
 # Useful function to manipulate to_move entities and ports
@@ -279,6 +281,8 @@ def store_variable(symbol, value):  # put value in SI
             unit = CAPACITANCE_UNIT
         if RESISTANCE == extract_value_dim(value):
             unit = RESISTANCE_UNIT
+        if DIMENSIONLESS == extract_value_dim(value):
+            unit = DIMENSIONLESS_UNIT
         value = extract_value_unit(value, unit)
     variables[symbol] = value
 
