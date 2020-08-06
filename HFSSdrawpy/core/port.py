@@ -85,8 +85,8 @@ class Port():
 
             offset1 = self.offsets[ii]
             offset2 = -other.offsets[ii]
-
-            if width1!=width2 or offset1!=offset2:
+            
+            if val(width1)!=val(width2) or val(offset1)!=val(offset2):
                 # need adaptor
                 points.append([Vector(0, offset1+width1/2).rot(self.ori)+self.pos,
                                Vector(adapt_dist, offset2+width2/2).rot(self.ori)+self.pos,

@@ -402,7 +402,7 @@ class HfssDesign(COMWrapper):
                ["NAME:" + name,
                 "PropType:=", variableprop,
                 "UserDef:=", True,
-                "Value:=", value]]]])
+                "Value:=", str(value)]]]])
 
     def set_variable(self, name, value, postprocessing=False):
         if name not in self._design.GetVariables()+self._design.GetPostProcessingVariables():
