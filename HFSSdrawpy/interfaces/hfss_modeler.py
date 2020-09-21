@@ -827,9 +827,9 @@ class HfssModeler(COMWrapper):
             # if the coor_sys does not exist : create
             self._modeler.CreateRelativeCS(["NAME:RelativeCSParameters",
             "Mode:="		, "Axis/Position",
-            "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
-            "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
-            "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]],
+            "OriginX:=", str(origin[0]), "OriginY:="	, str(origin[1]), "OriginZ:=", str(origin[2]),
+            "XAxisXvec:=", str(new_x[0]), "XAxisYvec:=", str(new_x[1]), "XAxisZvec:=", str(new_x[2]),
+            "YAxisXvec:=", str(new_y[0]), "YAxisYvec:="		, str(new_y[1]), "YAxisZvec:=", str(new_y[2])],
 
             ["NAME:Attributes", "Name:=", coor_sys])
         else:
@@ -838,9 +838,9 @@ class HfssModeler(COMWrapper):
 		["NAME:Geometry3DCSTab",
 			["NAME:PropServers", coor_sys],
 			["NAME:ChangedProps", ["NAME:Reference CS","Value:=", ref_name],
-                                ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
-                                ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
-                                ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
+                                ["NAME:Origin", "X:=", str(origin[0]), "Y:=", str(origin[1]), "Z:=", str(origin[2])],
+                                ["NAME:X Axis", "X:=", str(new_x[0]), "Y:=", str(new_x[1]), "Z:=", str(new_x[2])],
+                                ["NAME:Y Point", "X:=", str(new_y[0]), "Y:=", str(new_y[1]), "Z:=", str(new_y[2])]]]])
 
     def set_coor_sys(self, coor_sys):
         if coor_sys != self.get_coor_sys():
