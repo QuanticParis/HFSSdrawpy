@@ -86,7 +86,7 @@ class Port():
 
             offset1 = self.offsets[ii]
             offset2 = -other.offsets[ii]
-            
+
             if val(width1)!=val(width2) or val(offset1)!=val(offset2):
                 # need adaptor
                 points.append([Vector(0, offset1+width1/2).rot(self.ori)+self.pos,
@@ -186,32 +186,45 @@ class Port():
             posy = port.pos[0]*math.sin(rad)+port.pos[1]*math.cos(rad)
             port.pos = Vector([posx, posy])
 
-    def split(self, subnames=None, gap=None):
+    def split(self, splitnames=None, gap=None):
         """
         Creates CPW like ports out of the listed subports
+        If some subports are not split (splitnames argument is neither empty or
+        -1), all the remaining subports are grouped in a new port overwriting
+        the initial one
 
         Parameters
         ----------
-        subnames : list of str, must be part of eponymous instance attribute
-                   if empty, split all ports
-                   if -1 is passed, split all ports but last (last=cutout)
-        gap      : str, gap size for the output CPW ports
-                   if None, track size is used
+        splitnames : list of str, must be part of eponymous instance attribute
+                     if empty, split all ports
+                     if -1 is passed, split all ports but last (last=cutout)
+        gap        : str, gap size for the output CPW ports
+                     if None, track size is used
         Returns
         -------
         subports : list of Port instances
 
         """
 
-        if not subnames:
-            subnames = self.subnames
-        elif subnames == -1:
-            subnames = self.subnames[:-1]
-        if not all(sub in self.subnames for sub in subnames):
+        leftovers = True
+        if not splitnames:
+            splitnames = self.subnames
+            leftovers  = False
+        elif splitnames == -1:
+            splitnames = self.subnames[:-1]
+            leftovers  = False
+
+        if not all(sub in self.subnames for sub in splitnames):
             raise ValueError('Split ports must belong to '+str(self.subnames))
 
+        if leftovers:
+            lo_widths   = self.widths
+            lo_layers   = self.layers
+            lo_subnames = self.subnames
+            lo_offsets  = self.offsets
+
         subports = []
-        for sub in subnames:
+        for sub in splitnames:
             isub     = self.subnames.index(sub)
             if gap is None:
                 gap = self.widths[isub]
@@ -219,12 +232,40 @@ class Port():
             pos      = self.pos + Vector([0,self.offsets[isub]]).rot(self.ori)
             widths   = [self.widths[isub], self.widths[isub]+2*gap]
             layers   = [self.layers[isub], GAP]
-            subnames = ['track', 'gap']
+            cpwnames = ['track', 'gap']
             offsets  = [0, 0]
             subports.append(Port(body=self.body, name=name, pos=pos,
                                  ori=self.ori, widths=widths, layers=layers,
-                                 offsets=offsets, subnames=subnames,
+                                 offsets=offsets, subnames=cpwnames,
                                  constraint_port=False))
+            if leftovers:
+                lo_widths.pop(isub)
+                lo_layers.pop(isub)
+                lo_subnames.pop(isub)
+                lo_offsets.pop(isub)
+
+        if leftovers:
+            #we update the dictionary of the initial port
+            self.width    = lo_widths
+            self.layers   = lo_layers
+            self.offsets  = lo_offsets
+            self.subnames = lo_subnames
+            self.N        = len(lo_widths)
+
+            #we reset the r version and make a new one
+            self.r.reset()
+            reversed_ori = -self.ori
+            reversed_offsets = None
+            if self.offsets is not None:
+                reversed_offsets = []
+                for ii in range(self.N):
+                    reversed_offsets.append(-self.offsets[ii])
+            self.r = Port(self.body, self.name+'_r', self.pos, reversed_ori,
+                          self.widths, self.subnames, self.layers,
+                          reversed_offsets, self.constraint_port, key=self)
+
         return subports
+
+
 
 
