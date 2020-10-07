@@ -165,6 +165,9 @@ class HfssDesktop(COMWrapper):
     def set_active_project(self, name):
         self._desktop.SetActiveProject(name)
 
+    def clear_all_messages(self):
+        self._desktop.ClearMessages("", "", 3)
+
     @property
     def project_directory(self):
         return self._desktop.GetProjectDirectory()
@@ -1677,6 +1680,18 @@ class ConstantCalcObject(CalcObject):
     def __init__(self, num, setup):
         stack = [("EnterScalar", num)]
         super(ConstantCalcObject, self).__init__(stack, setup)
+
+def get_desktop():
+    import ctypes, os
+    try:
+        is_admin = os.getuid() == 0
+    except AttributeError:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+    if not is_admin:
+        print('\033[93m WARNING: you are not runnning as an admin! You need to run as an admin. You will probably get an error next. \033[0m')
+
+    app = HfssApp()
+    return app.get_app_desktop()
 
 def get_active_project():
     ''' If you see the error:
