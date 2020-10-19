@@ -100,6 +100,10 @@ class Entity():
         copy.translate(vec)
         return copy
 
+    def find_vertex(self):
+        vertices = self.body.interface.get_vertices(self)
+        return vertices
+    
     def find_start_vertex(self):
         # finds the lowest vertex in Y in a polygon
         # if there are several, returns the lowest in X
@@ -203,6 +207,10 @@ class Entity():
 
     def assign_material(self, material):
         self.body.interface.assign_material(self, material)
+
+    def assign_impedance(self, ResistanceSq, ReactanceSq):
+        self.body.interface.assign_impedance(self, ResistanceSq, ReactanceSq)
+
 
     def assign_mesh_length(self, mesh_length):
         mesh_length = parse_entry(mesh_length)
