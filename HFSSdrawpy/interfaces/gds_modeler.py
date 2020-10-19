@@ -250,6 +250,9 @@ class GdsModeler():
 
     def assign_perfect_E(self, entity, name=None):
         pass
+    
+    def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
+        pass
 
     def assign_perfect_E_faces(self, entity):
         pass
