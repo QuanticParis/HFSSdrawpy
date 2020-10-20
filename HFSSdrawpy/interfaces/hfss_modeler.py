@@ -957,6 +957,31 @@ class HfssModeler(COMWrapper):
         return name
 
     @assert_name
+    def sphere(self, pos, radius, **kwargs):
+        name = self._modeler.CreateSphere(
+            ["NAME:SphereParameters",
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "Radius:=", str(radius)],
+            self._attributes_array(**kwargs))
+        return name
+    
+    @assert_name
+    def torus(self, pos, majorradius, minorradius, axis, **kwargs):
+        assert axis in "XYZ"
+        name = self._modeler.CreateTorus(
+            ["NAME:TorusParameters",
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "MajorRadius:=", str(majorradius),
+             "MinorRadius:=", str(minorradius),
+             "WhichAxis:=", axis],
+            self._attributes_array(**kwargs))
+        return name
+        
+    @assert_name
     def cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(

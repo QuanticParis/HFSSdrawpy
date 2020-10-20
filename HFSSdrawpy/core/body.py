@@ -223,6 +223,21 @@ class Body(Modeler):
         self.interface.cylinder(pos, radius, height, axis, **kwargs)
         return Entity(3, self, **kwargs)
 
+    @set_body
+    def sphere(self, pos, radius, name='sphere', **kwargs):
+        pos, radius = parse_entry(pos, radius)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        self.interface.sphere(pos, radius, **kwargs)
+        return Entity(3, self, **kwargs)
+    
+    @set_body
+    def torus(self, pos, majorradius, minorradius, axis, name='torus', **kwargs):
+        pos, majorradius, minorradius = parse_entry(pos, majorradius, minorradius)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        self.interface.torus(pos, majorradius, minorradius, axis, **kwargs)
+        return Entity(3, self, **kwargs)
 
     @set_body
     def disk(self, pos, radius, axis, name='disk_0', **kwargs):

@@ -52,3 +52,11 @@ def box_center(self, pos, size, **kwargs):
 def cylinder(self, pos, radius, height, axis, **kwargs):
 
     return self.cylinder(pos, radius, height, axis, **kwargs)
+
+def sphere(self, pos, radius, **kwargs):
+
+    return self.sphere(pos, radius, **kwargs)
+
+def torus(self, pos, majorradius, minorradius, axis, **kwargs):
+    
+    return self.torus(pos, majorradius, minorradius, axis, **kwargs)
