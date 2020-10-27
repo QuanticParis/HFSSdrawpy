@@ -21,10 +21,10 @@ chip = Body(pm, 'chip')
 
 # Drawing
 
-track = '42um'
-gap = '25um'
-upper = '42um'
-lower = '25um'
+track = pm.set_variable('19.5mm')
+gap = pm.set_variable('19.5mm')
+upper = pm.set_variable('19.5mm')
+lower = pm.set_variable('19.5mm')
 
 rect = chip.rect([0, -(gap+track/2)*10, -lower], 
                 [0, (gap+track/2)*20, upper+lower],
