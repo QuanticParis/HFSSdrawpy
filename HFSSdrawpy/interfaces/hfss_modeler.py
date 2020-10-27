@@ -1132,7 +1132,7 @@ class HfssModeler(COMWrapper):
                                         		"IsInternal:="		, True ])
 
     def assign_waveport(self, entity, name):
-        Nmodes=1,
+        Nmodes=1
         RenormalizeAllTerminals=True
         UseLineAlignment=False
         DoDeembed=False
