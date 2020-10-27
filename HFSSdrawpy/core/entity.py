@@ -90,6 +90,9 @@ class Entity():
     def assign_perfect_E(self, suffix='perfE'):
         self.body.interface.assign_perfect_E(self, self.name+'_'+suffix)
 
+    def assign_waveport(self, suffix='port'):
+        self.body.interface.assign_waveport(self, self.name+'_'+suffix)
+
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()
 

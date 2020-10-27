@@ -1131,6 +1131,36 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
+    def assign_waveport(self, entity, name):
+        Nmodes=1,
+        RenormalizeAllTerminals=True
+        UseLineAlignment=False
+        DoDeembed=False
+        ShowReporterFilter=False
+        ReporterFilter=[True]
+        UseAnalyticAlignment=False
+        # creates a waveport on a face
+        #if not isinstance(entities, list):
+        #    entities = [entities]
+        #entity_names = [entity.name for entity in entities]
+        # creates name for modes
+        modesarray = ["NAME:Modes"]
+        for n in range(0, Nmodes):
+            modesarray.append(["NAME:Mode" + str(n + 1),
+                               "ModeNum:=", n + 1,
+                               "UseIntLine:=", False])
+
+        self._boundaries.AssignWavePort(["NAME:"+name,
+                                         "Faces:=", entity.name,
+                                         "NumModes:=", Nmodes,
+                                         "RenormalizeAllTerminals:=", RenormalizeAllTerminals, 
+                                         "UseLineAlignment:=", UseLineAlignment, 
+                                         "DoDeembed:=", DoDeembed,
+                                          modesarray, 
+                                         "ShowReporterFilter:=", ShowReporterFilter, 
+                                         "ReporterFilter:=", ReporterFilter, 
+                                         "UseAnalyticAlignment:=", UseAnalyticAlignment])
+
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
             entities = [entities]
