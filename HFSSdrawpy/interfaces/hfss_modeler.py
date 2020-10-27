@@ -1131,7 +1131,7 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
-    def assign_waveport(self, entity, name):
+    def assign_waveport(self, entity):
         Nmodes=1
         RenormalizeAllTerminals=True
         UseLineAlignment=False
@@ -1150,8 +1150,8 @@ class HfssModeler(COMWrapper):
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", False])
 
-        self._boundaries.AssignWavePort(["NAME:"+name,
-                                         "Faces:=", entity.name,
+        self._boundaries.AssignWavePort(["NAME:", entity.name,
+                                         "Faces:=", entity,
                                          "NumModes:=", Nmodes,
                                          "RenormalizeAllTerminals:=", RenormalizeAllTerminals, 
                                          "UseLineAlignment:=", UseLineAlignment, 
