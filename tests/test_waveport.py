@@ -23,7 +23,10 @@ chip = Body(pm, 'chip')
 
 track = '42um'
 gap = '25um'
+upper = '42um'
+lower = '25um'
 
-with chip([0, 0], [-1, 0]):
-    port, = elt.draw_end_cable(chip, track, gap, typeEnd='waveport', 
-                               lower='0.3mm', upper='1mm', name='test')
+rect = chip.rect([0, -(gap+track/2)*10, -lower], 
+                [0, (gap+track/2)*20, upper+lower],
+                name=name+'_waveport')
+rect.assign_waveport()
