@@ -28,5 +28,5 @@ lower = '25um'
 
 rect = chip.rect([0, -(gap+track/2)*10, -lower], 
                 [0, (gap+track/2)*20, upper+lower],
-                name=name+'_waveport')
+                name='_waveport')
 rect.assign_waveport()
