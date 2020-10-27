@@ -1145,7 +1145,7 @@ class HfssModeler(COMWrapper):
         #entity_names = [entity.name for entity in entities]
         # creates name for modes
         modesarray = ["NAME:Modes"]
-        for n in range(0, Nmodes):
+        for n in range(Nmodes):
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", False])
