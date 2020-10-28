@@ -1161,7 +1161,6 @@ class HfssModeler(COMWrapper):
                                         		"IsInternal:="		, True ])
 
     def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
-<<<<<<< HEAD
         """Creates a Waveport at an arbitrary face
         
         name (str):  port name
@@ -1176,9 +1175,6 @@ class HfssModeler(COMWrapper):
         TODO:
         implement integration line
         """
-=======
-        # creates a waveport on a face of arbitrary shape
->>>>>>> 936b295 (last update)
         UseIntLine=False
         start = [0,0,0]
         stop = [0,0,0]
@@ -1187,24 +1183,15 @@ class HfssModeler(COMWrapper):
         faces = [int(ii) for ii in faces]
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
-            # placeholder 
             inlinearray = ["NAME:IntLine",
-<<<<<<< HEAD
                            "Start:=", start,
                            "End:=", stop,
                            "CharImp:=", "Zpi"]
-=======
-                            "Start:=", [0,0,0],
-                            "End:=", [0,0,0],
-                            "CharImp:=", "Zpi"]
->>>>>>> dd6ddc6 (Update hfss_modeler.py)
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
         self._boundaries.AssignWavePort(["NAME:"+name,
-<<<<<<< HEAD
-<<<<<<< HEAD
                                         "Faces:=", faces,
                                         "NumModes:=", Nmodes,
                                         "DoDeembed:=", DoDeembed,
@@ -1228,18 +1215,6 @@ class HfssModeler(COMWrapper):
         self._boundaries.AutoIdentifyTerminals(groundarray,
                                                 name,
                                                 False)
-=======
-                                         "NumModes:=", Nmodes,
-=======
->>>>>>> dd6ddc6 (Update hfss_modeler.py)
-                                         "Faces:=", faces,
-                                         "NumModes:=", Nmodes,
-                                         "DoDeembed:=", DoDeembed,
-                                         "DeembedDist:=", DeembedDist,
-                                         "RenormalizeAllTerminals:=", DoRenorm,
-                                         "RenormImp:=", RenormValue,
-                                          modesarray])
->>>>>>> 22869bd (update waveport)
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
