@@ -1150,14 +1150,14 @@ class HfssModeler(COMWrapper):
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
-        self._boundaries.AssignWavePort("NAME:"+name,
+        self._boundaries.AssignWavePort(["NAME:"+name,
                                         "Faces:=", faces,
                                         "NumModes:=", Nmodes,
                                         "DoDeembed:=", DoDeembed,
                                         "DeembedDist:=", DeembedDist,
                                         "DoRenorm:=", DoRenorm,
                                         "RenormValue:=", RenormValue,
-                                        modesarray)
+                                        modesarray])
 
     def assign_terminal_auto(self, entity, name, ground):
         # assigns terminals to waveport
