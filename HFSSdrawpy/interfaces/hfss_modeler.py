@@ -1235,7 +1235,7 @@ class HfssModeler(COMWrapper):
 =======
                                "UseIntLine:=", False])
 
-        self._boundaries.AssignWavePort(["NAME:", name,
+        self._boundaries.AssignWavePort(["NAME:", 1,
                                          "Faces:=", entity,
                                          "NumModes:=", Nmodes,
                                          "RenormalizeAllTerminals:=", RenormalizeAllTerminals, 
