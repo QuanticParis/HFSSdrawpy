@@ -1153,16 +1153,11 @@ class HfssModeler(COMWrapper):
         self._boundaries.AssignWavePort(["NAME:"+name,
                                          "Faces:=", faces,
                                          "NumModes:=", Nmodes,
-                                         "PolarizeEField:=", PolarizeEField,
+                                         #"PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "RenormalizeAllTerminals:=", True,
-                                         "RenormalizeAllModes:=", True,
-                                         "Renorm:=", True,
-                                         "DoRenormalizeAllTerminals:=", True,
-                                         "DoRenormalizeAllModes:=", True,
-                                         "DoRenorm:=", True,
-                                         #"RenormValue:=", RenormValue, 
+                                         "DoRenorm:=", DoRenorm,
+                                         "RenormValue:=", RenormValue,
                                           modesarray])
 
     def assign_mesh_length(self, entities, length):
