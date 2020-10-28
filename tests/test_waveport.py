@@ -26,30 +26,31 @@ length = pm.set_variable('1mm')
 width = pm.set_variable('3mm')
 
 # define substrate + MSL
-chip_subs = box(chip_body,
-                [-width/2, 0, -sub_h],
-                [width, length, sub_h],
-                name="chip_subs")
+chip_subs = chip_body.box(chip_body,
+                          [-width/2, 0, -sub_h],
+                          [width, length, sub_h],
+                          name="chip_subs")
 chip_subs.assign_material("sapphire")
 
-MSL = rect(chip_body, [-track/2, 0, 0],
-                      [track, length, 0], 
-                      name="MSL")
+MSL = chip_body.rect(chip_body,
+                     [-track/2, 0, 0],
+                     [track, length, 0], 
+                     name="MSL")
 MSL.assign_perfect_E('_perfE')
 
 # define vacuum
-chip_subs = box(chip_body,
-                [-width/2, 0, 0],
-                [width, length, cover_H],
-                name="chip_subs")
+chip_subs = chip_body.box(chip_body,
+                          [-width/2, 0, 0],
+                          [width, length, cover_H],
+                          name="chip_subs")
 chip_subs.assign_material("sapphire")
 
 # define ports
-port1 = chip.rect([-width/2, 0, -sub_h], 
-                  [width, 0, cover_H],
-                  name='1')
+port1 = chip_body.rect([-width/2, 0, -sub_h], 
+                       [width, 0, cover_H],
+                       name='1')
 port1.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
-port1 = chip.rect([-width/2, length, -sub_h], 
-                  [width, length, cover_H],
-                  name='2')
+port1 = chip_body.rect([-width/2, length, -sub_h], 
+                       [width, length, cover_H],
+                       name='2')
 port1.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
