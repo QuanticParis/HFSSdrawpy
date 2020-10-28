@@ -1161,6 +1161,7 @@ class HfssModeler(COMWrapper):
                                         		"IsInternal:="		, True ])
 
     def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
+<<<<<<< HEAD
         """Creates a Waveport at an arbitrary face
         
         name (str):  port name
@@ -1175,6 +1176,9 @@ class HfssModeler(COMWrapper):
         TODO:
         implement integration line
         """
+=======
+        # creates a waveport on a face of arbitrary shape
+>>>>>>> 936b295 (last update)
         UseIntLine=False
         start = [0,0,0]
         stop = [0,0,0]
@@ -1230,7 +1234,6 @@ class HfssModeler(COMWrapper):
 >>>>>>> dd6ddc6 (Update hfss_modeler.py)
                                          "Faces:=", faces,
                                          "NumModes:=", Nmodes,
-                                         #"PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
                                          "DoRenorm:=", DoRenorm,
