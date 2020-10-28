@@ -1189,6 +1189,8 @@ class HfssModeler(COMWrapper):
         RenormValue="50Ohm"
         UseIntLine=False
         DoDeembed=False
+        DoRenorm=False
+        DeembedDist="1mm"
         print(entity.name)
         # creates a waveport on a face
         faces = list(self.get_face_ids(entity))
@@ -1237,11 +1239,15 @@ class HfssModeler(COMWrapper):
                                "UseIntLine:=", UseIntLine])
 >>>>>>> fbe3b14 (Update hfss_modeler.py)
 
-        self._boundaries.AssignWavePort(["NAME:", name,
+        self._boundaries.AssignWavePort(["NAME:"+name,
                                          "NumModes:=", Nmodes,
+                                         "Faces:=", faces,
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
+                                         "DeembedDist:=", DeembedDist,
+                                         "DoRenorm:=", DoRenorm,
                                          "RenormValue:=", RenormValue, 
+<<<<<<< HEAD
                                           modesarray, 
 <<<<<<< HEAD
                                          "ShowReporterFilter:=", ShowReporterFilter, 
@@ -1251,6 +1257,9 @@ class HfssModeler(COMWrapper):
 =======
                                          "Faces:=", faces])
 >>>>>>> fbe3b14 (Update hfss_modeler.py)
+=======
+                                          modesarray])
+>>>>>>> 27e0560 (Update hfss_modeler.py)
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
