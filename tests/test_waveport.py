@@ -78,7 +78,7 @@ width = pm.set_variable('3mm')
 # define substrate + MSL
 chip_subs = box(chip_body,
                 [-width/2, 0, -sub_h],
-                [width, length, subs_h],
+                [width, length, sub_h],
                 name="chip_subs")
 chip_subs.assign_material("sapphire")
 
