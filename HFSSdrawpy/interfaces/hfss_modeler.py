@@ -1142,17 +1142,10 @@ class HfssModeler(COMWrapper):
         # creates name for modes
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
-            if DoRenorm == True:
-                inlinearray = ["NAME:IntLine",
-                                "Start:=", start,
-                                "End:=", stop,
-                                "CharImp:=", "Zpi",
-                                "RenormImp:=", RenormValue]
-            else:
-                inlinearray = ["NAME:IntLine",
-                                    "Start:=", start,
-                                    "End:=", stop,
-                                    "CharImp:=", "Zpi"]
+            inlinearray = ["NAME:IntLine",
+                           "Start:=", start,
+                           "End:=", stop,
+                           "CharImp:=", "Zpi"]
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
@@ -1162,7 +1155,8 @@ class HfssModeler(COMWrapper):
                                          "NumModes:=", Nmodes,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "RenormalizeAllTerminals:=", DoRenorm,
+                                         "DoRenorm:=", DoRenorm,
+                                         "RenormValue:=", RenormValue,
                                           modesarray])
 
     def assign_mesh_length(self, entities, length):
