@@ -1150,8 +1150,8 @@ class HfssModeler(COMWrapper):
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
-                                         "RenormValue:=", RenormValue, 
+                                         "RenormAllModes:=", DoRenorm,
+                                         "RenormImped:=", RenormValue, 
                                           modesarray])
         print(["NAME:"+name,
                                          "NumModes:=", Nmodes,
