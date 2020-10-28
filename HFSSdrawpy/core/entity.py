@@ -90,11 +90,16 @@ class Entity():
     def assign_perfect_E(self, suffix='perfE'):
         self.body.interface.assign_perfect_E(self, self.name+'_'+suffix)
 
+<<<<<<< HEAD
     def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
         self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
 
     def assign_terminal_auto(self, ground, prefix='port'):
         self.body.interface.assign_terminal_auto(self, prefix+'_'+self.name, ground)
+=======
+    def assign_waveport(self):
+        self.body.interface.assign_waveport(self, self.name)
+>>>>>>> dc806a6 (update waveport)
 
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()
