@@ -1154,8 +1154,8 @@ class HfssModeler(COMWrapper):
                                          "NumModes:=", Nmodes,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
-                                         "RenormValue:=", RenormValue,
+                                         "RenormalizeAllTerminals:=", DoRenorm,
+                                         "RenormImp:=", RenormValue,
                                           modesarray])
 
     def assign_mesh_length(self, entities, length):
