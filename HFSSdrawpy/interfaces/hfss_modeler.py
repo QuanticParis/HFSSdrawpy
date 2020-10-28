@@ -1226,7 +1226,7 @@ class HfssModeler(COMWrapper):
         refarray = [ref_cond.name for ref_cond in ref_cond]
         self._boundaries.AutoIdentifyTerminals([refarray,
                                                 entity.name,
-                                                True])
+                                                False])
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
