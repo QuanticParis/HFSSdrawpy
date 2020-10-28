@@ -1236,8 +1236,8 @@ class HfssModeler(COMWrapper):
                                          "NumModes:=", Nmodes,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
-                                         "RenormValue:=", RenormValue,
+                                         "RenormalizeAllTerminals:=", DoRenorm,
+                                         "RenormImp:=", RenormValue,
                                           modesarray])
 >>>>>>> 22869bd (update waveport)
 
