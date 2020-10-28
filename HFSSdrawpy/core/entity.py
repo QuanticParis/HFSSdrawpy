@@ -90,37 +90,11 @@ class Entity():
     def assign_perfect_E(self, suffix='perfE'):
         self.body.interface.assign_perfect_E(self, self.name+'_'+suffix)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
-=======
-    def assign_waveport(self, Nmodes=1, DoRenorm=True, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
->>>>>>> 4f4925a (Update entity.py)
         self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
 
     def assign_terminal_auto(self, ground, prefix='port'):
         self.body.interface.assign_terminal_auto(self, prefix+'_'+self.name, ground)
-=======
-    def assign_waveport(self):
-        self.body.interface.assign_waveport(self, self.name)
->>>>>>> dc806a6 (update waveport)
-=======
-    def assign_waveport(self, prefix='port'):
-=======
-    def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50Ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
-<<<<<<< HEAD
->>>>>>> e459a82 (Update Waveport)
-        self.body.interface.assign_waveport(self, prefix+'_'+self.name)
->>>>>>> 8813f67 (Update entity.py)
-=======
-=======
-    def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
->>>>>>> 633aff3 (update assign_waveport)
-        self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
->>>>>>> d78f8b8 (Update entity.py)
 
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()
