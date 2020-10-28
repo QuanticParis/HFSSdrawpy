@@ -25,7 +25,7 @@ cover_H = pm.set_variable('0.57mm')
 MSL_length = pm.set_variable('1mm')
 width = pm.set_variable('3mm')
 
-# define substrate + MSL
+# define substrate + MSL + GND
 chip_subs = box(chip_body,
                 [-width/2, 0, -sub_h],
                 [width, MSL_length, sub_h],
@@ -37,6 +37,12 @@ MSL = rect(chip_body,
            [track, MSL_length, 0], 
            name="MSL")
 MSL.assign_perfect_E('_perfE')
+
+GND = rect(chip_body,
+           [-width/2, 0, 0],
+           [width, MSL_length, 0], 
+           name="GND")
+GND.assign_perfect_E('_perfE')
 
 # define vacuum
 cover = box(chip_body,
@@ -51,9 +57,11 @@ port1 = rect(chip_body,
               [width, 0, cover_H+sub_h],
               name="1")
 port1.assign_waveport(Nmodes=1)
+port1.assign_terminal_auto(GND)
 
 port2 = rect(chip_body,
               [-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],
               name="2")
 port2.assign_waveport(Nmodes=1)
+port2.assign_terminal_auto(GND)
