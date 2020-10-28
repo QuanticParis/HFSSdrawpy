@@ -106,9 +106,13 @@ class Entity():
     def assign_waveport(self, prefix='port'):
 =======
     def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50Ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
+<<<<<<< HEAD
 >>>>>>> e459a82 (Update Waveport)
         self.body.interface.assign_waveport(self, prefix+'_'+self.name)
 >>>>>>> 8813f67 (Update entity.py)
+=======
+        self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
+>>>>>>> d78f8b8 (Update entity.py)
 
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()
