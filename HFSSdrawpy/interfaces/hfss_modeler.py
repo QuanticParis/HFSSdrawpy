@@ -1160,7 +1160,6 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
-<<<<<<< HEAD
     def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
         """Creates a Waveport at an arbitrary face
         
@@ -1182,21 +1181,6 @@ class HfssModeler(COMWrapper):
         DeembedDist = parse_entry(DeembedDist)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
-=======
-    def assign_waveport(self, entity, name):
-        Nmodes=1
-        PolarizeEField=False
-        RenormValue="50Ohm"
-        UseIntLine=False
-        DoDeembed=False
-        DoRenorm=False
-        DeembedDist="1mm"
-        print(entity.name)
-        # creates a waveport on a face
-        faces = list(self.get_face_ids(entity))
-        faces = [int(ii) for ii in faces]
-        # creates name for modes
->>>>>>> dc806a6 (update waveport)
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
             inlinearray = ["NAME:IntLine",
@@ -1205,8 +1189,6 @@ class HfssModeler(COMWrapper):
                            "CharImp:=", "Zpi"]
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
-<<<<<<< HEAD
-<<<<<<< HEAD
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
         self._boundaries.AssignWavePort(["NAME:"+name,
@@ -1233,33 +1215,6 @@ class HfssModeler(COMWrapper):
         self._boundaries.AutoIdentifyTerminals(groundarray,
                                                 name,
                                                 False)
-=======
-                               "UseIntLine:=", False])
-=======
-                               "UseIntLine:=", UseIntLine])
->>>>>>> fbe3b14 (Update hfss_modeler.py)
-
-        self._boundaries.AssignWavePort(["NAME:"+name,
-                                         "NumModes:=", Nmodes,
-                                         "Faces:=", faces,
-                                         "PolarizeEField:=", PolarizeEField,
-                                         "DoDeembed:=", DoDeembed,
-                                         "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
-                                         "RenormValue:=", RenormValue, 
-<<<<<<< HEAD
-                                          modesarray, 
-<<<<<<< HEAD
-                                         "ShowReporterFilter:=", ShowReporterFilter, 
-                                         "ReporterFilter:=", ReporterFilter, 
-                                         "UseAnalyticAlignment:=", UseAnalyticAlignment])
->>>>>>> df7e54b (Update hfss_modeler.py)
-=======
-                                         "Faces:=", faces])
->>>>>>> fbe3b14 (Update hfss_modeler.py)
-=======
-                                          modesarray])
->>>>>>> 27e0560 (Update hfss_modeler.py)
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
