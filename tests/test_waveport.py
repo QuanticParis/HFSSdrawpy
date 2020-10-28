@@ -3,10 +3,8 @@ import numpy as np
 
 
 from HFSSdrawpy import Modeler, Body, Entity
-import drawpylib.cpw_elements as elt
 from HFSSdrawpy.utils import parse_entry, Vector
-from drawpylib.parameters import TRACK, GAP, RLC, MESH, MASK, DEFAULT, ELEC, \
-    eps
+from HFSSdrawpy.libraries.base_elements import *
 
 '''
 testing script for waveport assignment
