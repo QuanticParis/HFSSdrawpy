@@ -1137,8 +1137,9 @@ class HfssModeler(COMWrapper):
         RenormValue="50Ohm"
         UseIntLine=False
         DoDeembed=False
+        print(entity.name)
         # creates a waveport on a face
-        faces = list(self.get_face_ids(entity.name))
+        faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
         # creates name for modes
         modesarray = ["NAME:Modes"]
