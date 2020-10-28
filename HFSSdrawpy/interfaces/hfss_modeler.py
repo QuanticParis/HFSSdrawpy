@@ -1216,18 +1216,16 @@ class HfssModeler(COMWrapper):
                                                 name,
                                                 False)
 
-    def assign_terminal_auto(self, entity, ref_cond):
+    def assign_terminal_auto(self, entity, name, cond):
         # assigns terminals to waveport
-        # REFName is ground plane
         # creates name for modes
-        if not isinstance(ref_cond, list):
-            ref_cond = [ref_cond]
-        refarray = ["NAME:ReferenceConductors"]
-        for ref_cond in ref_cond:
-            refarray.append(ref_cond.name)
-        print([refarray, entity.name, False])
-        self._boundaries.AutoIdentifyTerminals([refarray,
-                                                entity.name,
+        if not isinstance(cond, list):
+            cond = [cond]
+        condarray = ["NAME:ReferenceConductors"]
+        for cond in cond:
+            condarray.append(cond.name)
+        self._boundaries.AutoIdentifyTerminals([condarray,
+                                                name,
                                                 False])
 
     def assign_mesh_length(self, entities, length):
