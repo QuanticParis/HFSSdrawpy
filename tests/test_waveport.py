@@ -56,4 +56,4 @@ port2 = rect(chip_body,
               [-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],
               name="2")
-port2.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
+port2.assign_waveport(Nmodes=1, DoRenorm=False)

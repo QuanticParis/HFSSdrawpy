@@ -1134,17 +1134,24 @@ class HfssModeler(COMWrapper):
     def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
         # creates a waveport on a face of arbitrary shape
         UseIntLine=False
+        start = [0,0,0]
+        stop = [0,0,0]
         # get face(s)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
         # creates name for modes
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
-            # placeholder 
+            if DoRenorm == True:
+                inlinearray = ["NAME:IntLine",
+                                "Start:=", start,
+                                "End:=", stop,
+                                "CharImp:=", "Zpi",
+                                "RenormImp:=", RenormValue]
             inlinearray = ["NAME:IntLine",
-                            "Start:=", [0,0,0],
-                            "End:=", [0,0,0],
-                            "CharImp:=", "Zpi"]
+                                "Start:=", start,
+                                "End:=", stop,
+                                "CharImp:=", "Zpi"]
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
@@ -1155,7 +1162,6 @@ class HfssModeler(COMWrapper):
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
                                          "RenormalizeAllTerminals:=", DoRenorm,
-                                         "RenormImp:=", RenormValue,
                                           modesarray])
 
     def assign_mesh_length(self, entities, length):
