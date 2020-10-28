@@ -1141,6 +1141,7 @@ class HfssModeler(COMWrapper):
         # creates name for modes
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
+            # placeholder 
             inlinearray = ["NAME:IntLine",
                             "Start:=", [0,0,0],
                             "End:=", [0,0,0],
@@ -1155,7 +1156,7 @@ class HfssModeler(COMWrapper):
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
+                                         "Renorm All Modes:=", DoRenorm,
                                          "RenormValue:=", RenormValue, 
                                           modesarray])
 
