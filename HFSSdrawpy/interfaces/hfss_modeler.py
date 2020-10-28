@@ -1183,6 +1183,7 @@ class HfssModeler(COMWrapper):
         faces = [int(ii) for ii in faces]
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
+            # placeholder 
             inlinearray = ["NAME:IntLine",
 <<<<<<< HEAD
                            "Start:=", start,
@@ -1232,7 +1233,7 @@ class HfssModeler(COMWrapper):
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
+                                         "Renorm All Modes:=", DoRenorm,
                                          "RenormValue:=", RenormValue, 
                                           modesarray])
 >>>>>>> 22869bd (update waveport)
