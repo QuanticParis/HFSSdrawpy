@@ -1150,17 +1150,8 @@ class HfssModeler(COMWrapper):
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenormAllModes:=", DoRenorm,
-                                         "RenormImped:=", RenormValue, 
-                                          modesarray])
-        print(["NAME:"+name,
-                                         "NumModes:=", Nmodes,
-                                         "Faces:=", faces,
-                                         "PolarizeEField:=", PolarizeEField,
-                                         "DoDeembed:=", DoDeembed,
-                                         "DeembedDist:=", DeembedDist,
-                                         "RenormAllModes:=", DoRenorm,
-                                         "RenormImped:=", RenormValue, 
+                                         "DoRenorm:=", DoRenorm,
+                                         "RenormValue:=", RenormValue, 
                                           modesarray])
 
     def assign_mesh_length(self, entities, length):
