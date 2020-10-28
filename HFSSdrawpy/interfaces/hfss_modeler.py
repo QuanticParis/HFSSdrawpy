@@ -1189,6 +1189,7 @@ class HfssModeler(COMWrapper):
                            "CharImp:=", "Zpi"]
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
+<<<<<<< HEAD
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
         self._boundaries.AssignWavePort(["NAME:"+name,
@@ -1215,6 +1216,20 @@ class HfssModeler(COMWrapper):
         self._boundaries.AutoIdentifyTerminals(groundarray,
                                                 name,
                                                 False)
+=======
+                               "UseIntLine:=", False])
+
+        self._boundaries.AssignWavePort(["NAME:", self.name,
+                                         "Faces:=", entity,
+                                         "NumModes:=", Nmodes,
+                                         "RenormalizeAllTerminals:=", RenormalizeAllTerminals, 
+                                         "UseLineAlignment:=", UseLineAlignment, 
+                                         "DoDeembed:=", DoDeembed,
+                                          modesarray, 
+                                         "ShowReporterFilter:=", ShowReporterFilter, 
+                                         "ReporterFilter:=", ReporterFilter, 
+                                         "UseAnalyticAlignment:=", UseAnalyticAlignment])
+>>>>>>> df7e54b (Update hfss_modeler.py)
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
