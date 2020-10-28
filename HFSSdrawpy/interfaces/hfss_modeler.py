@@ -1159,7 +1159,7 @@ class HfssModeler(COMWrapper):
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "DoRenormAllModes:=", DoRenorm,
+                                         "RenormAllModes:=", DoRenorm,
                                          "RenormImped:=", RenormValue, 
                                           modesarray])
 
