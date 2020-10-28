@@ -40,7 +40,7 @@ MSL.assign_perfect_E('_perfE')
 
 GND = rect(chip_body,
            [-width/2, 0, -sub_h],
-           [width, MSL_length, -sub_h], 
+           [width, MSL_length, 0], 
            name="GND")
 GND.assign_perfect_E('_perfE')
 
