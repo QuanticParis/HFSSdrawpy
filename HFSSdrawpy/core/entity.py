@@ -93,6 +93,7 @@ class Entity():
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
         self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
 
@@ -111,6 +112,9 @@ class Entity():
         self.body.interface.assign_waveport(self, prefix+'_'+self.name)
 >>>>>>> 8813f67 (Update entity.py)
 =======
+=======
+    def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
+>>>>>>> 633aff3 (update assign_waveport)
         self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
 >>>>>>> d78f8b8 (Update entity.py)
 

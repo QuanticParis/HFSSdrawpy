@@ -58,8 +58,15 @@ port1 = chip_body.rect([-width/2, 0, -sub_h],
 port1.assign_waveport(Nmodes=1)
 port1.assign_terminal_auto(GND)
 
+<<<<<<< HEAD
 port2 = chip_body.rect([-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],
               name="2")
 port2.assign_waveport(Nmodes=1)
 port2.assign_terminal_auto(GND)
+=======
+rect = chip.rect([0, -(gap+track/2)*10, -lower], 
+                [0, (gap+track/2)*20, upper+lower],
+                name='_waveport')
+rect.assign_waveport(Nmodes=2, DoRenorm=True, RenormValue="50ohm", DoDeembed=True, DeembedDist="2mm")
+>>>>>>> 633aff3 (update assign_waveport)
