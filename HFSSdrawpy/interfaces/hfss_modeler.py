@@ -1233,7 +1233,7 @@ class HfssModeler(COMWrapper):
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "Renorm All Modes:=", DoRenorm,
+                                         "DoRenorm:=", True,
                                          "RenormValue:=", RenormValue, 
                                           modesarray])
 >>>>>>> 22869bd (update waveport)
