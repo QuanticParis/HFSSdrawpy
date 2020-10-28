@@ -1223,7 +1223,9 @@ class HfssModeler(COMWrapper):
         if not isinstance(ref_cond, list):
             ref_cond = [ref_cond]
         refarray = ["NAME:ReferenceConductors"]
-        refarray.append([ref_cond.name for ref_cond in ref_cond])
+        for ref_cond in ref_cond:
+            refarray.append(ref_cond.name)
+        print([refarray, entity.name, False])
         self._boundaries.AutoIdentifyTerminals([refarray,
                                                 entity.name,
                                                 False])
