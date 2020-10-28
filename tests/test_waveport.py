@@ -27,6 +27,7 @@ track = pm.set_variable('0.32mm')
 sub_h = pm.set_variable('0.43mm')
 cover_H = pm.set_variable('0.57mm')
 <<<<<<< HEAD
+<<<<<<< HEAD
 MSL_length = pm.set_variable('1mm')
 width = pm.set_variable('3mm')
 
@@ -73,33 +74,38 @@ rect.assign_waveport(Nmodes=2, DoRenorm=True, RenormValue="50ohm", DoDeembed=Tru
 >>>>>>> 633aff3 (update assign_waveport)
 =======
 length = pm.set_variable('1mm')
+=======
+MSL_length = pm.set_variable('1mm')
+>>>>>>> e40649f (Update test_waveport.py)
 width = pm.set_variable('3mm')
 
 # define substrate + MSL
-chip_subs = chip_body.box(chip_body,
-                          [-width/2, 0, -sub_h],
-                          [width, length, sub_h],
-                          name="chip_subs")
+chip_subs = box(chip_body,
+                [-width/2, 0, -sub_h],
+                [width, MSL_length, sub_h],
+                name="chip_subs")
 chip_subs.assign_material("sapphire")
 
-MSL = chip_body.rect(chip_body,
-                     [-track/2, 0, 0],
-                     [track, length, 0], 
-                     name="MSL")
+MSL = rect(chip_body,
+           [-track/2, 0, 0],
+           [track, MSL_length, 0], 
+           name="MSL")
 MSL.assign_perfect_E('_perfE')
 
 # define vacuum
-chip_subs = chip_body.box(chip_body,
-                          [-width/2, 0, 0],
-                          [width, length, cover_H],
-                          name="chip_subs")
-chip_subs.assign_material("sapphire")
+cover = box(chip_body,
+                [-width/2, 0, 0],
+                [width, MSL_length, cover_H],
+                name="air_top")
+cover.assign_material("vacuum")
 
 # define ports
-port1 = chip_body.rect([-width/2, 0, -sub_h], 
-                       [width, 0, cover_H],
-                       name='1')
+port1 = rect(chip_body,
+              [-width/2, 0, -sub_h], 
+              [width, 0, cover_H+sub_h],
+              name="_1")
 port1.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
+<<<<<<< HEAD
 <<<<<<< HEAD
 port1 = chip.rect([-width/2, length, -sub_h], 
                   [width, length, cover_H],
@@ -112,3 +118,11 @@ port1 = chip_body.rect([-width/2, length, -sub_h],
                        name='2')
 port1.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
 >>>>>>> 5655412 (Update test_waveport.py)
+=======
+
+port2 = rect(chip_body,
+              [-width/2, MSL_length, -sub_h], 
+              [width, 0, cover_H+sub_h],
+              name="_2")
+port2.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
+>>>>>>> e40649f (Update test_waveport.py)
