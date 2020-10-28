@@ -1230,16 +1230,11 @@ class HfssModeler(COMWrapper):
 >>>>>>> dd6ddc6 (Update hfss_modeler.py)
                                          "Faces:=", faces,
                                          "NumModes:=", Nmodes,
-                                         "PolarizeEField:=", PolarizeEField,
+                                         #"PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
-                                         "RenormalizeAllTerminals:=", True,
-                                         "RenormalizeAllModes:=", True,
-                                         "Renorm:=", True,
-                                         "DoRenormalizeAllTerminals:=", True,
-                                         "DoRenormalizeAllModes:=", True,
-                                         "DoRenorm:=", True,
-                                         #"RenormValue:=", RenormValue, 
+                                         "DoRenorm:=", DoRenorm,
+                                         "RenormValue:=", RenormValue,
                                           modesarray])
 >>>>>>> 22869bd (update waveport)
 
