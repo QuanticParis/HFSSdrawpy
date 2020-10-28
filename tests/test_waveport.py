@@ -29,4 +29,4 @@ lower = pm.set_variable('19.5mm')
 rect = chip.rect([0, -(gap+track/2)*10, -lower], 
                 [0, (gap+track/2)*20, upper+lower],
                 name='_waveport')
-rect.assign_waveport(Nmodes=2, DoRenorm=True, RenormValue="50Ohm", DoDeembed=True, DeembedDist="2mm")
+rect.assign_waveport(Nmodes=2, DoRenorm=True, RenormValue="50ohm", DoDeembed=True, DeembedDist="2mm")
