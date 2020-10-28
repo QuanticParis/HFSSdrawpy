@@ -8,6 +8,10 @@ from HFSSdrawpy.libraries.base_elements import *
 
 '''
 testing script for waveport assignment
+
+generates a shielded microstrip line on sapphire including ground plane 
+for terminal assignment
+
 '''
 modeler = 'hfss'
 pm = Modeler(modeler)

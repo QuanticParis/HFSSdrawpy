@@ -1132,14 +1132,21 @@ class HfssModeler(COMWrapper):
                                         		"IsInternal:="		, True ])
 
     def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
-        # creates a waveport on a face of arbitrary shape
+        """Creates a Waveport at an arbitrary face
+        
+        name (str):  port name
+        Nmodes (int):  number of modes/terminals
+        DoRenorm (bool): renormalize port impedance
+        RenormValue (str): port impedance
+        DoDeembed(bool): deembed port
+        DeembedDist(str): deembedding distance
+
+        """
         UseIntLine=False
         start = [0,0,0]
         stop = [0,0,0]
-        # get face(s)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
-        # creates name for modes
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
             inlinearray = ["NAME:IntLine",
@@ -1160,8 +1167,12 @@ class HfssModeler(COMWrapper):
                                         modesarray])
 
     def assign_terminal_auto(self, entity, name, ground):
-        # assigns terminals to waveport
-        # creates name for modes
+        """auto-generates Terminals on a Waveport
+        
+        name (str):  port name
+        ground (list):  entities of reference conductors (ground!)
+
+        """
         if not isinstance(ground, list):
             ground = [ground]
         groundarray = ["NAME:ReferenceConductors"]
