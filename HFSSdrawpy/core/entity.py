@@ -94,7 +94,11 @@ class Entity():
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
+=======
+    def assign_waveport(self, Nmodes=1, DoRenorm=True, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
+>>>>>>> 4f4925a (Update entity.py)
         self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
 
     def assign_terminal_auto(self, ground, prefix='port'):
