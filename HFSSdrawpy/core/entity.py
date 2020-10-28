@@ -93,8 +93,8 @@ class Entity():
     def assign_waveport(self, Nmodes=1, DoRenorm=False, RenormValue="50ohm", DoDeembed=False, DeembedDist="0mm", prefix='port'):
         self.body.interface.assign_waveport(self, prefix+'_'+self.name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist)
 
-    def assign_terminal_auto(self, cond, prefix='port'):
-        self.body.interface.assign_terminal_auto(self, prefix+'_'+self.name, cond)
+    def assign_terminal_auto(self, ground, prefix='port'):
+        self.body.interface.assign_terminal_auto(self, prefix+'_'+self.name, ground)
 
     def connect_faces(self, name, entity1, entity2):
         raise NotImplementedError()

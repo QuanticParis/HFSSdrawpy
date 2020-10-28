@@ -1150,26 +1150,26 @@ class HfssModeler(COMWrapper):
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
-        self._boundaries.AssignWavePort(["NAME:"+name,
-                                         "Faces:=", faces,
-                                         "NumModes:=", Nmodes,
-                                         "DoDeembed:=", DoDeembed,
-                                         "DeembedDist:=", DeembedDist,
-                                         "DoRenorm:=", DoRenorm,
-                                         "RenormValue:=", RenormValue,
-                                          modesarray])
+        self._boundaries.AssignWavePort("NAME:"+name,
+                                        "Faces:=", faces,
+                                        "NumModes:=", Nmodes,
+                                        "DoDeembed:=", DoDeembed,
+                                        "DeembedDist:=", DeembedDist,
+                                        "DoRenorm:=", DoRenorm,
+                                        "RenormValue:=", RenormValue,
+                                        modesarray)
 
-    def assign_terminal_auto(self, entity, name, cond):
+    def assign_terminal_auto(self, entity, name, ground):
         # assigns terminals to waveport
         # creates name for modes
-        if not isinstance(cond, list):
-            cond = [cond]
-        condarray = ["NAME:ReferenceConductors"]
-        for cond in cond:
-            condarray.append(cond.name)
-        self._boundaries.AutoIdentifyTerminals([condarray,
+        if not isinstance(ground, list):
+            ground = [ground]
+        groundarray = ["NAME:ReferenceConductors"]
+        for ground in ground:
+            groundarray.append(ground.name)
+        self._boundaries.AutoIdentifyTerminals(groundarray,
                                                 name,
-                                                False])
+                                                False)
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
