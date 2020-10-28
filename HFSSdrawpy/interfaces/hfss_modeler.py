@@ -1133,7 +1133,6 @@ class HfssModeler(COMWrapper):
 
     def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
         # creates a waveport on a face of arbitrary shape
-        PolarizeEField=False
         UseIntLine=False
         # get face(s)
         faces = list(self.get_face_ids(entity))
@@ -1153,7 +1152,6 @@ class HfssModeler(COMWrapper):
         self._boundaries.AssignWavePort(["NAME:"+name,
                                          "Faces:=", faces,
                                          "NumModes:=", Nmodes,
-                                         #"PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
                                          "DoRenorm:=", DoRenorm,
