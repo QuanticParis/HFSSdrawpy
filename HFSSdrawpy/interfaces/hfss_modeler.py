@@ -1184,14 +1184,21 @@ class HfssModeler(COMWrapper):
         modesarray = ["NAME:Modes"]
         for n in range(Nmodes):
             inlinearray = ["NAME:IntLine",
+<<<<<<< HEAD
                            "Start:=", start,
                            "End:=", stop,
                            "CharImp:=", "Zpi"]
+=======
+                            "Start:=", [0,0,0],
+                            "End:=", [0,0,0],
+                            "CharImp:=", "Zpi"]
+>>>>>>> dd6ddc6 (Update hfss_modeler.py)
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
         self._boundaries.AssignWavePort(["NAME:"+name,
+<<<<<<< HEAD
 <<<<<<< HEAD
                                         "Faces:=", faces,
                                         "NumModes:=", Nmodes,
@@ -1218,7 +1225,10 @@ class HfssModeler(COMWrapper):
                                                 False)
 =======
                                          "NumModes:=", Nmodes,
+=======
+>>>>>>> dd6ddc6 (Update hfss_modeler.py)
                                          "Faces:=", faces,
+                                         "NumModes:=", Nmodes,
                                          "PolarizeEField:=", PolarizeEField,
                                          "DoDeembed:=", DoDeembed,
                                          "DeembedDist:=", DeembedDist,
