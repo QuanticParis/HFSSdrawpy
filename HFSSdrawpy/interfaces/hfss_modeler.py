@@ -1192,6 +1192,7 @@ class HfssModeler(COMWrapper):
                                "UseIntLine:=", UseIntLine,
                                inlinearray])
         self._boundaries.AssignWavePort(["NAME:"+name,
+<<<<<<< HEAD
                                         "Faces:=", faces,
                                         "NumModes:=", Nmodes,
                                         "DoDeembed:=", DoDeembed,
@@ -1215,6 +1216,16 @@ class HfssModeler(COMWrapper):
         self._boundaries.AutoIdentifyTerminals(groundarray,
                                                 name,
                                                 False)
+=======
+                                         "NumModes:=", Nmodes,
+                                         "Faces:=", faces,
+                                         "PolarizeEField:=", PolarizeEField,
+                                         "DoDeembed:=", DoDeembed,
+                                         "DeembedDist:=", DeembedDist,
+                                         "RenormalizeAllTerminals:=", DoRenorm,
+                                         "RenormImp:=", RenormValue, 
+                                          modesarray])
+>>>>>>> 22869bd (update waveport)
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):

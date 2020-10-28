@@ -103,7 +103,7 @@ cover.assign_material("vacuum")
 port1 = rect(chip_body,
               [-width/2, 0, -sub_h], 
               [width, 0, cover_H+sub_h],
-              name="_1")
+              name="1")
 port1.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -123,6 +123,11 @@ port1.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
 port2 = rect(chip_body,
               [-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],
+<<<<<<< HEAD
               name="_2")
 port2.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
 >>>>>>> e40649f (Update test_waveport.py)
+=======
+              name="2")
+port2.assign_waveport(Nmodes=1, DoRenorm=True, RenormValue="50ohm")
+>>>>>>> 22869bd (update waveport)
