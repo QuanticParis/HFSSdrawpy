@@ -1162,11 +1162,11 @@ class HfssModeler(COMWrapper):
     def assign_terminal_auto(self, entity, ref_cond):
         # assigns terminals to waveport
         # REFName is ground plane
-        # PortName is port
         # creates name for modes
         if not isinstance(ref_cond, list):
             ref_cond = [ref_cond]
-        refarray = [ref_cond.name for ref_cond in ref_cond]
+        refarray = ["NAME:ReferenceConductors"]
+        refarray.append([ref_cond.name for ref_cond in ref_cond])
         self._boundaries.AutoIdentifyTerminals([refarray,
                                                 entity.name,
                                                 False])
