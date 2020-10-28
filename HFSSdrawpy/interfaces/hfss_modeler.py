@@ -1131,16 +1131,11 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
-    def assign_waveport(self, entity, name):
-        Nmodes=1
+    def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
+        # creates a waveport on a face of arbitrary shape
         PolarizeEField=False
-        RenormValue="50Ohm"
         UseIntLine=False
-        DoDeembed=False
-        DoRenorm=False
-        DeembedDist="1mm"
-        print(entity.name)
-        # creates a waveport on a face
+        # get face(s)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
         # creates name for modes
@@ -1149,7 +1144,6 @@ class HfssModeler(COMWrapper):
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine])
-
         self._boundaries.AssignWavePort(["NAME:"+name,
                                          "NumModes:=", Nmodes,
                                          "Faces:=", faces,
