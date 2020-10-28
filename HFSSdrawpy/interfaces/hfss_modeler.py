@@ -1148,10 +1148,11 @@ class HfssModeler(COMWrapper):
                                 "End:=", stop,
                                 "CharImp:=", "Zpi",
                                 "RenormImp:=", RenormValue]
-            inlinearray = ["NAME:IntLine",
-                                "Start:=", start,
-                                "End:=", stop,
-                                "CharImp:=", "Zpi"]
+            else:
+                inlinearray = ["NAME:IntLine",
+                                    "Start:=", start,
+                                    "End:=", stop,
+                                    "CharImp:=", "Zpi"]
             modesarray.append(["NAME:Mode" + str(n + 1),
                                "ModeNum:=", n + 1,
                                "UseIntLine:=", UseIntLine,
