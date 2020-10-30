@@ -211,7 +211,10 @@ class Port():
             splitnames = self.subnames
             leftovers  = False
         elif splitnames == -1:
-            splitnames = self.subnames[:-1]
+            if self.subnames[-1] == 'mask':
+                splitnames = self.subnames[:-2]
+            else:
+                splitnames = self.subnames[:-1]
             leftovers  = False
 
         if not all(sub in self.subnames for sub in splitnames):

@@ -540,6 +540,8 @@ class Body(Modeler):
                     port_.widths.append(port_.widths[-1] + 2*self.gap_mask)
                     port_.offsets.append(0.0)
                     port_.N += 1
+                    # this double if condition at this stage is super weird
+                    # but it works fine...
                     if port_.subnames[-1] != 'mask':
                         port_.subnames.append('mask')
                     if port_.layers[-1] != MASK:
@@ -624,7 +626,9 @@ class Body(Modeler):
 
             # plot adaptors
             for jj, pts in enumerate(points):
-                self.polyline(pts, name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt', layer=ports[index_modified].layers[jj])
+                self.polyline(pts,
+                              name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt',
+                              layer=ports[index_modified].layers[jj])
 
             # define the constraint_port parameters
             for port in ports[1:-1]:
