@@ -669,7 +669,7 @@ class HfssDMDesignSolutions(HfssDesignSolutions):
         self.parent._solutions.ExportNetworkData(
                     [],  self.parent.name + " : " + self.name,
                       2, fn, ["all"], False, 0,
-                      data_type, -1, 1, 15)
+                      "S", -1, 1, 15)
 
 class HfssFrequencySweep(COMWrapper):
     prop_tab = "HfssTab"
