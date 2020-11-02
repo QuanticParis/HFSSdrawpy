@@ -20,10 +20,17 @@ for terminal assignment
 
 ###########################################################setup new project
 
+# DrivenModal or DrivenTerminal
+simtype = 'DrivenModal'
+
 desktop = get_desktop()
 project = desktop.new_project()
 project.make_active()
-design = project.new_dm_design('test')
+if simtype == 'DrivenTerminal':
+    design = project.new_dt_design('test')
+if simtype == 'DrivenModal':
+    design = project.new_dm_design('test')
+ 
 setup_name = "Setup"
 
 modeler = 'hfss'
@@ -69,11 +76,16 @@ port1 = chip_body.rect([-width/2, 0, -sub_h],
               [width, 0, cover_H+sub_h],
               name="1")
 port1.assign_waveport(Nmodes=1)
+if simtype == 'DrivenTerminal':
+    port1.assign_terminal_auto(GND)
+
 
 port2 = chip_body.rect([-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],
               name="2")
 port2.assign_waveport(Nmodes=1)
+if simtype == 'DrivenTerminal':
+    port2.assign_terminal_auto(GND)
 
 ############################################################# SOLVE
 dm_setup = design.create_dm_setup(freq_ghz=5, name=setup_name)
