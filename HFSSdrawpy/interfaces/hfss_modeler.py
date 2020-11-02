@@ -664,10 +664,10 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    def export_network_data(self):
+    def export_network_data(self, sweepname):
         fn = "D://package_HFSSDesign1.s2p"
         self.parent._solutions.ExportNetworkData(
-                    [],  self.parent.name + " : " + self.name,
+                    [],  self.parent.name + " : " + sweepname,
                       2, fn, ["all"], True, 50,
                       "S", -1, 1, 15)
 
