@@ -664,11 +664,10 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    def export_network_data(self, sweep, efile, variation='', eformat=3, dtype="S",
-                            freq=["all"], renorm=True, z0=50, cformat=1):
+    def export_network_data(self, sweep, efile, eformat=3, dtype="S",
+                            freq=["all"], renorm=True, z0=50, cformat=1, digits=15):
         '''
             sweep (str): sweep name
-            variation (str): DesignVariationKey
             eformat (int): 2-.tab /3-.sNp /4-.cit /7-.m /8-Z0 spreadsheet
             efile (str): Full path to the file to write out
             dtype (str): S, Y, Z matrix
@@ -676,11 +675,12 @@ class HfssDMDesignSolutions(HfssDesignSolutions):
             renorm (bool): renormalise data
             z0 (double): characteristic impedance
             cformat (int): 0 = Magnitude/Phase. 1= Real/Imaginary. 2= db/Phase.
+            digits (int): Number of Digits Precision
+
+            TODO: inplement <DesignVariationKey>, <SolnSelectionArray>
         ''' 
         epass=-1
-        digits=15
-        self.parent._solutions.ExportNetworkData(variation,
-                    [],
+        self.parent._solutions.ExportNetworkData([],
                     self.parent.name + " : " + sweep, #solution selector Setup:Sweep
                     eformat, # file format
                     efile, # full export path
