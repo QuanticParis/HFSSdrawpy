@@ -680,7 +680,7 @@ class HfssDMDesignSolutions(HfssDesignSolutions):
         epass=-1
         digits=15
         fn = "D://package_HFSSDesign1.s2p"
-        self.parent._solutions.ExportNetworkData(variation
+        self.parent._solutions.ExportNetworkData(variation,
                     [],
                     self.parent.name + " : " + sweep, #solution selector Setup:Sweep
                     eformat, # file format
