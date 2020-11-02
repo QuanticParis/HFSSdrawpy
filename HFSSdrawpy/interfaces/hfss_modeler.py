@@ -664,12 +664,34 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    def export_network_data(self, sweepname):
+    def export_network_data(self, sweep, efile, variation='', eformat=3, dtype="S"
+    freq=["all"], renorm=True, z0=50, cformat=1):
+        '''
+            sweep (str): sweep name
+            variation (str): DesignVariationKey
+            eformat (int): 2-.tab /3-.sNp /4-.cit /7-.m /8-Z0 spreadsheet
+            efile (str): Full path to the file to write out
+            dtype (str): S, Y, Z matrix
+            freq (array): array (e.g."1GHz","2GHz", ...)
+            renorm (bool): renormalise data
+            z0 (double): characteristic impedance
+            cformat (int): 0 = Magnitude/Phase. 1= Real/Imaginary. 2= db/Phase.
+        ''' 
+        epass=-1
+        digits=15
         fn = "D://package_HFSSDesign1.s2p"
-        self.parent._solutions.ExportNetworkData(
-                    [],  self.parent.name + " : " + sweepname,
-                      2, fn, ["all"], True, 50,
-                      "S", -1, 1, 15)
+        self.parent._solutions.ExportNetworkData(variation
+                    [],
+                    self.parent.name + " : " + sweep, #solution selector Setup:Sweep
+                    eformat, # file format
+                    efile, # full export path
+                    freq, # freq to export
+                    renorm, # renormalisation
+                    z0, # characteristic impedance
+                    dtype, # data type
+                    epass, # ignored at the moment
+                    cformat,
+                    digits)
 
 class HfssFrequencySweep(COMWrapper):
     prop_tab = "HfssTab"
