@@ -668,7 +668,7 @@ class HfssDMDesignSolutions(HfssDesignSolutions):
         fn = "D://package_HFSSDesign1.s2p"
         self.parent._solutions.ExportNetworkData(
                     [],  self.parent.name + " : " + self.name,
-                      2, fn, ["all"], False, 0,
+                      2, fn, ["all"], True, 50,
                       "S", -1, 1, 15)
 
 class HfssFrequencySweep(COMWrapper):
