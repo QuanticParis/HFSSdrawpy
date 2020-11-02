@@ -664,8 +664,7 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    def get_network_data(self, formats):
-
+    def get_network_data(self):
         self._solutions.ExportNetworkData(["", #DesignVariationKey
                                         ["Setup1:Sweep1"], #solution setup name and solution name
                                         3, # FileFormat Type: <int> 2 : .tab 3 : .sNp 4 : .cit 7 : .m 8 : Terminal Z0
