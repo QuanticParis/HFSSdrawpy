@@ -664,8 +664,8 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    def export_network_data(self, sweep, efile, variation='', eformat=3, dtype="S"
-    freq=["all"], renorm=True, z0=50, cformat=1):
+    def export_network_data(self, sweep, efile, variation='', eformat=3, dtype="S",
+                            freq=["all"], renorm=True, z0=50, cformat=1):
         '''
             sweep (str): sweep name
             variation (str): DesignVariationKey
