@@ -1,18 +1,31 @@
-import os
-import numpy as np
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Sep 21 11:26:31 2020
 
-
+@author: FELIX
+"""
 from HFSSdrawpy import Modeler, Body, Entity
 from HFSSdrawpy.utils import parse_entry, Vector
 from HFSSdrawpy.libraries.base_elements import *
-
+from HFSSdrawpy.interfaces.hfss_modeler import *
 '''
-testing script for waveport assignment
+testing script for waveport assignment and network data export
+
+ATTENTION; script creates a new project in HFSS and analysis
 
 generates a shielded microstrip line on sapphire including ground plane 
 for terminal assignment
 
 '''
+
+###########################################################setup new project
+
+desktop = get_desktop()
+project = desktop.new_project()
+project.make_active()
+design = project.new_dm_design('test')
+setup_name = "Setup"
+
 modeler = 'hfss'
 pm = Modeler(modeler)
 
@@ -21,7 +34,7 @@ pm.is_hfss = True
 
 chip_body = Body(pm, 'chip')
 
-# Drawing
+# #############################################################Drawing
 
 track = pm.set_variable('0.32mm')
 sub_h = pm.set_variable('0.43mm')
@@ -51,15 +64,25 @@ cover = chip_body.box([-width/2, 0, 0],
                 name="air_top")
 cover.assign_material("vacuum")
 
-# define ports
+# ###########################################################define ports
 port1 = chip_body.rect([-width/2, 0, -sub_h], 
               [width, 0, cover_H+sub_h],
               name="1")
 port1.assign_waveport(Nmodes=1)
-port1.assign_terminal_auto(GND)
 
 port2 = chip_body.rect([-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],
               name="2")
 port2.assign_waveport(Nmodes=1)
-port2.assign_terminal_auto(GND)
+
+############################################################# SOLVE
+dm_setup = design.create_dm_setup(freq_ghz=5, name=setup_name)
+dm_sweep = dm_setup.insert_sweep(0.1, 10, 1001, name="Sweep", type="Interpolating")
+analysis = dm_setup.analyze()
+
+# #############################################################export
+path = project.get_path()
+file = "test.s2p"
+solutions = dm_setup.get_solutions()
+solutions.export_network_data(sweep="Sweep", efile=path+file)
+print("FILE IS LOCATED IN "+path+file)

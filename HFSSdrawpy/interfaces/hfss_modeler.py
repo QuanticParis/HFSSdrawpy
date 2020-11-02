@@ -281,6 +281,9 @@ class HfssProject(COMWrapper):
     def new_dm_design(self, name):
         return self.new_design(name, "DrivenModal")
 
+    def new_t_design(self, name):
+        return self.new_design(name, "Terminal")
+
     def new_em_design(self, name):
         return self.new_design(name, "Eigenmode")
 
