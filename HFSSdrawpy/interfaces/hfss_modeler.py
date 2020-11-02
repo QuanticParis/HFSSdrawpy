@@ -1162,10 +1162,12 @@ class HfssModeler(COMWrapper):
         
         name (str):  port name
         Nmodes (int):  number of modes/terminals
-        DoRenorm (bool): renormalize port impedance
-        RenormValue (str): port impedance
         DoDeembed(bool): deembed port
         DeembedDist(str): deembedding distance
+
+        !!! DOES NOT WORK
+        DoRenorm (bool): renormalize port impedance 
+        RenormValue (str): port impedance
 
         """
         UseIntLine=False
@@ -1202,8 +1204,8 @@ class HfssModeler(COMWrapper):
         if not isinstance(ground, list):
             ground = [ground]
         groundarray = ["NAME:ReferenceConductors"]
-        for ground in ground:
-            groundarray.append(ground.name)
+        for gnd in ground:
+            groundarray.append(gnd.name)
         self._boundaries.AutoIdentifyTerminals(groundarray,
                                                 name,
                                                 False)
