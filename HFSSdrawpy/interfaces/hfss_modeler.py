@@ -664,7 +664,23 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    pass
+    def get_network_data(self, formats):
+
+        self._solutions.ExportNetworkData(["", #DesignVariationKey
+                                        ["Setup1:Sweep1"], #solution setup name and solution name
+                                        3, # FileFormat Type: <int> 2 : .tab 3 : .sNp 4 : .cit 7 : .m 8 : Terminal Z0
+                                        "C://Documents/package_HFSSDesign1.s4p", #Full path to the file
+                                        Array ('all'), # Array of doubles or "all"
+                                        True, # Renormalise
+                                        50, # Impedance
+                                        "S", # datatype "S", "Y", or "Z"
+                                        -1, # pass 1 to N, -1 gets all passes
+                                        0, # cmlx format 0 = Magnitude/Phase.1= Real/Imaginary.2= db/Phase.
+                                        15, # presicion <int>, default is 15
+                                        True, #include Gamma and Impedance comments
+                                        True, #support non-standard Touchstone extensions
+                                        True])
+        return 0
 
 class HfssFrequencySweep(COMWrapper):
     prop_tab = "HfssTab"
