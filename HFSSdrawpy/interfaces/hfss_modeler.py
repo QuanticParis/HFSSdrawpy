@@ -1172,10 +1172,13 @@ class HfssModeler(COMWrapper):
         DoRenorm (bool): renormalize port impedance 
         RenormValue (str): port impedance
 
+        TODO:
+        implement integration line
         """
         UseIntLine=False
         start = [0,0,0]
         stop = [0,0,0]
+        DeembedDist = parse_entry(DeembedDist)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
         modesarray = ["NAME:Modes"]
