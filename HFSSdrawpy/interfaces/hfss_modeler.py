@@ -1430,6 +1430,30 @@ class HfssModeler(COMWrapper):
             ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=",
              "%ddeg"%(angle)])
 
+    def rotate_x(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "X", "RotateAngle:=",
+             "%ddeg"%(angle)])
+
+    def rotate_y(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "Y", "RotateAngle:=",
+             "%ddeg"%(angle)])
+
+    def rotate_z(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=",
+             "%ddeg"%(angle)])
+
     def rename(self, entity, name):
         new_name = self._modeler.ChangeProperty(["NAME:AllTabs",
       		["NAME:Geometry3DAttributeTab",
