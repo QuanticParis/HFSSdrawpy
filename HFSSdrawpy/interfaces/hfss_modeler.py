@@ -281,6 +281,9 @@ class HfssProject(COMWrapper):
     def new_dm_design(self, name):
         return self.new_design(name, "DrivenModal")
 
+    def new_dt_design(self, name):
+        return self.new_design(name, "DrivenTerminal")
+
     def new_em_design(self, name):
         return self.new_design(name, "Eigenmode")
 
@@ -664,7 +667,33 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    pass
+    def export_network_data(self, sweep, efile, eformat=3, dtype="S",
+                            freq=["all"], renorm=True, z0=50, cformat=1, digits=15):
+        '''
+            sweep (str): sweep name
+            eformat (int): 2-.tab /3-.sNp /4-.cit /7-.m /8-Z0 spreadsheet
+            efile (str): Full path to the file to write out
+            dtype (str): S, Y, Z matrix
+            freq (array): array (e.g."1GHz","2GHz", ...)
+            renorm (bool): renormalise data
+            z0 (double): characteristic impedance
+            cformat (int): 0 = Magnitude/Phase. 1= Real/Imaginary. 2= db/Phase.
+            digits (int): Number of Digits Precision
+
+            TODO: inplement <DesignVariationKey>, <SolnSelectionArray>
+        ''' 
+        epass=-1
+        self.parent._solutions.ExportNetworkData([],
+                    self.parent.name + " : " + sweep, #solution selector Setup:Sweep
+                    eformat, # file format
+                    efile, # full export path
+                    freq, # freq to export
+                    renorm, # renormalisation
+                    z0, # characteristic impedance
+                    dtype, # data type
+                    epass, # ignored at the moment
+                    cformat,
+                    digits)
 
 class HfssFrequencySweep(COMWrapper):
     prop_tab = "HfssTab"
@@ -1131,6 +1160,74 @@ class HfssModeler(COMWrapper):
                                         		"IsTwoSided:="		, False,
                                         		"IsInternal:="		, True ])
 
+    def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
+        """Creates a Waveport at an arbitrary face
+        
+        name (str):  port name
+        Nmodes (int):  number of modes/terminals
+        DoDeembed(bool): deembed port
+        DeembedDist(str): deembedding distance
+
+        !!! DOES NOT WORK
+        DoRenorm (bool): renormalize port impedance 
+        RenormValue (str): port impedance
+
+        TODO:
+        implement integration line
+        """
+        UseIntLine=False
+        start = [0,0,0]
+        stop = [0,0,0]
+        DeembedDist = parse_entry(DeembedDist)
+        faces = list(self.get_face_ids(entity))
+        faces = [int(ii) for ii in faces]
+        modesarray = ["NAME:Modes"]
+        for n in range(Nmodes):
+            inlinearray = ["NAME:IntLine",
+                           "Start:=", start,
+                           "End:=", stop,
+                           "CharImp:=", "Zpi"]
+            modesarray.append(["NAME:Mode" + str(n + 1),
+                               "ModeNum:=", n + 1,
+                               "UseIntLine:=", UseIntLine,
+                               inlinearray])
+        self._boundaries.AssignWavePort(["NAME:"+name,
+                                        "Faces:=", faces,
+                                        "NumModes:=", Nmodes,
+                                        "DoDeembed:=", DoDeembed,
+                                        "DeembedDist:=", str(DeembedDist),
+                                        "DoRenorm:=", DoRenorm,
+                                        "RenormValue:=", RenormValue,
+                                        modesarray])
+
+    def assign_terminal_auto(self, entity, name, ground):
+        """auto-generates Terminals on a Waveport
+        
+        name (str):  port name
+        ground (list):  entities of reference conductors (ground!)
+
+        """
+        if not isinstance(ground, list):
+            ground = [ground]
+        groundarray = ["NAME:ReferenceConductors"]
+        for gnd in ground:
+            groundarray.append(gnd.name)
+        self._boundaries.AutoIdentifyTerminals(groundarray,
+                                                name,
+                                                False)
+
+    def assign_terminal_auto(self, entity, name, cond):
+        # assigns terminals to waveport
+        # creates name for modes
+        if not isinstance(ground, list):
+            ground = [ground]
+        groundarray = ["NAME:ReferenceConductors"]
+        for ground in ground:
+            groundarray.append(ground.name)
+        self._boundaries.AutoIdentifyTerminals(groundarray,
+                                                name,
+                                                False)
+
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
             entities = [entities]
@@ -1338,6 +1435,30 @@ class HfssModeler(COMWrapper):
                         	])
 
     def rotate(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=",
+             "%ddeg"%(angle)])
+
+    def rotate_x(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "X", "RotateAngle:=",
+             "%ddeg"%(angle)])
+
+    def rotate_y(self, entities, angle):
+        if not isinstance(entities, list):
+            entities = [entities]
+        names = [entity.name for entity in entities]
+        self._modeler.Rotate(self._selections_array(*names),
+            ["NAME:RotateParameters", "RotateAxis:=", "Y", "RotateAngle:=",
+             "%ddeg"%(angle)])
+
+    def rotate_z(self, entities, angle):
         if not isinstance(entities, list):
             entities = [entities]
         names = [entity.name for entity in entities]
