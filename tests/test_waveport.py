@@ -56,7 +56,7 @@ port1 = chip_body.rect([-width/2, 0, -sub_h],
               [width, 0, cover_H+sub_h],
               name="1")
 port1.assign_waveport(Nmodes=1)
-port1.assign_terminal_auto(GND)
+port1.assign_terminal_auto(MSL)
 
 port2 = chip_body.rect([-width/2, MSL_length, -sub_h], 
               [width, 0, cover_H+sub_h],

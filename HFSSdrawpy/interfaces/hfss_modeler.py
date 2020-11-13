@@ -1219,14 +1219,14 @@ class HfssModeler(COMWrapper):
     def assign_terminal_auto(self, entity, name, cond):
         # assigns terminals to waveport
         # creates name for modes
-        if not isinstance(ground, list):
-            ground = [ground]
-        groundarray = ["NAME:ReferenceConductors"]
-        for ground in ground:
-            groundarray.append(ground.name)
-        self._boundaries.AutoIdentifyTerminals(groundarray,
+        if not isinstance(cond, list):
+            cond = [cond]
+        condarray = ["NAME:ReferenceConductors"]
+        for cond in cond:
+            condarray.append(cond.name)
+        self._boundaries.AutoIdentifyTerminals([condarray,
                                                 name,
-                                                False)
+                                                False])
 
     def assign_mesh_length(self, entities, length):
         if not isinstance(entities, list):
