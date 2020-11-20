@@ -141,12 +141,13 @@ def add_points(points, rl, min_dist, n_meander):
 
 class Path(object):
 
-    def __init__(self, name, port_in, port_out, fillet, points=[]):
+    def __init__(self, name, port_in, port_out, fillet, points=[], is_slanted=False):
         self.name = name
         self.port_in = port_in
         self.port_out = port_out
         self.fillet = fillet
         self.points = points
+        self.is_slanted = is_slanted
 
         if points==[]:
             in_pos = Vector(port_in.pos)
@@ -156,56 +157,62 @@ class Path(object):
             room_bonding = 0*100e-6 #SMPD MANU BOND SPACE
 
             dist_y = (out_pos-in_pos).dot(in_ori.orth())
-            self.slanted=False
-            if in_ori.dot(out_ori)==-1 and abs(val(dist_y))<val(2*fillet):
-                self.slanted=True  # need to do a slanted_path
-
-            pointA = in_pos+in_ori*room_bonding  # first and last point
-            pointB = out_pos+out_ori*room_bonding
-            point1 = in_pos+in_ori*(1.1*fillet+room_bonding)  # after in
-            point2 = out_pos+out_ori*(1.1*fillet+room_bonding)  # before out
-
-            points_choices = []
-            if in_ori.dot(out_ori)==-1:
-                middle_point = (point1 + point2)/2
-
-                choice_in = next_point(point1, middle_point, in_ori) #bon sens
-                choice_out = next_point(point2, middle_point, out_ori) #à inverser
-                for c_in in choice_in:
-                    for c_out in choice_out:
-                        points_choices.append([pointA, *c_in, *c_out[:-1][::-1], pointB])
+            if in_ori.dot(out_ori)==-1 and abs(val(dist_y))<val(2*fillet) and not is_slanted and abs(val(dist_y))>1e-10:
+                print('SLANTED !')
+                self.points = self.auto_slanted(in_pos, out_pos, in_ori, out_ori, dist_y)
+                self.is_slanted = True
+            elif is_slanted:
+                dist = (out_pos-in_pos).dot(in_ori)
+                pointA = in_pos+in_ori*dist/3  # first and last point
+                pointB = out_pos+out_ori*dist/3
+                self.points = [in_pos, pointA, pointB, out_pos]
             else:
-                choice_in = next_point(point1, point2, in_ori)
-                for c_in in choice_in:
-                    points_choices.append([pointA, *c_in, pointB])
+                pointA = in_pos+in_ori*room_bonding  # first and last point
+                pointB = out_pos+out_ori*room_bonding
+                point1 = in_pos+in_ori*(1.1*fillet+room_bonding)  # after in
+                point2 = out_pos+out_ori*(1.1*fillet+room_bonding)  # before out
 
-            final_choice= None
-            cost=np.inf
-            for ii, choice in enumerate(points_choices):
-                new_cost, new_choice = self.clean(points=choice)
-                if new_cost<cost:
-                    final_choice = new_choice
-                    cost = new_cost
-            self.points = final_choice
+                points_choices = []
+                if in_ori.dot(out_ori)==-1:
+                    middle_point = (point1 + point2)/2
+
+                    choice_in = next_point(point1, middle_point, in_ori) #bon sens
+                    choice_out = next_point(point2, middle_point, out_ori) #à inverser
+                    for c_in in choice_in:
+                        for c_out in choice_out:
+                            points_choices.append([pointA, *c_in, *c_out[:-1][::-1], pointB])
+                else:
+                    choice_in = next_point(point1, point2, in_ori)
+                    for c_in in choice_in:
+                        points_choices.append([pointA, *c_in, pointB])
+
+                final_choice= None
+                cost=np.inf
+                for ii, choice in enumerate(points_choices):
+                    new_cost, new_choice = self.clean(points=choice)
+                    if new_cost<cost:
+                        final_choice = new_choice
+                        cost = new_cost
+                self.points = final_choice
 
     def __add__(self, other):
         assert(isinstance(other, Path))
         if self.points[-1] == other.points[0]:
             points = self.points + other.points[1:]
             return Path(self.name, self.port_in, other.port_out, self.fillet,
-                        points=points)
+                        points=points, is_slanted=self.is_slanted or other.is_slanted)
         elif self.points[-1] == other.points[-1]:
             points = self.points + other.points[:-1][::-1]
             return Path(self.name, self.port_in, other.port_in, self.fillet,
-                        points=points)
+                        points=points, is_slanted=self.is_slanted or other.is_slanted)
         elif self.points[0] == other.points[-1]:
             points = other.points + self.points[1:]
             return Path(self.name, other.port_in, self.port_out, self.fillet,
-                        points=points)
+                        points=points, is_slanted=self.is_slanted or other.is_slanted)
         elif self.points[-1] == other.points[-1]:
             points = other.points + self.points[:-1][::-1]
             return Path(self.name, other.port_in, self.port_in, self.fillet,
-                        points=points)
+                        points=points, is_slanted=self.is_slanted or other.is_slanted)
         else:
             raise ValueError('Added path do not coincide on one point')
 
@@ -240,13 +247,17 @@ class Path(object):
         new_points = [points[0]]
         prev_vec = vecs[0]
         for ii, curr_vec in enumerate(vecs[1:]):
-            if curr_vec.dot(prev_vec)==0:
+            if curr_vec is None or prev_vec is None: # slanted path
                 new_points.append(points[ii+1])
-            elif curr_vec.dot(prev_vec)==-1 and cleaning_only:
-                msg = 'Provided path is invalid: the path goes back on \
-                       itself, 180° corner'
-                raise ValueError(msg)
-            cost += cost_f(prev_vec.dot(curr_vec))
+                cost += 0
+            else: # normal
+                if curr_vec.dot(prev_vec)==0:
+                    new_points.append(points[ii+1])
+                elif curr_vec.dot(prev_vec)==-1 and cleaning_only:
+                    msg = 'Provided path is invalid: the path goes back on \
+                           itself, 180° corner'
+                    raise ValueError(msg)
+                cost += cost_f(curr_vec.dot(prev_vec))
             prev_vec = curr_vec
         new_points.append(points[-1])
 
@@ -256,20 +267,21 @@ class Path(object):
             return cost, new_points
 
     # handling slanted parts
-    def slanted(self):
-        points = self.points.copy()
-        if slanted:
-            h = abs(dist_y/2)
-            x = (fillet-h)/fillet
-            d = h*x/(1-x**2)**0.5
-            dist_x = (out_pos-in_pos).dot(in_ori)
-            pointA = in_pos+in_ori*(dist_x/2-d)
-            pointB = out_pos+out_ori*(dist_x/2-d)
+    def auto_slanted(self, in_pos, out_pos, in_ori, out_ori, dist_y):
 
-            to_bond.append([in_pos, pointA])
-            to_bond.append([pointB, out_pos])
+        h = abs(dist_y/2)
+        x = (self.fillet-h)/self.fillet
+        d = h*x/(1-x**2)**0.5
+        dist_x = (out_pos-in_pos).dot(in_ori)
+        pointA = in_pos+in_ori*(dist_x/2-d)
+        pointB = out_pos+out_ori*(dist_x/2-d)
 
-            return [in_pos, pointA, pointB, out_pos]
+        # TODO compute length !
+
+        # to_bond.append([in_pos, pointA])
+        # to_bond.append([pointB, out_pos])
+
+        return [in_pos, pointA, pointB, out_pos]
 
 
     def to_bond(self):

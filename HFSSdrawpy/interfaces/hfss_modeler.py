@@ -165,6 +165,9 @@ class HfssDesktop(COMWrapper):
     def set_active_project(self, name):
         self._desktop.SetActiveProject(name)
 
+    def clear_all_messages(self):
+        self._desktop.ClearMessages("", "", 3)
+
     @property
     def project_directory(self):
         return self._desktop.GetProjectDirectory()
@@ -402,7 +405,7 @@ class HfssDesign(COMWrapper):
                ["NAME:" + name,
                 "PropType:=", variableprop,
                 "UserDef:=", True,
-                "Value:=", value]]]])
+                "Value:=", str(value)]]]])
 
     def set_variable(self, name, value, postprocessing=False):
         if name not in self._design.GetVariables()+self._design.GetPostProcessingVariables():
@@ -827,9 +830,9 @@ class HfssModeler(COMWrapper):
             # if the coor_sys does not exist : create
             self._modeler.CreateRelativeCS(["NAME:RelativeCSParameters",
             "Mode:="		, "Axis/Position",
-            "OriginX:=", origin[0], "OriginY:="	, origin[1], "OriginZ:=", origin[2],
-            "XAxisXvec:=", new_x[0], "XAxisYvec:=", new_x[1], "XAxisZvec:=", new_x[2],
-            "YAxisXvec:=", new_y[0], "YAxisYvec:="		, new_y[1], "YAxisZvec:=", new_y[2]],
+            "OriginX:=", str(origin[0]), "OriginY:="	, str(origin[1]), "OriginZ:=", str(origin[2]),
+            "XAxisXvec:=", str(new_x[0]), "XAxisYvec:=", str(new_x[1]), "XAxisZvec:=", str(new_x[2]),
+            "YAxisXvec:=", str(new_y[0]), "YAxisYvec:="		, str(new_y[1]), "YAxisZvec:=", str(new_y[2])],
 
             ["NAME:Attributes", "Name:=", coor_sys])
         else:
@@ -838,9 +841,9 @@ class HfssModeler(COMWrapper):
 		["NAME:Geometry3DCSTab",
 			["NAME:PropServers", coor_sys],
 			["NAME:ChangedProps", ["NAME:Reference CS","Value:=", ref_name],
-                                ["NAME:Origin", "X:=", origin[0], "Y:=", origin[1], "Z:=", origin[2]],
-                                ["NAME:X Axis", "X:=", new_x[0], "Y:=", new_x[1], "Z:=", new_x[2]],
-                                ["NAME:Y Point", "X:=", new_y[0], "Y:=", new_y[1], "Z:=", new_y[2]]]]])
+                                ["NAME:Origin", "X:=", str(origin[0]), "Y:=", str(origin[1]), "Z:=", str(origin[2])],
+                                ["NAME:X Axis", "X:=", str(new_x[0]), "Y:=", str(new_x[1]), "Z:=", str(new_x[2])],
+                                ["NAME:Y Point", "X:=", str(new_y[0]), "Y:=", str(new_y[1]), "Z:=", str(new_y[2])]]]])
 
     def set_coor_sys(self, coor_sys):
         if coor_sys != self.get_coor_sys():
@@ -953,6 +956,31 @@ class HfssModeler(COMWrapper):
         name = self.rect(corner_pos, size, **kwargs)
         return name
 
+    @assert_name
+    def sphere(self, pos, radius, **kwargs):
+        name = self._modeler.CreateSphere(
+            ["NAME:SphereParameters",
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "Radius:=", str(radius)],
+            self._attributes_array(**kwargs))
+        return name
+    
+    @assert_name
+    def torus(self, pos, majorradius, minorradius, axis, **kwargs):
+        assert axis in "XYZ"
+        name = self._modeler.CreateTorus(
+            ["NAME:TorusParameters",
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "MajorRadius:=", str(majorradius),
+             "MinorRadius:=", str(minorradius),
+             "WhichAxis:=", axis],
+            self._attributes_array(**kwargs))
+        return name
+        
     @assert_name
     def cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
@@ -1677,6 +1705,18 @@ class ConstantCalcObject(CalcObject):
     def __init__(self, num, setup):
         stack = [("EnterScalar", num)]
         super(ConstantCalcObject, self).__init__(stack, setup)
+
+def get_desktop():
+    import ctypes, os
+    try:
+        is_admin = os.getuid() == 0
+    except AttributeError:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+    if not is_admin:
+        print('\033[93m WARNING: you are not runnning as an admin! You need to run as an admin. You will probably get an error next. \033[0m')
+
+    app = HfssApp()
+    return app.get_app_desktop()
 
 def get_active_project():
     ''' If you see the error:
