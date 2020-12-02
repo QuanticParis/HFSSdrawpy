@@ -966,7 +966,7 @@ class HfssModeler(COMWrapper):
              "Radius:=", str(radius)],
             self._attributes_array(**kwargs))
         return name
-    
+
     @assert_name
     def torus(self, pos, majorradius, minorradius, axis, **kwargs):
         assert axis in "XYZ"
@@ -980,7 +980,7 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs))
         return name
-        
+
     @assert_name
     def cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
@@ -1411,7 +1411,15 @@ class HfssModeler(COMWrapper):
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals])
         return entities.pop(0)
 
-
+    def assign_impedance(self, entities, ResistanceSq, ReactanceSq,name="impedance"):
+        if not isinstance(entities, list):
+            entities = [entities]
+        entity_names = [entity.name for entity in entities]
+        self._boundaries.AssignImpedance(["NAME:"+name,
+                                         "Objects:=", entity_names,
+                                         "Resistance:="	, str(ResistanceSq),
+                                         "Reactance:="		, str(ReactanceSq),
+                                         "InfGroundPlane:=", False])
 
 # class ModelEntity():
 #     instances_layered = {}
