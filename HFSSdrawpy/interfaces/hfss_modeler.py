@@ -980,7 +980,23 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs))
         return name
-        
+
+    def cone(self, pos, radius1, radius2, height, axis, **kwargs):
+        assert axis in "XYZ"
+        name = self._modeler.CreateCone(
+            ["NAME:ConeParameters",
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "WhichAxis:=", axis,
+             "Height:=", str(height),
+             "BottomRadius:="	, str(radius1),
+	 	     "TopRadius:="		, str(radius2)
+             ],
+            self._attributes_array(**kwargs))
+        return name
+
+
     @assert_name
     def cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
@@ -1104,6 +1120,16 @@ class HfssModeler(COMWrapper):
         entity_names = [entity.name for entity in entities]
         self._boundaries.AssignPerfectE(["NAME:"+name,
                                          "Objects:=", entity_names,
+                                         "InfGroundPlane:=", False])
+            
+    def assign_impedance(self, entities, ResistanceSq, ReactanceSq,name="impedance"):
+        if not isinstance(entities, list):
+            entities = [entities]
+        entity_names = [entity.name for entity in entities]
+        self._boundaries.AssignImpedance(["NAME:"+name,
+                                         "Objects:=", entity_names,
+                                         "Resistance:="	, str(ResistanceSq),
+                                         "Reactance:="		, str(ReactanceSq),
                                          "InfGroundPlane:=", False])
 
     def assign_perfect_E_faces(self, entity):

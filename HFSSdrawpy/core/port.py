@@ -84,7 +84,7 @@ class Port():
             width2 = other.widths[ii]
 
             offset1 = self.offsets[ii]
-            offset2 = -other.offsets[ii]
+            offset2 = other.offsets[ii]
             
             if val(width1)!=val(width2) or val(offset1)!=val(offset2):
                 # need adaptor
@@ -140,10 +140,10 @@ class Port():
 
             self.r.pos = self.save['pos']
             self.r.widths = self.save['widths']
-            reversed_offsets = []
-            for ii in range(self.N):
-                reversed_offsets.append(-self.offsets[ii])
-            self.r.offsets = reversed_offsets
+        reversed_offsets = []
+        for ii in range(self.N):
+            reversed_offsets.append(-self.offsets[ii])
+        self.r.offsets = reversed_offsets
 
     def bond_params(self):
         y_max = -np.infty

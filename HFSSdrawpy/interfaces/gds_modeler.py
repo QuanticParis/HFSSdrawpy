@@ -11,7 +11,7 @@ import gdspy
 from ..utils import parse_entry, val, Vector
 from ..core.entity import gen_name
 
-TOLERANCE = 1e-7 # for arcs
+TOLERANCE = 1e-8 # for arcs
 print("gdspy_version : ",gdspy.__version__)
 
 class GdsModeler():
@@ -249,6 +249,9 @@ class GdsModeler():
         pass
 
     def assign_perfect_E(self, entity, name=None):
+        pass
+
+    def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
         pass
 
     def assign_perfect_E_faces(self, entity):
