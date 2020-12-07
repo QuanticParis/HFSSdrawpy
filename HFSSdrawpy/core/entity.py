@@ -205,11 +205,79 @@ class Entity():
         self.is_fillet = True
         return None
 
+#
+#    def fille_edget(self, radius, edge_index):
+#
+#
+#        if vertex_indices is None:
+#            # filleting all vertices
+#            msg = 'Should provide a single radius when filleting all vertices'
+#            assert not isinstance(radius, list), msg
+#            if self.body.mode=='hfss':
+#                self.body.interface._fillet_edges(self, radius, edge_index)
+#                self.is_fillet = True
+#            return None
+#
+#        if not isinstance(edge_index, list):
+#            edge_index = [edge_index]
+#        if isinstance(radius, list):
+#            # expect vertex_indices also a list of list
+#            msg = 'a vertex_indices list should be given for each radius'
+#            assert (len(radius) == len(vertex_indices)), msg
+#            assert (isinstance(vertex_indices[0], list)), msg
+#        else:
+#            radius = [radius]
+#            vertex_indices = [vertex_indices]
+#
+#        if self.is_boolean:
+#            # should find the lowest/leftest vertex to have consistent behaviour
+#            index_start, nb_vertices, is_trigo = self.find_start_vertex()
+#            if not is_trigo:
+#                vertex_indices = [[-ind for ind in index]
+#                                  for index in vertex_indices]
+#        else:
+#            index_start = 0
+#            if self.body.mode == 'gds':
+#                nb_vertices = len(self.body.interface.get_vertices(self))
+#            else:
+#                 nb_vertices = len(self.body.interface.get_vertex_ids(self))
+#        vertex_indices = [[(index_start + ind) % nb_vertices
+#                           for ind in index]
+#                          for index in vertex_indices]
+#
+#        radius = parse_entry(radius)
+#        # check that one index is not present twice
+#        flat_indices = []
+#        for indices in vertex_indices:
+#            flat_indices += indices
+#        msg = 'Vertex index is present more than once in fillet'
+#        assert len(flat_indices)==len(set(flat_indices)), msg
+#        if self.body.mode=='gds':
+#            radius = val(radius)
+#            self.body.interface.fillet(self, radius, vertex_indices)
+#        else:
+#            # manipulate vertex_indices in a good way
+#            past_indices = []
+#            for rad, indices in zip(radius, vertex_indices):
+#                new_indices = []
+#                append_indices = []
+#                for index in indices:
+#                    index += sum(i < index for i in past_indices)
+#                    new_indices.append(index)
+#                    if index != 0:
+#                        append_indices.append(index)
+#                self.body.interface.fillet(self, rad, new_indices)
+#                past_indices += append_indices
+#        self.is_fillet = True
+#        return None
+
+
+
     def assign_material(self, material):
         self.body.interface.assign_material(self, material)
 
-    def assign_impedance(self, ResistanceSq, ReactanceSq):
-        self.body.interface.assign_impedance(self, ResistanceSq, ReactanceSq)
+    def assign_impedance(self, ResistanceSq, ReactanceSq,  name="impedance"):
+        self.body.interface.assign_impedance(self, ResistanceSq, ReactanceSq, name)
 
 
     def assign_mesh_length(self, mesh_length):

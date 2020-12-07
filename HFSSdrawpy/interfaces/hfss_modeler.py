@@ -980,7 +980,23 @@ class HfssModeler(COMWrapper):
              "WhichAxis:=", axis],
             self._attributes_array(**kwargs))
         return name
-        
+
+    def cone(self, pos, radius1, radius2, height, axis, **kwargs):
+        assert axis in "XYZ"
+        name = self._modeler.CreateCone(
+            ["NAME:ConeParameters",
+             "XCenter:=", str(pos[0]),
+             "YCenter:=", str(pos[1]),
+             "ZCenter:=", str(pos[2]),
+             "WhichAxis:=", axis,
+             "Height:=", str(height),
+             "BottomRadius:="	, str(radius1),
+	 	     "TopRadius:="		, str(radius2)
+             ],
+            self._attributes_array(**kwargs))
+        return name
+
+
     @assert_name
     def cylinder(self, pos, radius, height, axis, **kwargs):
         assert axis in "XYZ"
