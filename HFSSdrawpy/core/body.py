@@ -222,6 +222,14 @@ class Body(Modeler):
         kwargs['name'] = name
         self.interface.cylinder(pos, radius, height, axis, **kwargs)
         return Entity(3, self, **kwargs)
+    
+    @set_body
+    def cone(self, pos, radius1,radius2, height, axis, name='cone', **kwargs):
+        pos, radius1, radius2, height = parse_entry(pos, radius1, radius2, height)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        self.interface.cone(pos, radius1, radius2, height, axis, **kwargs)
+        return Entity(3, self, **kwargs)
 
 
     @set_body
