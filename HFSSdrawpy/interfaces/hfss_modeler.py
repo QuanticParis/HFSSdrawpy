@@ -981,6 +981,7 @@ class HfssModeler(COMWrapper):
             self._attributes_array(**kwargs))
         return name
 
+    @assert_name
     def cone(self, pos, radius1, radius2, height, axis, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCone(
