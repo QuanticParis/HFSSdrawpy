@@ -16,7 +16,7 @@ from win32com.client import Dispatch, CDispatch
 from ..utils import parse_entry, \
                             val, \
                             LENGTH_UNIT, \
-                            Vector \
+                            Vector, \
                             coor2angle
                             #extract_value_unit, \
                             #extract_value_dim, \
