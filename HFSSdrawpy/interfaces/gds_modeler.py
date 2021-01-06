@@ -260,6 +260,12 @@ class GdsModeler():
     def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
         pass
 
+    def assign_waveport(self, *args, **kwargs):
+        pass
+
+    def assign_terminal_auto(self, *args, **kwargs):
+        pass
+
     def create_object_from_face(self, name):
         pass
 
