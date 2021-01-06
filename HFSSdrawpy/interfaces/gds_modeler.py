@@ -245,7 +245,7 @@ class GdsModeler():
                 self.cell.add(dummy)
                 blank_entity.delete()
 
-    def assign_material(self, material):
+    def assign_material(self, *args, **kwargs):
         pass
 
     def assign_perfect_E(self, entity, name=None):
