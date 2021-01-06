@@ -16,7 +16,8 @@ from win32com.client import Dispatch, CDispatch
 from ..utils import parse_entry, \
                             val, \
                             LENGTH_UNIT, \
-                            Vector
+                            Vector \
+                            coor2angle
                             #extract_value_unit, \
                             #extract_value_dim, \
                             #rem_unit, \
@@ -1422,12 +1423,15 @@ class HfssModeler(COMWrapper):
                         		"UseMaterialAppearance:=", False
                         	])
 
-    def rotate(self, entities, angle):
+    def rotate(self, entities, angle, center=None, axis='Z'):
+        if(center is not None):
+            raise Warning("HFSS modeler cannot handle roatation which are not around (0, 0).")
+            # angle_center = coor2angle(center[0], center[1])
         if not isinstance(entities, list):
             entities = [entities]
         names = [entity.name for entity in entities]
         self._modeler.Rotate(self._selections_array(*names),
-            ["NAME:RotateParameters", "RotateAxis:=", "Z", "RotateAngle:=",
+            ["NAME:RotateParameters", "RotateAxis:=", axis, "RotateAngle:=",
              "%ddeg"%(angle)])
 
     def rotate_x(self, entities, angle):

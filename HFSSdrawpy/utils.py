@@ -541,3 +541,35 @@ class Vector(numpy.ndarray):
 #     y = Vector([0, -1, 0])
 
 #     print(x.rot(y))
+
+def coor2angle(x, y=None):
+
+    if(y is None):
+        x, y = x
+
+    norm = (x**2+y**2)**0.5
+
+    if(x != 0 and abs(y/x) < 1):
+        angle = numpy.arcsin(y/norm)
+        if(x<0):
+            angle = numpy.pi - numpy.arcsin(y/norm)
+    else:
+        angle = numpy.arccos(x/norm)
+        if(y<0):
+            angle = - numpy.arccos(x/norm) + 2*numpy.pi
+
+    return angle%(2*numpy.pi)
+
+# if(__name__=="__main__"):
+
+#     import matplotlib.pyplot as plt
+
+#     plt.figure()
+
+#     for theta in numpy.arange(0, 2*numpy.pi, 0.05):
+
+#         x, y = numpy.cos(theta), numpy.sin(theta)
+
+#         plt.plot(theta, coor2angle(x, y), 'o')
+    
+#     plt.show()

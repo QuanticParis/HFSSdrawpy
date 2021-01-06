@@ -316,13 +316,17 @@ class GdsModeler():
             gds_entity = self.gds_object_instances[entity.name]
             gds_entity.translate(*translation_vector)
 
-    def rotate(self, entities, angle):
+    def rotate(self, entities, angle, center=None):
+        
+        if(center is None):
+            center = (0, 0)
+
         if not isinstance(entities, list):
             entities = [entities]
         for entity in entities:
             # if entity!=None:
             gds_entity = self.gds_object_instances[entity.name]
-            gds_entity.rotate(angle/360*2*np.pi)
+            gds_entity.rotate(angle/360*2*np.pi, center=(val(center[0]), val(center[1])))
 
 
     def rect_array(self, pos, size, columns,rows,spacing, origin=(0, 0), **kwargs):
