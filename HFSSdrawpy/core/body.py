@@ -744,3 +744,26 @@ class Body(Modeler):
                 bond_number += 1
                 pos = pos + ori*spacing
             jj+=1
+
+    def text(self, str_text, size, angle=0, horizontal=True, name='text_0', **kwargs):
+        """
+        Place text in GDS layout
+
+        text (string) – The text to be converted in geometric objects.
+        size (number) – Height of the character. The width of a character and the distance between characters are 
+            this value multiplied by 5 / 9 and 8 / 9, respectively. For vertical text, the distance is multiplied by 11 / 9.
+            horizontal (bool) – If True, the text is written from left to right; if False, from top to bottom.
+        angle (number) – The angle of rotation of the text.
+        name (string) – The GDSII layer number for these elements.
+        layer (integer) – The GDSII layer number for these elements.
+        """
+        if self.mode=='gds':
+            size = parse_entry(size)
+            name = check_name(Entity, name)
+            kwargs['name'] = name
+            size = val(size)
+            self.interface.text(str_text, size, angle, horizontal, **kwargs)
+            return Entity(2, self, **kwargs)
+        else:
+            pass
+        
