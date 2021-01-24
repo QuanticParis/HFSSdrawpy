@@ -61,7 +61,12 @@ class GdsModeler():
         obj = self.gds_object_instances.pop(entity.name)
         self.gds_object_instances[name]=obj
 
-    def generate_gds(self, file):
+    def generate_gds(self, file, max_points):
+        for instance in self.gds_object_instances.keys():
+            obj = self.gds_object_instances[instance]
+            if isinstance(obj, gdspy.Polygon) or isinstance(obj, gdspy.PolygonSet):
+                self.gds_object_instances[instance] = obj.fracture(max_points=max_points, precision=1e-9)
+
         for cell_name in self.gds_cells.keys():
             filename = file+'_%s.gds'%cell_name
             gdspy.write_gds(filename, cells=[cell_name],
