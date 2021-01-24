@@ -170,6 +170,14 @@ class GdsModeler():
             self.cell.add(poly)
         return names, layers
 
+    def text(self ,str_text, size, angle, horizontal, **kwargs):
+        size = parse_entry(size)
+        name = kwargs['name']
+        layer = kwargs['layer']
+        ploy1 = gdspy.Text(text=str_text, size=size, horizontal=horizontal, angle=angle, layer=layer)
+        self.gds_object_instances[name] = ploy1
+        self.cell.add(ploy1)
+
     def connect_faces(self, entity1, entity2):
         pass
 
