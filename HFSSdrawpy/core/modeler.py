@@ -87,10 +87,10 @@ class Modeler():
         store_variable(symbol, value)
         return symbol
 
-    def generate_gds(self, folder, filename):
+    def generate_gds(self, folder, filename, max_points=0):
         file = os.path.join(folder, filename)
         if self.mode=='gds':
-            self.interface.generate_gds(file)
+            self.interface.generate_gds(file, max_points)
 
     def make_material(self, material_params, name):
         raise NotImplementedError()
