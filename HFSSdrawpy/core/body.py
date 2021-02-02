@@ -766,4 +766,3 @@ class Body(Modeler):
             return Entity(2, self, **kwargs)
         else:
             pass
-        
