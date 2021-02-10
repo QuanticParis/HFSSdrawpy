@@ -1,5 +1,6 @@
 [![Python version](https://img.shields.io/badge/python-3.6%2B-blue)](https://www.python.org/downloads/release/python-360/)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](https://github.com/QuanticParis/HFSSdrawpy/blob/refactoring-2021/LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # HFSSdrawpy
 
@@ -47,3 +48,10 @@ pre-compiled binaries:
    # to install the gdspy-1.5.2-cp38-cp38-win_amd64.whl gdspy release
    poetry run pip install path/to/downloaded/gdspy/release/gdspy-1.5.2-cp38-cp38-win_amd64.whl
    ```
+
+### Code linting
+Please use [Black](https://github.com/psf/black) to auto-format your code:
+```shell
+# format all .py files within all folders with black
+poetry run black **/*.py
+```
