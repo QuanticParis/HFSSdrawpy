@@ -62,6 +62,19 @@ version = "1.6.3"
 numpy = "*"
 
 [[package]]
+category = "dev"
+description = "A Python utility / library to sort Python imports."
+name = "isort"
+optional = false
+python-versions = ">=3.6,<4.0"
+version = "5.7.0"
+
+[package.extras]
+colors = ["colorama (>=0.4.3,<0.5.0)"]
+pipfile_deprecated_finder = ["pipreqs", "requirementslib"]
+requirements_deprecated_finder = ["pipreqs", "pip-api"]
+
+[[package]]
 category = "main"
 description = "Python library for arbitrary-precision floating-point arithmetic"
 name = "mpmath"
@@ -167,7 +180,7 @@ python-versions = "*"
 version = "3.7.4.3"
 
 [metadata]
-content-hash = "780e43844a9bf384d2975c9740af4bfeca9fd37b41f7db04de5cfd6ce702ed10"
+content-hash = "c6029105f0ac40019b3c33f413dcca91b1e1879134dee2c5c2b9c3f912a38a02"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -188,6 +201,10 @@ dataclasses = [
 ]
 gdspy = [
     {file = "gdspy-1.6.3.zip", hash = "sha256:efde05a89911334ddabef460c0ad15ee19474476008210f71ac5301917859bee"},
+]
+isort = [
+    {file = "isort-5.7.0-py3-none-any.whl", hash = "sha256:fff4f0c04e1825522ce6949973e83110a6e907750cd92d128b0d14aaaadbffdc"},
+    {file = "isort-5.7.0.tar.gz", hash = "sha256:c729845434366216d320e936b8ad6f9d681aab72dc7cbc2d51bedc3582f3ad1e"},
 ]
 mpmath = [
     {file = "mpmath-1.2.1-py3-none-any.whl", hash = "sha256:604bc21bd22d2322a177c73bdb573994ef76e62edd595d17e00aff24b0667e5c"},

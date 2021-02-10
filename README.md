@@ -50,6 +50,12 @@ pre-compiled binaries:
    ```
 
 ### Code linting
+Please use [isort](https://github.com/psf/black) to sort your imports:
+```shell
+# sort all imports in all .py files within all folders
+poetry run isort **/*.py
+```
+
 Please use [Black](https://github.com/psf/black) to auto-format your code:
 ```shell
 # format all .py files within all folders with black
