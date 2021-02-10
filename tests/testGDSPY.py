@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 27 13:53:38 2020
-
-@author: Zaki
-"""
-
 import gdspy
 
 # Create the geometry: a single rectangle.

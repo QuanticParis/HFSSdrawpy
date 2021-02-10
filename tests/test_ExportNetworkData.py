@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Sep 21 11:26:31 2020
-
-@author: FELIX
-"""
 from HFSSdrawpy import Body, Entity, Modeler
 from HFSSdrawpy.interfaces.hfss_modeler import *
 from HFSSdrawpy.libraries.base_elements import *

@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 28 16:18:36 2019
-
-@author: Ulysse
-"""
-
 # Binding the 2D elements of python_modeler
 
 

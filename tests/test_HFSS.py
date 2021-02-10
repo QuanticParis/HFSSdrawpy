@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Oct 30 15:39:44 2019
-
-@author: antho
-"""
-
 import traceback
 
 from ConnectElement2 import ConnectElt2, Vector

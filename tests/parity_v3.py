@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 29 14:05:00 2019
-
-@author: wcs
-"""
-
-"""
+'''
 Changes from v2 to v3:
  - trsmn junction width reduced from 0.237 to 0.147 um to reduce EJ from 21.9 to 13.6 GHz
  - small junction width reduced from 0.185 to 0.172 um to reduce EJ from 12.9 to 12.0 GHz

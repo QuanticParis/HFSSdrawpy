@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 28 16:18:36 2019
-
-@author: Zaki
-"""
-
 import numpy as np
 
 from ..parameters import DEFAULT, GAP, MASK, MESH, RLC, TRACK, eps

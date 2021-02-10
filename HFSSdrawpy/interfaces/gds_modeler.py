@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov  4 11:13:09 2019
-
-@author: antho
-"""
-
 import gdspy
 import numpy as np
 

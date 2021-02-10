@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 12 23:30:42 2018
-
-@author: checkhov
-"""
-
 import matplotlib.pyplot as plt
 import numpy as np
 from scripts.designer import Circuit, ConnectElt, Vector

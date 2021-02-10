@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 14 13:46:42 2019
-
-@author: Zaki
-"""
-
 import numpy
 import sympy
 from pint import UnitRegistry

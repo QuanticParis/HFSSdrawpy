@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 31 14:14:51 2019
-
-@author: antho
-"""
-
 import os
 from inspect import currentframe, getfile
 

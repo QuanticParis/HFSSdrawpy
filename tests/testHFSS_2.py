@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov 22 17:18:25 2019
-
-@author: Zaki
-"""
 #%% Connect JJ
 import scripts  # We import the package with gdsPy scripts.
 from scripts import Vector as Vector
