@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "HFSSdrawpy"
+version = "0.10.0"
+description = "Draw circuits in HFSS using Python"
+authors = ["HQCteam <teamhqc@gmail.com>"]
+license = "MIT"
+homepage = "https://github.com/QuanticParis/HFSSdrawpy"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+Pint = "^0.10"
+sympy = "^1.5.1"
+gdspy = { "version" = "^1.5.2", markers = "sys_platform != 'win32'" }
+pywin32 = { "version" = "^227", markers = "sys_platform == 'win32'" }
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
