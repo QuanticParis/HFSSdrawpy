@@ -222,7 +222,7 @@ class Body(Modeler):
         kwargs['name'] = name
         self.interface.cylinder(pos, radius, height, axis, **kwargs)
         return Entity(3, self, **kwargs)
-    
+
     @set_body
     def cone(self, pos, radius1,radius2, height, axis, name='cone', **kwargs):
         pos, radius1, radius2, height = parse_entry(pos, radius1, radius2, height)
@@ -238,7 +238,7 @@ class Body(Modeler):
         kwargs['name'] = name
         self.interface.sphere(pos, radius, **kwargs)
         return Entity(3, self, **kwargs)
-    
+
     @set_body
     def torus(self, pos, majorradius, minorradius, axis, name='torus', **kwargs):
         pos, majorradius, minorradius = parse_entry(pos, majorradius, minorradius)
@@ -326,6 +326,17 @@ class Body(Modeler):
         else:
             self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
             return Entity(3, self, **kwargs)
+
+    @set_body
+    def text(self,pos, size,text, name='text_0', **kwargs):
+        pos, size = parse_entry(pos, size)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        if self.mode=='gds':
+            pos = val(pos)
+            size = val(size)
+        self.interface.text(pos, size,text, **kwargs)
+        return Entity(2, self, **kwargs)
 
     @set_body
     def path(self, points, port, fillet, name='path_0', **kwargs):
