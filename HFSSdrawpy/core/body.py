@@ -216,15 +216,15 @@ class Body(Modeler):
         return self.rect(pos, size, name=name, **kwargs)
 
     @set_body
-    def cylinder(self, pos, radius, height, axis, name='cylinder', **kwargs):
+    def cylinder(self, pos, radius, height, axis, segments = 0, name='cylinder_0', **kwargs):
         pos, radius, height = parse_entry(pos, radius, height)
         name = check_name(Entity, name)
         kwargs['name'] = name
-        self.interface.cylinder(pos, radius, height, axis, **kwargs)
+        self.interface.cylinder(pos, radius, height, axis, segments, **kwargs)
         return Entity(3, self, **kwargs)
     
     @set_body
-    def cone(self, pos, radius1,radius2, height, axis, name='cone', **kwargs):
+    def cone(self, pos, radius1,radius2, height, axis, name='cone_0', **kwargs):
         pos, radius1, radius2, height = parse_entry(pos, radius1, radius2, height)
         name = check_name(Entity, name)
         kwargs['name'] = name
@@ -232,7 +232,7 @@ class Body(Modeler):
         return Entity(3, self, **kwargs)
 
     @set_body
-    def sphere(self, pos, radius, name='sphere', **kwargs):
+    def sphere(self, pos, radius, name='sphere_0', **kwargs):
         pos, radius = parse_entry(pos, radius)
         name = check_name(Entity, name)
         kwargs['name'] = name
@@ -240,7 +240,7 @@ class Body(Modeler):
         return Entity(3, self, **kwargs)
     
     @set_body
-    def torus(self, pos, majorradius, minorradius, axis, name='torus', **kwargs):
+    def torus(self, pos, majorradius, minorradius, axis, name='torus_0', **kwargs):
         pos, majorradius, minorradius = parse_entry(pos, majorradius, minorradius)
         name = check_name(Entity, name)
         kwargs['name'] = name

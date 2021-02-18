@@ -1029,7 +1029,7 @@ class HfssModeler(COMWrapper):
 
 
     @assert_name
-    def cylinder(self, pos, radius, height, axis, **kwargs):
+    def cylinder(self, pos, radius, height, axis, segments, **kwargs):
         assert axis in "XYZ"
         name = self._modeler.CreateCylinder(
             ["NAME:CylinderParameters",
@@ -1039,17 +1039,17 @@ class HfssModeler(COMWrapper):
              "Radius:=", str(radius),
              "Height:=", str(height),
              "WhichAxis:=", axis,
-             "NumSides:=", 0],
+             "NumSides:=", segments],
             self._attributes_array(**kwargs))
         return name
 
     @assert_name
-    def cylinder_center(self, pos, radius, height, axis, **kwargs):
+    def cylinder_center(self, pos, radius, height, axis, segments, **kwargs):
         assert axis in "XYZ"
         axis_idx = ["X", "Y", "Z"].index(axis)
         edge_pos = copy(pos)
         edge_pos[axis_idx] = val(pos[axis_idx]) - val(height)/2
-        return self.cylinder(edge_pos, radius, height, axis, **kwargs)
+        return self.cylinder(edge_pos, radius, height, axis, segments, **kwargs)
 
     @assert_name
     def disk(self, pos, radius, axis, **kwargs):
