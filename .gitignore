@@ -1,12 +1,18 @@
-# Compiled
+# python's bytecode compiled files
+__pycache__/
 *.pyc
-# GDS
-*.gds
+
+# distribution / packaging
+*.egg-info/
+build/
+dist/
+
+# IDE settings directory
+.idea/
+.vscode/
+
+# macOS specific
 .DS_Store
-# Subdirectories
-/build
-/dist
-/HFSSdrawpy.egg-info
-Pipfile
-Pipfile.lock
-/.vscode
+
+# GDS specific
+*.gds

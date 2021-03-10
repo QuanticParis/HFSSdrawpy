@@ -1,29 +1,22 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 14 13:46:42 2019
-
-@author: Zaki
-"""
-
-from sympy.parsing import sympy_parser
-from pint import UnitRegistry
 import numpy
 import sympy
+from pint import UnitRegistry
+from sympy.parsing import sympy_parser
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
-LENGTH = '[length]'
-INDUCTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2'
-CAPACITANCE = '[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]'
-RESISTANCE = '[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3'
-DIMENSIONLESS = 'dimensionless'
+LENGTH = "[length]"
+INDUCTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2"
+CAPACITANCE = "[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]"
+RESISTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3"
+DIMENSIONLESS = "dimensionless"
 
-LENGTH_UNIT = 'meter'
-INDUCTANCE_UNIT = 'nH'
-CAPACITANCE_UNIT = 'fF'
-RESISTANCE_UNIT = 'ohm'
-DIMENSIONLESS_UNIT = ''
+LENGTH_UNIT = "meter"
+INDUCTANCE_UNIT = "nH"
+CAPACITANCE_UNIT = "fF"
+RESISTANCE_UNIT = "ohm"
+DIMENSIONLESS_UNIT = ""
 
 ### List handling
 # Useful function to manipulate to_move entities and ports
@@ -31,7 +24,7 @@ def find_last_list(list_entities):
     # return the last list of a set of nested lists
 
     if isinstance(list_entities, list):
-        if len(list_entities)==0:
+        if len(list_entities) == 0:
             return list_entities
         else:
             if isinstance(list_entities[-1], list):
@@ -39,16 +32,17 @@ def find_last_list(list_entities):
             else:
                 return list_entities
     else:
-        raise TypeError('There are no list')
+        raise TypeError("There are no list")
+
 
 def find_penultimate_list(list_entities):
     # return the last list of a set of nested lists
     if isinstance(list_entities, list):
-        if len(list_entities)==0:
+        if len(list_entities) == 0:
             return False
         else:
             if isinstance(list_entities[-1], list):
-                if len(list_entities[-1])==0:
+                if len(list_entities[-1]) == 0:
                     return list_entities
                 else:
                     if isinstance(list_entities[-1][-1], list):
@@ -58,14 +52,15 @@ def find_penultimate_list(list_entities):
             else:
                 return False
     else:
-        raise TypeError('There are no list')
+        raise TypeError("There are no list")
+
 
 def add_to_corresponding_list(elt, nested_list, added_elt):
     # return the last list of a set of nested lists
     if isinstance(nested_list, list):
         if elt in nested_list:
             index = nested_list.index(elt)
-            nested_list.insert(index+1, added_elt)
+            nested_list.insert(index + 1, added_elt)
             return True
         else:
             for elt_list in nested_list:
@@ -76,7 +71,8 @@ def add_to_corresponding_list(elt, nested_list, added_elt):
                 return False
             return True
     else:
-        pass#raise TypeError('Argument is not a list')
+        pass  # raise TypeError('Argument is not a list')
+
 
 def general_remove(elt, nested_list):
     # same as list.remove(elt) but for a nested list
@@ -91,7 +87,8 @@ def general_remove(elt, nested_list):
                     if success:
                         break
     else:
-        raise TypeError('Argument is not a list')
+        raise TypeError("Argument is not a list")
+
 
 def find_corresponding_list(elt, nested_list):
     # return the last list of a set of nested lists
@@ -110,68 +107,74 @@ def find_corresponding_list(elt, nested_list):
     else:
         return None
 
+
 ### Naming
+
 
 def gen_name(name):
     # routine to mimic the default naming procedure of HFSS when object
     # already exists
-    end = ''
+    end = ""
     for ii in name[::-1]:
         if ii.isdigit():
-            end+=ii
+            end += ii
         else:
             break
-    if end=='':
-        return name+'1'
+    if end == "":
+        return name + "1"
     number = int(end[::-1])
-    if number==0:
-        return name+'1'
+    if number == 0:
+        return name + "1"
     else:
-        prefix = name[:-len(str(number))]
-        suffix = str(number+1)
-        return prefix+suffix
+        prefix = name[: -len(str(number))]
+        suffix = str(number + 1)
+        return prefix + suffix
+
 
 def check_name(_class, name):
-    end = ''
+    end = ""
     for ii, char in enumerate(name[::-1]):
         if char.isdigit():
-            end+=char
+            end += char
         else:
             break
     else:
         ii += 1
-    if end == '':
+    if end == "":
         radical = name
         number = 0
     else:
         radical = name[:-ii]
         number = int(end[::-1])
     new_name = name
-    while(new_name in _class.dict_instances.keys()):
-        number+=1
-        new_name = radical+str(number)
+    while new_name in _class.dict_instances.keys():
+        number += 1
+        new_name = radical + str(number)
     if new_name != name:
-        print("%s: changed '%s' name into '%s'"%(_class.__name__, name, new_name))
+        print("%s: changed '%s' name into '%s'" % (_class.__name__, name, new_name))
     return new_name
+
 
 ### Litteral Expressions
 
+
 def equal_float(float1, float2):
-    if abs(float1)>1e-10:
-        rel_diff = abs((float1-float2)/float1)
-        if rel_diff<1e-5:
+    if abs(float1) > 1e-10:
+        rel_diff = abs((float1 - float2) / float1)
+        if rel_diff < 1e-5:
             return True
         else:
             return False
 
-    elif abs(float2)>1e-10:
-        rel_diff = abs((float1-float2)/float2)
-        if rel_diff<1e-5:
+    elif abs(float2) > 1e-10:
+        rel_diff = abs((float1 - float2) / float2)
+        if rel_diff < 1e-5:
             return True
         else:
             return False
     else:
         return True
+
 
 def simplify_arith_expr(expr):
     try:
@@ -180,6 +183,7 @@ def simplify_arith_expr(expr):
     except Exception:
         print("Couldn't parse", expr)
         raise
+
 
 def extract_value_unit(expr, units):
     """
@@ -195,14 +199,16 @@ def extract_value_unit(expr, units):
         except Exception:
             return expr
 
+
 def extract_value_dim(expr):
     """
     type expr: str
     """
     return str(Q(expr).dimensionality)
 
+
 def parse_entry(*entries, marker=True):
-    #should take a list of tuple of list... of int, float or str...
+    # should take a list of tuple of list... of int, float or str...
     parsed = []
     for entry in entries:
         if not isinstance(entry, list) and not isinstance(entry, tuple):
@@ -216,11 +222,12 @@ def parse_entry(*entries, marker=True):
             elif isinstance(entry, tuple):
                 parsed.append(tuple(parse_entry(*entry, marker=False)))
             else:
-                raise TypeError('Not foreseen type: %s'%(type(entry)))
-    if len(parsed)==1 and marker:
+                raise TypeError("Not foreseen type: %s" % (type(entry)))
+    if len(parsed) == 1 and marker:
         return parsed[0]
     else:
         return parsed
+
 
 def rem_unit(other):
     try:
@@ -229,14 +236,16 @@ def rem_unit(other):
     except Exception:
         return other
 
+
 def _val(elt):
     if isinstance(elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)):
         return elt
     else:
         return float(elt.evalf(subs=variables))
 
+
 def val(*entries, marker=True):
-    #should take a list of tuple of list... of int, float or str...
+    # should take a list of tuple of list... of int, float or str...
     parsed = []
     for entry in entries:
         if not isinstance(entry, (list, tuple, Vector)):
@@ -249,27 +258,30 @@ def val(*entries, marker=True):
             elif isinstance(entry, tuple):
                 parsed.append(tuple(val(*entry, marker=False)))
             else:
-                raise TypeError('Not foreseen type: %s'%(type(entry)))
-    if len(parsed)==1 and marker:
+                raise TypeError("Not foreseen type: %s" % (type(entry)))
+    if len(parsed) == 1 and marker:
         return parsed[0]
     else:
         return parsed
 
+
 def way(vec):
     if vec[1] != 0:
-        if abs(vec[0]/vec[1])<1e-2:
-            if vec[1]>0:
-                return Vector(0,1)
-            elif vec[1]<0:
-                return Vector(0,-1)
-    if vec[0] != 0 :
-        if abs(vec[1]/vec[0])<1e-2:
-            if vec[0]>0:
-                return Vector(1,0)
-            elif vec[0]<0:
-                return Vector(-1,0)
+        if abs(vec[0] / vec[1]) < 1e-2:
+            if vec[1] > 0:
+                return Vector(0, 1)
+            elif vec[1] < 0:
+                return Vector(0, -1)
+    if vec[0] != 0:
+        if abs(vec[1] / vec[0]) < 1e-2:
+            if vec[0] > 0:
+                return Vector(1, 0)
+            elif vec[0] < 0:
+                return Vector(-1, 0)
+
 
 variables = {}
+
 
 def store_variable(symbol, value):  # put value in SI
     if isinstance(value, str):
@@ -285,6 +297,7 @@ def store_variable(symbol, value):  # put value in SI
             unit = DIMENSIONLESS_UNIT
         value = extract_value_unit(value, unit)
     variables[symbol] = value
+
 
 class Vector(numpy.ndarray):
 
@@ -306,16 +319,16 @@ class Vector(numpy.ndarray):
 
         if vec_y is not None:
             vec = [vec, vec_y, 0]
-            if(vec_z is not None):
+            if vec_z is not None:
                 vec[2] = vec_z
 
         try:
-            if(not (len(vec)==2 or len(vec)==3)):
-                raise TypeError('vec can only be 2 or 3D, not %iD' % (len(vec)))
+            if not (len(vec) == 2 or len(vec) == 3):
+                raise TypeError("vec can only be 2 or 3D, not %iD" % (len(vec)))
         except:
-            raise TypeError('vec must be iterable')
+            raise TypeError("vec must be iterable")
 
-        if(len(vec) == 2):
+        if len(vec) == 2:
             vec = [vec[0], vec[1], 0]
 
         obj = numpy.asarray(vec).view(cls)
@@ -337,16 +350,18 @@ class Vector(numpy.ndarray):
         """
 
         try:
-            return len(elt)==3
+            return len(elt) == 3
         except:
             return False
 
     def __eq__(self, other):
         val_self = val(self)
         val_other = val(other)
-        bool_result = (equal_float(val_self[0], val_other[0]) and
-                equal_float(val_self[1], val_other[1]) and
-                equal_float(val_self[2], val_other[2]))
+        bool_result = (
+            equal_float(val_self[0], val_other[0])
+            and equal_float(val_self[1], val_other[1])
+            and equal_float(val_self[2], val_other[2])
+        )
         return bool_result
 
     def index(self, elt):
@@ -359,64 +374,63 @@ class Vector(numpy.ndarray):
             return -1
         return ii
 
+    #     def __add__(self, other):
+    #         if Vector.check(other):
+    #             return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
+    #         else:
+    #             try:
+    #                 return Vector([self[0]+other, self[1]+other, self[2]+other])
+    #             except:
+    #                 raise TypeError('Could not perform add operation')
 
-#     def __add__(self, other):
-#         if Vector.check(other):
-#             return Vector([self[0]+other[0], self[1]+other[1], self[2]+other[2]])
-#         else:
-#             try:
-#                 return Vector([self[0]+other, self[1]+other, self[2]+other])
-#             except:
-#                 raise TypeError('Could not perform add operation')
+    #     def __radd__(self, other):
+    #         return self + other
 
-#     def __radd__(self, other):
-#         return self + other
+    #     def __sub__(self, other)    :
+    #         if Vector.check(other):
+    #             return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
+    #         else:
+    #             try:
+    #                 Vector([self[0]-other, self[1]-other, self[2]-other])
+    #             except:
+    #                 raise TypeError('Could not perform sub operation')
 
-#     def __sub__(self, other)    :
-#         if Vector.check(other):
-#             return Vector([self[0]-other[0], self[1]-other[1], self[2]-other[2]])
-#         else:
-#             try:
-#                 Vector([self[0]-other, self[1]-other, self[2]-other])
-#             except:
-#                 raise TypeError('Could not perform sub operation')
+    #     def __neg__(self):
+    #         return Vector([-self[0], -self[1], -self[2]])
 
-#     def __neg__(self):
-#         return Vector([-self[0], -self[1], -self[2]])
+    #     def __rsub__(self, other):
+    #         return -self + other
 
-#     def __rsub__(self, other):
-#         return -self + other
+    #     def __mul__(self, other):
+    #         if Vector.check(other):
+    #             return Vector([self[0]*other[0], self[1]*other[1], self[2]*other[2]])
+    #         else:
+    #             try:
+    #                 return Vector([other*self[0], other*self[1], other*self[2]])
+    #             except:
+    #                 raise TypeError('Could not perform mul operation')
 
-#     def __mul__(self, other):
-#         if Vector.check(other):
-#             return Vector([self[0]*other[0], self[1]*other[1], self[2]*other[2]])
-#         else:
-#             try:
-#                 return Vector([other*self[0], other*self[1], other*self[2]])
-#             except:
-#                 raise TypeError('Could not perform mul operation')
+    #     def __rmul__(self, other):
+    #         return self * other
 
-#     def __rmul__(self, other):
-#         return self * other
+    #     def __truediv__(self, other):
+    #         if Vector.check(other):
+    #             return Vector([self[0]/other[0], self[1]/other[1], self[2]/other[2]])
+    #         else:
+    #             try:
+    #                 return Vector([self[0]/other, self[1]/other, self[2]/other])
+    #             except:
+    #                 raise TypeError('Could not perform div operation')
 
-#     def __truediv__(self, other):
-#         if Vector.check(other):
-#             return Vector([self[0]/other[0], self[1]/other[1], self[2]/other[2]])
-#         else:
-#             try:
-#                 return Vector([self[0]/other, self[1]/other, self[2]/other])
-#             except:
-#                 raise TypeError('Could not perform div operation')
+    #     def __rtruediv__(self, other):
 
-#     def __rtruediv__(self, other):
+    #         self / other
 
-#         self / other
-
-#     def dot(self, other):
-#         if Vector.check(other):
-#             return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
-#         else:
-#             raise TypeError('Could not perform dot operation')
+    #     def dot(self, other):
+    #         if Vector.check(other):
+    #             return self[0]*other[0]+self[1]*other[1]+self[2]*other[2]
+    #         else:
+    #             raise TypeError('Could not perform dot operation')
 
     def cross(self, other):
 
@@ -430,13 +444,15 @@ class Vector(numpy.ndarray):
             type Vector, self x other
         """
 
-        if(Vector.check(other) and Vector.check(other)):
+        if Vector.check(other) and Vector.check(other):
 
-            return Vector(self[1]*other[2]-self[2]*other[1],
-                          -(self[0]*other[2]-self[2]*other[0]),
-                          self[0]*other[1]-self[1]*other[0])
+            return Vector(
+                self[1] * other[2] - self[2] * other[1],
+                -(self[0] * other[2] - self[2] * other[0]),
+                self[0] * other[1] - self[1] * other[0],
+            )
         else:
-            raise TypeError('Could not perform dot operation')
+            raise TypeError("Could not perform dot operation")
 
     def scalar_cross(self, other, ref=None):
 
@@ -453,34 +469,34 @@ class Vector(numpy.ndarray):
             dot((self x other), ref)
         """
 
-        if(ref is None):
+        if ref is None:
             ref = Vector(0, 0, 1)
 
-        if(Vector.check(other) and Vector.check(ref)):
+        if Vector.check(other) and Vector.check(ref):
             return self.cross(other).dot(ref)
         else:
-            raise TypeError('Could not perform dot operation')
+            raise TypeError("Could not perform dot operation")
 
     def norm(self):
-        return (self[0]**2+self[1]**2+self[2]**2)**0.5
+        return (self[0] ** 2 + self[1] ** 2 + self[2] ** 2) ** 0.5
 
     def abs(self):
         return Vector([abs(self[0]), abs(self[1]), abs(self[2])])
 
     def unit(self):
         norm = self.norm()
-        return Vector([self[0]/norm, self[1]/norm, self[2]/norm])
+        return Vector([self[0] / norm, self[1] / norm, self[2] / norm])
 
     def orth(self):
         return Vector([-self[1], self[0]])
 
-#     def as_nda(self):
+    #     def as_nda(self):
 
-#         return numpy.array([self[0], self[1], self[2]], dtype=object)
+    #         return numpy.array([self[0], self[1], self[2]], dtype=object)
 
     def rot(self, other, ref=None):
 
-        '''
+        """
         This function is just completly cryptic, Ulysse wrote it a long time ago.
         Here is what it is doing: we assume that self is expressed in x=(100), y=(010), z=(001)
         This function returns the coordinates of self in x'=other,y'=-(other x ref), z'=ref
@@ -496,25 +512,27 @@ class Vector(numpy.ndarray):
 
         Returns:
             self expressed in the new coordinate system.
-        '''
+        """
 
-        if(ref is None):
+        if ref is None:
             ref = Vector([0, 0, 1])
         else:
             ref = Vector(ref)
 
         other = Vector(other)
 
-        if(Vector.check(other) and Vector.check(ref)):
+        if Vector.check(other) and Vector.check(ref):
 
             other = Vector(other).unit()
             ortho = -other.cross(ref)
 
-            return (Vector([self.dot(other.refx()), self.dot(other.orth().refy()), 0])*ref[2] +
-                    Vector([self.dot(other.orth().refx()), 0, self.dot(other.refz())])*ref[1] +
-                    Vector([0, self.dot(other.refy()), self.dot(other.orth().refz())])*ref[0])
+            return (
+                Vector([self.dot(other.refx()), self.dot(other.orth().refy()), 0]) * ref[2]
+                + Vector([self.dot(other.orth().refx()), 0, self.dot(other.refz())]) * ref[1]
+                + Vector([0, self.dot(other.refy()), self.dot(other.orth().refz())]) * ref[0]
+            )
         else:
-            raise TypeError('other must be a Vector')
+            raise TypeError("other must be a Vector")
 
     def px(self):
         return Vector([self[0], 0, 0])
@@ -526,13 +544,13 @@ class Vector(numpy.ndarray):
         return Vector([0, 0, self[2]])
 
     def refx(self, offset=0):
-        return Vector([self[0], -self[1]+2*offset, self[2]])
+        return Vector([self[0], -self[1] + 2 * offset, self[2]])
 
     def refy(self, offset=0):
-        return Vector([-self[0]+2*offset, self[1], self[2]])
+        return Vector([-self[0] + 2 * offset, self[1], self[2]])
 
     def refz(self, offset=0):
-        return Vector([self[0], self[1], -self[2]+2*offset])
+        return Vector([self[0], self[1], -self[2] + 2 * offset])
 
 
 # if(__name__ == "__main__"):
@@ -542,23 +560,25 @@ class Vector(numpy.ndarray):
 
 #     print(x.rot(y))
 
+
 def coor2angle(x, y=None):
 
-    if(y is None):
+    if y is None:
         x, y = x
 
-    norm = (x**2+y**2)**0.5
+    norm = (x ** 2 + y ** 2) ** 0.5
 
-    if(x != 0 and abs(y/x) < 1):
-        angle = numpy.arcsin(y/norm)
-        if(x<0):
-            angle = numpy.pi - numpy.arcsin(y/norm)
+    if x != 0 and abs(y / x) < 1:
+        angle = numpy.arcsin(y / norm)
+        if x < 0:
+            angle = numpy.pi - numpy.arcsin(y / norm)
     else:
-        angle = numpy.arccos(x/norm)
-        if(y<0):
-            angle = - numpy.arccos(x/norm) + 2*numpy.pi
+        angle = numpy.arccos(x / norm)
+        if y < 0:
+            angle = -numpy.arccos(x / norm) + 2 * numpy.pi
 
-    return angle%(2*numpy.pi)
+    return angle % (2 * numpy.pi)
+
 
 # if(__name__=="__main__"):
 
@@ -571,5 +591,5 @@ def coor2angle(x, y=None):
 #         x, y = numpy.cos(theta), numpy.sin(theta)
 
 #         plt.plot(theta, coor2angle(x, y), 'o')
-    
+
 #     plt.show()
