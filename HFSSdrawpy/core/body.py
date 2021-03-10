@@ -335,8 +335,10 @@ class Body(Modeler):
         if self.mode=='gds':
             pos = val(pos)
             size = val(size)
-        self.interface.text(pos, size,text, **kwargs)
-        return Entity(2, self, **kwargs)
+            self.interface.text(pos, size,text, **kwargs)
+            return Entity(2, self, **kwargs)
+        else:
+            pass
 
     @set_body
     def path(self, points, port, fillet, name='path_0', **kwargs):
