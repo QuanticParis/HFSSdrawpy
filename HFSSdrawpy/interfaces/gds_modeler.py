@@ -116,6 +116,16 @@ class GdsModeler:
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
 
+    def text(self, pos, size, text, **kwargs):
+        pos, size = parse_entry(pos, size)
+        name = kwargs["name"]
+        layer = kwargs["layer"]
+
+        poly1 = gdspy.Text(text, size, pos, layer=layer)
+
+        self.gds_object_instances[name] = poly1
+        self.cell.add(poly1)
+
     def rect_center(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
         corner_pos = [val(p) - val(s) / 2 for p, s in zip(pos, size)]
@@ -379,7 +389,6 @@ class GdsModeler:
             gds_entity.translate(*translation_vector)
 
     def rotate(self, entities, angle, center=None):
-
         if center is None:
             center = (0, 0)
 

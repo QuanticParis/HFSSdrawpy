@@ -330,6 +330,19 @@ class Body(Modeler):
             return Entity(3, self, **kwargs)
 
     @set_body
+    def text(self, pos, size, text, name="text_0", **kwargs):
+        pos, size = parse_entry(pos, size)
+        name = check_name(Entity, name)
+        kwargs["name"] = name
+        if self.mode == "gds":
+            pos = val(pos)
+            size = val(size)
+            self.interface.text(pos, size, text, **kwargs)
+            return Entity(2, self, **kwargs)
+        else:
+            pass
+
+    @set_body
     def path(self, points, port, fillet, name="path_0", **kwargs):
         # fillet should be either 0 or larger than half of the port width
         name = check_name(Entity, name)
