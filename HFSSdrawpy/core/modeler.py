@@ -1,22 +1,17 @@
- # -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 31 14:14:51 2019
-
-@author: antho
-"""
-
-from pint import UnitRegistry
-import numpy as np
 import os
 from inspect import currentframe, getfile
-import sympy
 
+import numpy as np
+import sympy
+from pint import UnitRegistry
+
+from ..utils import parse_entry, store_variable, val, variables
 from .entity import Entity
-from ..utils import variables, store_variable, parse_entry, val
 
 sympy.init_printing(use_latex=False)
 
-class Modeler():
+
+class Modeler:
     """
     Modeler which defines basic operations and methods to perform on Entity and on the chosen interface.
     To create a new interface, one needs to copy an existing one in a new file, and adapt all methods to the formalism of the new interface.
@@ -29,11 +24,12 @@ class Modeler():
     -------
     mode: string in "gds" or "hfss"
     """
+
     is_overdev = False
     is_litho = False
     is_mask = False
-    gap_mask = parse_entry('20um')
-    overdev = parse_entry('0um')
+    gap_mask = parse_entry("20um")
+    overdev = parse_entry("0um")
 
     def __init__(self, mode):
         """
@@ -43,22 +39,24 @@ class Modeler():
         self.mode = mode
         if mode == "hfss":
             from ..interfaces.hfss_modeler import get_desktop
+
             desktop = get_desktop()
             project = desktop.get_active_project()
             design = project.get_active_design()
             self.design = design
             self.modeler = design.modeler
-            self.modeler.set_units('mm')
+            self.modeler.set_units("mm")
             self.modeler.delete_all_objects()
             desktop.clear_all_messages()
             self.interface = self.modeler
-        elif mode=="gds":
+        elif mode == "gds":
             from ..interfaces import gds_modeler
+
             self.interface = gds_modeler.GdsModeler()
         else:
-            print('Mode should be either hfss or gds')
+            print("Mode should be either hfss or gds")
 
-        #The list of bodies pointing to the current Modeler
+        # The list of bodies pointing to the current Modeler
         self.bodies = []
 
     ### Utils methods
@@ -76,28 +74,28 @@ class Modeler():
         if name is None:
             # this auto-parsing is clearly a hack and not robust
             # but I find it convenient
-            f = currentframe().f_back#.f_back
+            f = currentframe().f_back  # .f_back
             filename = getfile(f)
             code_line = open(filename).readlines()[f.f_lineno - 1]
             name = code_line.split("=")[0].strip()
 
-        if self.mode == 'hfss':
+        if self.mode == "hfss":
             self.design.set_variable(name, value)  # for HFSS
         symbol = sympy.symbols(name)
         store_variable(symbol, value)
         return symbol
 
-    def generate_gds(self, folder, filename):
+    def generate_gds(self, folder, filename, max_points=0):
         file = os.path.join(folder, filename)
-        if self.mode=='gds':
-            self.interface.generate_gds(file)
+        if self.mode == "gds":
+            self.interface.generate_gds(file, max_points)
 
     def make_material(self, material_params, name):
         raise NotImplementedError()
 
     ### Methods acting on list of entities
 
-    def intersect(self, entities, keep_originals = False):
+    def intersect(self, entities, keep_originals=False):
         raise NotImplementedError()
 
     def unite(self, entities, main=None, keep_originals=False, new_name=None):
@@ -120,11 +118,12 @@ class Modeler():
                 entities.remove(main)
             entities = [main] + entities
 
-        if len(entities)!=1:
-            if not all([entity.dimension == entities[0].dimension
-                                                    for entity in entities]):
-                raise TypeError('All united elements should have the \
-                                same dimension')
+        if len(entities) != 1:
+            if not all([entity.dimension == entities[0].dimension for entity in entities]):
+                raise TypeError(
+                    "All united elements should have the \
+                                same dimension"
+                )
             else:
                 if keep_originals:
                     entities[0] = entities[0].copy()
@@ -156,21 +155,22 @@ class Modeler():
             blank_entities = [blank_entities]
         if not isinstance(tool_entities, list):
             tool_entities = [tool_entities]
-        if len(blank_entities)==0 or len(tool_entities)==0:
+        if len(blank_entities) == 0 or len(tool_entities) == 0:
             pass
         else:
-            if (not all([entity.dimension==blank_entities[0].dimension
-                                                for entity in blank_entities])
-                or not all([entity.dimension==tool_entities[0].dimension
-                                                for entity in tool_entities])):
-                raise TypeError('All subtracted elements should have the \
-                                same dimension')
+            if not all(
+                [entity.dimension == blank_entities[0].dimension for entity in blank_entities]
+            ) or not all(
+                [entity.dimension == tool_entities[0].dimension for entity in tool_entities]
+            ):
+                raise TypeError(
+                    "All subtracted elements should have the \
+                                same dimension"
+                )
             else:
-                self.interface.subtract(blank_entities, tool_entities,
-                                            keep_originals=True)
+                self.interface.subtract(blank_entities, tool_entities, keep_originals=True)
                 # actualize the properties of the blank_entities
-                list_fillet_bool = any([entity.is_fillet
-                                        for entity in tool_entities])
+                list_fillet_bool = any([entity.is_fillet for entity in tool_entities])
                 for entity in blank_entities:
                     entity.is_boolean = True
                     entity.is_fillet = entity.is_fillet or list_fillet_bool
@@ -182,21 +182,19 @@ class Modeler():
 
     def rotate(self, entities, angle=0):
         if isinstance(angle, (list, np.ndarray)):
-            if len(angle)==2:
-                angle = np.math.atan2(np.linalg.det([[1,0],angle]),np.dot([1,0],angle))
-                angle = angle/np.pi*180
+            if len(angle) == 2:
+                angle = np.math.atan2(np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle))
+                angle = angle / np.pi * 180
             else:
                 raise Exception("angle should be either a float or a 2-dim array")
         elif not isinstance(angle, (float, int)):
             raise Exception("angle should be either a float or a 2-dim array")
-        if self.mode == 'gds':
+        if self.mode == "gds":
             angle = val(angle)
         self.interface.rotate(entities, angle)  # angle in degrees
 
     def translate(self, entities, vector=[0, 0, 0]):
         vector = parse_entry(vector)
-        if self.mode == 'gds':
+        if self.mode == "gds":
             vector = val(vector)
         self.interface.translate(entities, vector)
-
-
