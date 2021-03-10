@@ -328,14 +328,14 @@ class Body(Modeler):
             return Entity(3, self, **kwargs)
 
     @set_body
-    def text(self,pos, size,text, name='text_0', **kwargs):
+    def text(self, pos, size, text, name="text_0", **kwargs):
         pos, size = parse_entry(pos, size)
         name = check_name(Entity, name)
-        kwargs['name'] = name
-        if self.mode=='gds':
+        kwargs["name"] = name
+        if self.mode == "gds":
             pos = val(pos)
             size = val(size)
-            self.interface.text(pos, size,text, **kwargs)
+            self.interface.text(pos, size, text, **kwargs)
             return Entity(2, self, **kwargs)
         else:
             pass
