@@ -15,7 +15,7 @@ gdspy.current_library = gdspy.GdsLibrary()
 lib = gdspy.GdsLibrary()
 
 # Geometry must be placed in cells.
-cell = lib.new_cell('FIRST')
+cell = lib.new_cell("FIRST")
 
 ### rect
 if 0:
@@ -27,8 +27,14 @@ if 1:
     # Path created with automatic bends of radius 5
     points = [[0, 0], [0, 10], [10, 10], [10, 20]]
     cable = gdspy.FlexPath(
-        points, [1, 2, 1], offset=[-1, 3, 2], corners="circular bend", bend_radius=[5, 5], gdsii_path=False,
-        layer=[0, 0, 0])
+        points,
+        [1, 2, 1],
+        offset=[-1, 3, 2],
+        corners="circular bend",
+        bend_radius=[5, 5],
+        gdsii_path=False,
+        layer=[0, 0, 0],
+    )
 
     # Same path, generated with natural corners, for comparison
     # sp5 = gdspy.FlexPath(points, 1, layer=1, gdsii_path=True)
@@ -37,7 +43,7 @@ if 1:
     # cell.add(sp4)
 
     polygons = cable.get_polygons()
-    print('enumerate dict keys')
+    print("enumerate dict keys")
     for key in cable._polygon_dict.keys():
         print(key)
         print(len(cable._polygon_dict[key]))
@@ -47,7 +53,7 @@ if 1:
         poly = gdspy.Polygon(poly)
         poly.layers = [ii]
         cell.add(poly)
-    print('max_points')
+    print("max_points")
     print(cable.max_points)
 
 
@@ -56,10 +62,10 @@ display = 0
 if display:
     gdspy.LayoutViewer()
 else:
-    cwd  = os.getcwd()
-    gdspy.write_gds(os.path.join(cwd, 'test_path.gds'), unit=1.0e-6, precision=1e-8)
+    cwd = os.getcwd()
+    gdspy.write_gds(os.path.join(cwd, "test_path.gds"), unit=1.0e-6, precision=1e-8)
 
-#print(polySet.polygons[0])
+# print(polySet.polygons[0])
 
 #%%
 

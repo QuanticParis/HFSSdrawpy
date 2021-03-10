@@ -9,21 +9,22 @@ import os
 from HFSSdrawpy import Modeler, Body
 from HFSSdrawpy.parameters import TRACK, GAP
 import HFSSdrawpy.libraries.example_elements as elt
+
 # import HFSSdrawpy.libraries.base_elements as base
 
-pm = Modeler('hfss')
+pm = Modeler("hfss")
 
-chip1 = Body(pm, 'chip1')
-
-
-track = pm.set_variable('20um')
-gap = pm.set_variable('10um')
-radius1 = pm.set_variable('100um')
-radius2 = pm.set_variable('400um')
+chip1 = Body(pm, "chip1")
 
 
-rect1 = chip1.rect([0, 0], ['1mm', '1mm'], layer=TRACK)
-rect2 = chip1.rect(['0.5mm', '0.5mm'], ['-1mm', '-1mm'], layer=GAP)
+track = pm.set_variable("20um")
+gap = pm.set_variable("10um")
+radius1 = pm.set_variable("100um")
+radius2 = pm.set_variable("400um")
+
+
+rect1 = chip1.rect([0, 0], ["1mm", "1mm"], layer=TRACK)
+rect2 = chip1.rect(["0.5mm", "0.5mm"], ["-1mm", "-1mm"], layer=GAP)
 
 rect1.unite(rect2)
 
@@ -38,4 +39,4 @@ rect1.fillet([radius1, radius2], [[3, 1, 2, -1, -2, -3], [0, 4]])
 # in the trigonometric order.
 
 # generate gds file
-pm.generate_gds(os.path.join(os.getcwd(), 'gds_files'), 'fillet_test')
+pm.generate_gds(os.path.join(os.getcwd(), "gds_files"), "fillet_test")
