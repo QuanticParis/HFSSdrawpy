@@ -4,10 +4,10 @@ Created on Mon Sep 21 11:26:31 2020
 
 @author: FELIX
 """
-from HFSSdrawpy import Modeler, Body, Entity
-from HFSSdrawpy.utils import parse_entry, Vector
-from HFSSdrawpy.libraries.base_elements import *
+from HFSSdrawpy import Body, Entity, Modeler
 from HFSSdrawpy.interfaces.hfss_modeler import *
+from HFSSdrawpy.libraries.base_elements import *
+from HFSSdrawpy.utils import Vector, parse_entry
 
 """
 testing script for waveport assignment and network data export

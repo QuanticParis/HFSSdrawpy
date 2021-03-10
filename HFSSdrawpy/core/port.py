@@ -1,7 +1,8 @@
-import numpy as np
 import math
 
-from ..utils import Vector, parse_entry, check_name, find_last_list, val
+import numpy as np
+
+from ..utils import Vector, check_name, find_last_list, parse_entry, val
 
 
 class Port:

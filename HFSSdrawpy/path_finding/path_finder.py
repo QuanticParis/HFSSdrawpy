@@ -6,8 +6,9 @@ Created on Tue Apr 14 18:18:44 2020
 @author: Raphael
 """
 
-from ..utils import val, way, Vector
 import numpy as np
+
+from ..utils import Vector, val, way
 
 
 # useful function to find cable path

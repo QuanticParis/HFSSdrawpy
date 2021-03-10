@@ -5,10 +5,10 @@ Created on Thu Nov 14 13:46:42 2019
 @author: Zaki
 """
 
-from sympy.parsing import sympy_parser
-from pint import UnitRegistry
 import numpy
 import sympy
+from pint import UnitRegistry
+from sympy.parsing import sympy_parser
 
 ureg = UnitRegistry()
 Q = ureg.Quantity

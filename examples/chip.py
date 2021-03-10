@@ -6,9 +6,9 @@ Created on Tue Oct 29 14:05:00 2019
 """
 import os
 
-from HFSSdrawpy import Modeler, Body
-from HFSSdrawpy.parameters import TRACK, GAP
 import HFSSdrawpy.libraries.example_elements as elt
+from HFSSdrawpy import Body, Modeler
+from HFSSdrawpy.parameters import GAP, TRACK
 
 # import HFSSdrawpy.libraries.base_elements as base
 

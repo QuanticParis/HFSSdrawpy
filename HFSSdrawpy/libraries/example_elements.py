@@ -7,8 +7,8 @@ Created on Mon Oct 28 16:18:36 2019
 
 import numpy as np
 
-from ..utils import parse_entry, Vector
-from ..parameters import TRACK, GAP, RLC, MESH, MASK, DEFAULT, eps
+from ..parameters import DEFAULT, GAP, MASK, MESH, RLC, TRACK, eps
+from ..utils import Vector, parse_entry
 
 
 def create_port(self, widths=None, subnames=None, layers=None, offsets=0, name="port_0"):

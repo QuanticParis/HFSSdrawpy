@@ -1,16 +1,15 @@
 import numpy as np
 
 from ..parameters import DEFAULT
-
 from ..utils import (
     Vector,
-    parse_entry,
+    add_to_corresponding_list,
     check_name,
     find_last_list,
-    add_to_corresponding_list,
     gen_name,
-    val,
     general_remove,
+    parse_entry,
+    val,
 )
 
 

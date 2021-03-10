@@ -7,7 +7,7 @@ Created on Thu Apr 12 23:30:42 2018
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scripts.designer import ConnectElt, Vector, Circuit
+from scripts.designer import Circuit, ConnectElt, Vector
 
 plt.close("all")
 

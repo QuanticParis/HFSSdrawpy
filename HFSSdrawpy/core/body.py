@@ -1,24 +1,23 @@
 from functools import wraps
+
 import numpy as np
 
-
+from ..parameters import DEFAULT, MASK, MESH, PORT
+from ..path_finding.path_finder import Path
 from ..utils import (
     Vector,
-    parse_entry,
     check_name,
+    equal_float,
+    find_corresponding_list,
     find_last_list,
     find_penultimate_list,
-    find_corresponding_list,
+    parse_entry,
     val,
-    equal_float,
     way,
 )
 from .entity import Entity
 from .modeler import Modeler
-from ..path_finding.path_finder import Path
 from .port import Port
-
-from ..parameters import DEFAULT, PORT, MASK, MESH
 
 
 class BodyMover:

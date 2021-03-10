@@ -5,14 +5,15 @@ Created on Thu Oct 31 14:14:51 2019
 @author: antho
 """
 
-from pint import UnitRegistry
-import numpy as np
 import os
 from inspect import currentframe, getfile
-import sympy
 
+import numpy as np
+import sympy
+from pint import UnitRegistry
+
+from ..utils import parse_entry, store_variable, val, variables
 from .entity import Entity
-from ..utils import variables, store_variable, parse_entry, val
 
 sympy.init_printing(use_latex=False)
 

@@ -1,10 +1,10 @@
 import os
+
 import numpy as np
 
-
-from HFSSdrawpy import Modeler, Body, Entity
-from HFSSdrawpy.utils import parse_entry, Vector
+from HFSSdrawpy import Body, Entity, Modeler
 from HFSSdrawpy.libraries.base_elements import *
+from HFSSdrawpy.utils import Vector, parse_entry
 
 """
 testing script for waveport assignment

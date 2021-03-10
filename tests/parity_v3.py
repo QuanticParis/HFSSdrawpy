@@ -15,11 +15,13 @@ Changes from v2 to v3:
  - interdigitated capacitances removed
 """
 from importlib import reload
+
 import scripts
 
 reload(scripts)
-import gdspy
 import time
+
+import gdspy
 
 t1 = time.time()
 PM = PythonMdlr("gds")

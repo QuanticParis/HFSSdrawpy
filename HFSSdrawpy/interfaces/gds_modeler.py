@@ -5,11 +5,11 @@ Created on Mon Nov  4 11:13:09 2019
 @author: antho
 """
 
-import numpy as np
 import gdspy
+import numpy as np
 
-from ..utils import parse_entry, val, Vector
 from ..core.entity import gen_name
+from ..utils import Vector, parse_entry, val
 
 TOLERANCE = 1e-8  # for arcs
 print("gdspy_version : ", gdspy.__version__)

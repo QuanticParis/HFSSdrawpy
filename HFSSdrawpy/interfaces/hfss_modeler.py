@@ -1,19 +1,19 @@
 import atexit
-from copy import copy
 import os
-
-import tempfile
-import types
-import numpy
 import signal
-import pythoncom
+import tempfile
 import time
+import types
+from copy import copy
 from functools import wraps
-from sympy.parsing import sympy_parser
-from pint import UnitRegistry
-from win32com.client import Dispatch, CDispatch
 
-from ..utils import parse_entry, val, LENGTH_UNIT, Vector, coor2angle
+import numpy
+import pythoncom
+from pint import UnitRegistry
+from sympy.parsing import sympy_parser
+from win32com.client import CDispatch, Dispatch
+
+from ..utils import LENGTH_UNIT, Vector, coor2angle, parse_entry, val
 
 # extract_value_unit, \
 # extract_value_dim, \
@@ -2428,7 +2428,8 @@ class ConstantCalcObject(CalcObject):
 
 
 def get_desktop():
-    import ctypes, os
+    import ctypes
+    import os
 
     try:
         is_admin = os.getuid() == 0
@@ -2448,7 +2449,8 @@ def get_active_project():
     "The requested operation requires elevation."
     then you need to run your python as an admin.
     """
-    import ctypes, os
+    import ctypes
+    import os
 
     try:
         is_admin = os.getuid() == 0

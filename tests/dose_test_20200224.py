@@ -14,8 +14,8 @@ Third dose test for more oxidation and cross junctions
     but we need to know about reproducibility
 """
 
-import scripts
 import gdspy
+import scripts
 from scripts.hfss import parse_entry as parse_entry
 from scripts.Vector import Vector as Vector
 

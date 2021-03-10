@@ -28,10 +28,11 @@ chip1.set_current_coor(pos=["0mm", "10mm", "0mm"], ori=[0, 1])
 P2 = chip1.port("port2", Vector(["10mm", "10mm"]), Vector([0, 1]), "0.1mm", "0.05mm")
 # SL_PTH = chip1._connect_JJ('jojo', 'port1', 'port2', "0.02mm")
 
+import traceback
+
+import hfss
 #%% draw_cable
 import PythonModeler
-import traceback
-import hfss
 from Vector import Vector
 
 PythonModeler.Port.reset()
@@ -68,9 +69,10 @@ chip1.rect_corner_2D([0, 0, 0], [1, 1, 1], name="aa", layer="1")
 
 #%% 3D cavity + transmon
 
-import PythonModeler
 import traceback
+
 import hfss
+import PythonModeler
 
 PythonModeler.Port.reset()
 hfss.ModelEntity.reset()
@@ -119,8 +121,9 @@ cavity = chip2.cavity_3D_simple(
 #%% Cavity + transmon + Box
 
 from importlib import reload
-import PythonModeler
+
 import hfss
+import PythonModeler
 
 reload(PythonModeler)
 
@@ -175,8 +178,9 @@ cavity = chip2.cavity_3D_simple(
 
 #%%
 from importlib import reload
-import PythonModeler
+
 import hfss
+import PythonModeler
 
 reload(PythonModeler)
 
@@ -215,8 +219,9 @@ cavity = chip2.cavity_3D("cavity", PM.cylinder_radius, PM.cylinder_height, "3mm"
 
 #%% Only transmon
 from importlib import reload
-import PythonModeler
+
 import hfss
+import PythonModeler
 
 # reload(PythonModeler)
 
@@ -251,8 +256,9 @@ chip1.assign_perfect_E(vacuum, "environment")
 #%% Only Cavity
 
 from importlib import reload
-import PythonModeler
+
 import hfss
+import PythonModeler
 
 reload(PythonModeler)
 
@@ -276,8 +282,9 @@ cylinder = chip2.cavity_3D(
 
 #%% Cavity + insert
 from importlib import reload
-import PythonModeler
+
 import hfss
+import PythonModeler
 
 reload(PythonModeler)
 
@@ -303,7 +310,6 @@ cylinder = chip2.cavity_3D_simple(
 
 #%% Transmon plus cylinder
 import scripts
-
 
 PM = scripts.PythonMdlr("hfss")
 PM.set_variable("cylinder_height", "10mm")

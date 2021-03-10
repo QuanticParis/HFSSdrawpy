@@ -5,8 +5,9 @@ Created on Mon Nov  4 17:54:30 2019
 @author: antho
 """
 
-import gdspy
 import os
+
+import gdspy
 import numpy as np
 
 gdspy.current_library = gdspy.GdsLibrary()

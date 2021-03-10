@@ -5,10 +5,10 @@ Created on Wed Oct 30 15:39:44 2019
 @author: antho
 """
 
-from PythonModeler import PythonMdlr
-from PythonModeler import Port
 import traceback
+
 from ConnectElement2 import ConnectElt2, Vector
+from PythonModeler import Port, PythonMdlr
 
 PM = PythonMdlr("hfss")
 
@@ -95,11 +95,10 @@ P2 = Port("port2", [0.25, 1], [0, -1], 1, 2)
 print("capa")
 connector.draw_capa("capacite", "port1", "port2", 10, 5, 1)
 
-#%% TEST BATCH 3
-from PythonModeler import PythonMdlr
-
 # from PythonModeler import Port
 from ConnectElement2 import ConnectElt2
+#%% TEST BATCH 3
+from PythonModeler import PythonMdlr
 
 PM = PythonMdlr("hfss")
 PM.set_variable("track", "42um")
@@ -129,10 +128,10 @@ longueur1 = chip.connector.length(final_choice1, 0, 3, 0.05)
 
 # cable_starter(self, width = 'track', index=None, border=parse_entry('15um'))
 
-#%% TEST BATCH 4
-from PythonModeler import PythonMdlr
 import traceback
 
+#%% TEST BATCH 4
+from PythonModeler import PythonMdlr
 # from ConnectElement2 import ConnectElt2
 from Vector import Vector
 
@@ -187,9 +186,10 @@ right_quarter_up1 = chip.draw_quarter_circle(
     "right_quarter_up1", [0.735, 0.21 + 0.25], [1, 1], "TRACK", 1
 )
 
+import traceback
+
 #%%
 from PythonModeler import PythonMdlr
-import traceback
 
 PM = PythonMdlr("hfss")
 PM.set_variable("track", "42um")
@@ -204,9 +204,9 @@ except Exception:
 
 #%%
 
-from PythonModeler import PythonMdlr, Port
 import traceback
 
+from PythonModeler import Port, PythonMdlr
 # from ConnectElement2 import ConnectElt2
 from Vector import Vector
 
@@ -246,8 +246,9 @@ chip.draw_ZR_transmon(
 
 #%%
 
-import PythonModeler
 import traceback
+
+import PythonModeler
 
 PM = PythonModeler.PythonMdlr("hfss")
 PM.set_variable("track", "42um")
@@ -304,8 +305,9 @@ network.draw_cable("cable", "portOut1", "portOut1_1")
 #%%
 
 
-from PythonModeler import PythonMdlr
 import traceback
+
+from PythonModeler import PythonMdlr
 
 PM = PythonMdlr("hfss")
 PM.set_variable("track", "42um")
@@ -336,9 +338,10 @@ CBL = network.draw_cable("cable", "port1", "port2")
 
 #%%
 
-import PythonModeler
 import traceback
+
 import hfss
+import PythonModeler
 
 # TODO refresh the dictionnaries each time we run the code
 # otherwise the number of variables doesnot change
@@ -380,9 +383,10 @@ hfss.ModelEntity.reset()
 
 #%%
 
-import PythonModeler
 import traceback
+
 import hfss
+import PythonModeler
 
 # 4 Reset the dictionnaries (at the end or at the begining ?)
 PythonModeler.Port.reset()
