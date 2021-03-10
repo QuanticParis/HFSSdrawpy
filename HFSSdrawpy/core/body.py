@@ -330,14 +330,24 @@ class Body(Modeler):
             return Entity(3, self, **kwargs)
 
     @set_body
-    def text(self, pos, size, text, name="text_0", **kwargs):
-        pos, size = parse_entry(pos, size)
-        name = check_name(Entity, name)
-        kwargs["name"] = name
+    def text(self, pos, size, text, angle=0, horizontal=True, name="text_0", **kwargs):
+        """
+        Place text in GDS layout.
+
+        size (number) – Height of the character. The width of a character and the distance between characters are
+            this value multiplied by 5 / 9 and 8 / 9, respectively. For vertical text, the distance is multiplied by 11 / 9.
+        text (string) – The text to be converted in geometric objects.
+        angle (number) – The angle of rotation of the text.
+        horizontal (bool) – If True, the text is written from left to right; if False, from top to bottom.
+        name (string) – The GDSII layer number for these elements.
+        """
         if self.mode == "gds":
+            pos, size = parse_entry(pos, size)
+            name = check_name(Entity, name)
+            kwargs["name"] = name
             pos = val(pos)
             size = val(size)
-            self.interface.text(pos, size, text, **kwargs)
+            self.interface.text(pos, size, text, angle, horizontal, **kwargs)
             return Entity(2, self, **kwargs)
         else:
             pass

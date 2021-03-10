@@ -116,12 +116,12 @@ class GdsModeler:
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
 
-    def text(self, pos, size, text, **kwargs):
+    def text(self, pos, size, text, angle, horizontal, **kwargs):
         pos, size = parse_entry(pos, size)
         name = kwargs["name"]
         layer = kwargs["layer"]
 
-        poly1 = gdspy.Text(text, size, pos, layer=layer)
+        poly1 = gdspy.Text(text, size, pos, horizontal=horizontal, angle=angle, layer=layer)
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
