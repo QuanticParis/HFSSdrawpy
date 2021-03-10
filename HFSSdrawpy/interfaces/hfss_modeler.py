@@ -2126,6 +2126,24 @@ class HfssModeler(COMWrapper):
         )
         return entities.pop(0)
 
+    def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
+        if not isinstance(entities, list):
+            entities = [entities]
+        entity_names = [entity.name for entity in entities]
+        self._boundaries.AssignImpedance(
+            [
+                "NAME:" + name,
+                "Objects:=",
+                entity_names,
+                "Resistance:=",
+                str(ResistanceSq),
+                "Reactance:=",
+                str(ReactanceSq),
+                "InfGroundPlane:=",
+                False,
+            ]
+        )
+
 
 # class ModelEntity():
 #     instances_layered = {}
