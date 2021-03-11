@@ -611,12 +611,18 @@ class Body(Modeler):
 
         if self.is_mask:
             for port_ in ports:
-                port_.widths.append(port_.widths[-1] + 2 * self.gap_mask)
-                port_.offsets.append(0.0)
-                port_.N += 1
-                if port_.subnames[-1] != "mask":
-                    port_.layers.append(MASK)
-                    port_.subnames.append("mask")
+                if port_.constraint_port:
+                    pass
+                else:
+                    port_.widths.append(port_.widths[-1] + 2 * self.gap_mask)
+                    port_.offsets.append(0.0)
+                    port_.N += 1
+                    # this double if condition at this stage is super weird
+                    # but it works fine...
+                    if port_.subnames[-1] != "mask":
+                        port_.subnames.append("mask")
+                    if port_.layers[-1] != MASK:
+                        port_.layers.append(MASK)
 
         do_not_beyong = [port.name for port in ports if port.body != self]
         if do_not_beyong:

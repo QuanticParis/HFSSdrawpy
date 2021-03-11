@@ -4,7 +4,7 @@ import numpy as np
 from ..core.entity import gen_name
 from ..utils import Vector, parse_entry, val
 
-TOLERANCE = 1e-8  # for arcs
+TOLERANCE = 1e-9 # for arcs
 print("gdspy_version : ", gdspy.__version__)
 
 
