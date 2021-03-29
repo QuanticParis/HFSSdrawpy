@@ -222,7 +222,7 @@ class Body(Modeler):
         kwargs['name'] = name
         self.interface.cylinder(pos, radius, height, axis, **kwargs)
         return Entity(3, self, **kwargs)
-    
+
     @set_body
     def cone(self, pos, radius1,radius2, height, axis, name='cone', **kwargs):
         pos, radius1, radius2, height = parse_entry(pos, radius1, radius2, height)
@@ -238,7 +238,7 @@ class Body(Modeler):
         kwargs['name'] = name
         self.interface.sphere(pos, radius, **kwargs)
         return Entity(3, self, **kwargs)
-    
+
     @set_body
     def torus(self, pos, majorradius, minorradius, axis, name='torus', **kwargs):
         pos, majorradius, minorradius = parse_entry(pos, majorradius, minorradius)
@@ -557,12 +557,13 @@ class Body(Modeler):
 
         if self.is_mask:
             for port_ in ports:
-                port_.widths.append(port_.widths[-1] + 2*self.gap_mask)
-                port_.offsets.append(0.0)
-                port_.N += 1
-                if port_.subnames[-1] != 'mask':
-                    port_.layers.append(MASK)
-                    port_.subnames.append('mask')
+                if not port_.constraint_port:
+                    port_.widths.append(port_.widths[-2] + 2*self.gap_mask)
+                    port_.offsets.append(0.0)
+                    port_.N += 1
+                    if port_.subnames[-1] != 'mask':
+                        port_.layers.append(MASK)
+                        port_.subnames.append('mask')
 
         do_not_beyong = [port.name for port in ports if port.body != self]
         if do_not_beyong:
