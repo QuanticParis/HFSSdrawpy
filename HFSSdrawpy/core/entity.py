@@ -77,14 +77,16 @@ class Entity:
         if self.body.entities_to_move is not None:
             general_remove(self, self.body.entities_to_move)
 
-    def copy(self, new_name=None):
+    def copy(self, new_name=None, new_layer=None):
         generated_name = gen_name(self.name)
         self.body.interface.copy(self)
+        if new_layer is None:
+            new_layer = self.layer
         copied = Entity(
             self.dimension,
             self.body,
             nonmodel=self.nonmodel,
-            layer=self.layer,
+            layer=new_layer,
             copy=self,
             name=generated_name,
         )
