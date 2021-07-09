@@ -294,8 +294,10 @@ class Body(Modeler):
     @set_body
     #####draw arrays of rectangles with dimension (colums x row) with spacing given by a list [x_spacing,y_spacing]
     def rect_array(self, pos, size, columns, rows, spacing, name="rect_array_0", **kwargs):
+
+        pos, size, spacing = parse_entry(pos, size, spacing)
+
         if self.mode == "gds":
-            pos, size, spacing = parse_entry(pos, size, spacing)
             name = check_name(Entity, name)
             kwargs["name"] = name
             pos = val(pos)
@@ -304,7 +306,13 @@ class Body(Modeler):
             self.interface.rect_array(pos, size, columns, rows, spacing, **kwargs)
             return Entity(2, self, **kwargs)
         else:
-            pass
+            columns, rows = parse_entry(columns, rows)
+            rect = self.rect(pos, size, name, **kwargs)
+            self.duplicate_along_line(
+                rect, [0, spacing[1], 0], n=rows)
+            self.duplicate_along_line(
+                rect, [spacing[0], 0, 0], n=columns)
+            return rect
 
     @set_body
     def rect_center(self, pos, size, name="rect_0", **kwargs):
@@ -411,6 +419,18 @@ class Body(Modeler):
             path_entity.delete()
 
         return model_entities
+    
+    @set_body
+    def duplicate_along_line(self, entity, vec, n=2, new_obj=False, duplicate_assign=False, **kwargs):
+
+        if(self.mode=='hfss'):
+            vec, n = parse_entry(vec, n)
+            self.interface.duplicate_along_line(
+                entity, vec, n=n, new_obj=new_obj, duplicate_assign=duplicate_assign
+            )
+            return entity
+        else:
+            pass
 
     ### Advanced methods
 

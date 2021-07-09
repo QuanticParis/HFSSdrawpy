@@ -1465,8 +1465,8 @@ class HfssModeler(COMWrapper):
         entity_to_sweep.dimension += 1
         return entity_to_sweep.name
 
-    def duplicate_along_line(self, entity, vec, n=2):
-        self._modeler.DuplicateAlongLine(
+    def duplicate_along_line(self, entity, vec, n=2, new_obj=True, duplicate_assign = False):
+        name = self._modeler.DuplicateAlongLine(
             [
                 "NAME:Selections",
                 "Selections:=",
@@ -1477,7 +1477,7 @@ class HfssModeler(COMWrapper):
             [
                 "NAME:DuplicateToAlongLineParameters",
                 "CreateNewObjects:=",
-                True,
+                new_obj,
                 "XComponent:=",
                 str(vec[0]),
                 "YComponent:=",
@@ -1487,9 +1487,11 @@ class HfssModeler(COMWrapper):
                 "NumClones:=",
                 str(n),
             ],
-            ["NAME:Options", "DuplicateAssignments:=", False],
+            ["NAME:Options", "DuplicateAssignments:=", duplicate_assign],
             ["CreateGroupsForNewObjects:=", False],
         )
+
+        return name
 
     def intersect(self, entities, keep_originals=False):
         names = []
