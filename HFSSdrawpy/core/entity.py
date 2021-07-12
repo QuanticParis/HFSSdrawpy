@@ -102,6 +102,7 @@ class Entity:
 
     def thicken_sheet(self, thickness, bothsides=False):
         self.body.interface.thicken_sheet(self, thickness, bothsides=False)
+        self.dimension = 3
 
     def assign_perfect_E(self, suffix="perfE"):
         self.body.interface.assign_perfect_E(self, self.name + "_" + suffix)
