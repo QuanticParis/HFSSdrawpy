@@ -573,7 +573,8 @@ class Body(Modeler):
         slope=0.5,
         name="cable_0",
         mesh_size=None,
-        slanted=False
+        slanted=False, 
+        is_mask=None,
     ):
         """
 
@@ -628,21 +629,26 @@ class Body(Modeler):
             meander_offset = [meander_offset] * len(to_meander)
 
         ports = list(ports)
+        
+        if is_mask is None:
+            is_mask = self.pm.is_mask
 
-        if self.is_mask:
+        if is_mask:
             for port_ in ports:
-                if port_.constraint_port:
-                    pass
-                else:
-                    port_.widths.append(port_.widths[-1] + 2 * self.gap_mask)
-                    port_.offsets.append(0.0)
-                    port_.N += 1
-                    # this double if condition at this stage is super weird
-                    # but it works fine...
-                    if port_.subnames[-1] != "mask":
-                        port_.subnames.append("mask")
-                    if port_.layers[-1] != MASK:
-                        port_.layers.append(MASK)
+                if not port_.constraint_port:
+                    port_.mask(layer=MASK, gap_mask=self.gap_mask)
+                # if port_.constraint_port:
+                #     pass
+                # else:
+                #     port_.widths.append(port_.widths[-1] + 2 * self.gap_mask) # should be maximal size of the port
+                #     port_.offsets.append(0.0)
+                #     port_.N += 1
+                #     # this double if condition at this stage is super weird
+                #     # but it works fine...
+                #     if port_.subnames[-1] != "mask":
+                #         port_.subnames.append("mask")
+                #     if port_.layers[-1] != MASK:
+                #         port_.layers.append(MASK)
 
         do_not_beyong = [port.name for port in ports if port.body != self]
         if do_not_beyong:
