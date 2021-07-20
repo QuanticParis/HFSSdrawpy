@@ -313,6 +313,40 @@ class Port:
                           reversed_offsets, self.constraint_port, key=self)
 
         return subports
+    
+    def mask(self, layer, gap_mask):
+        """
+        Creates the mask sub_port by taking the outer most dimensions
+
+        Returns
+        -------
+        None.
+
+        """
+        # self.is_mask=True # TODO add a property to the port to tell 
+        # if mask has been applied or not
+        outter_top_exp = self.widths[0]/2+self.offsets[0]
+        outter_bot_exp = -self.widths[0]/2+self.offsets[0]
+
+        top_exp = outter_top_exp
+        top = val(top_exp)
+        bot_exp = outter_bot_exp
+        bot = val(bot_exp)
+        for ii in range(1, self.N):
+            top_exp = self.widths[ii]/2+self.offsets[ii]
+            bot_exp = -self.widths[ii]/2+self.offsets[ii]
+            
+            if val(top_exp)>top:
+                outter_top_exp = top_exp
+                
+            if val(bot_exp)<bot:
+                outter_bot_exp = bot_exp
+        
+        self.widths.append(outter_top_exp-outter_bot_exp+2*gap_mask)
+        self.offsets.append((outter_top_exp+outter_bot_exp)/2)
+        self.layers.append(layer)
+        self.subnames.append('mask')
+        self.N +=1
 
 
 
