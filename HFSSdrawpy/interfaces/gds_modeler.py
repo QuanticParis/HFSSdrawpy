@@ -61,7 +61,6 @@ class GdsModeler:
                 self.gds_object_instances[instance] = obj.fracture(
                     max_points=max_points, precision=1e-9
                 )
-
         for cell_name in self.gds_cells.keys():
             filename = file + "_%s.gds" % cell_name
             gdspy.write_gds(filename, cells=[cell_name], unit=1.0, precision=1e-9)
@@ -317,6 +316,9 @@ class GdsModeler:
         pass
 
     def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
+        pass
+    
+    def assign_lumped_port(self, entity, start, end, name="RLC"):
         pass
 
     def assign_waveport(self, *args, **kwargs):

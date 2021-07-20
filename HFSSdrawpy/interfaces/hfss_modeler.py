@@ -1713,6 +1713,49 @@ class HfssModeler(COMWrapper):
             str(c),
         ]
         self._boundaries.AssignLumpedRLC(params)
+        
+    def assign_lumped_port(self, entity, start, end, name="RLC"):
+        # parsing start and end is very peculiar for this function
+        # hfss style
+        start, end = parse_entry(start, end)
+        start, end = val(start, end)
+        start = [str(elt * 1000) + "mm" for elt in start]
+        end = [str(elt * 1000) + "mm" for elt in end]
+        params = ["NAME:" + entity.name + "_" + name, "Objects:="]
+        params.append([entity.name])
+        params.append(["NAME:CurrentLine", "Start:=", start, "End:=", end])
+        params += [
+            "RenormalizeAllTerminals:=",
+            True,
+            "DoDeembed:=",
+            False,
+            [
+                "NAME:Modes",
+                [
+                    "NAME:Mode1",
+                    "ModeNum:=",
+                    1,
+                    "UseIntLine:=",
+                    True,
+                    ["NAME:IntLine", "Start:=", start, "End:=", end],
+                    "CharImp:=",
+                    "Zpi",
+                    "AlignmentGroup:=",
+                    0,
+                    "RenormImp:=",
+                    "50ohm",
+                ],
+            ],
+            "ShowReporterFilter:=",
+            False,
+            "ReporterFilter:=",
+            [True],
+            "FullResistance:=",
+            "50ohm",
+            "FullReactance:=",
+            "0ohm",
+        ]
+        self._boundaries.AssignLumpedPort(params)
 
     def create_object_from_face(self, entity):
         faces = list(self._modeler.GetFaceIDs(entity.name))
