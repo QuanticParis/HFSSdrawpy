@@ -413,8 +413,8 @@ class GdsModeler:
 
         self.gds_object_instances[name] = poly1
 
-        cell_to_copy = gdspy.Cell("cell_to_copy")
-        self.gds_cells["cell_to_copy"] = cell_to_copy
+        cell_to_copy = gdspy.Cell("cell_to_copy_"+name)
+        self.gds_cells["cell_to_copy_"+name] = cell_to_copy
         cell_to_copy.add(poly1)
 
         spacing = parse_entry(spacing)
