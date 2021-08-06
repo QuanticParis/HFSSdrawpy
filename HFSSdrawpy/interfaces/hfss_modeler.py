@@ -1374,7 +1374,7 @@ class HfssModeler(COMWrapper):
         assert axis in "XYZ"
         radius =  parse_entry(radius)
         # create ellips
-        if len(radius) > 1:
+        if isinstance(radius, list):
             ratio = (radius[1])/(radius[0])
         else:
             ratio = 1
