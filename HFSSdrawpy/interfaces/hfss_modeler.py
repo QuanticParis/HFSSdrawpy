@@ -1376,6 +1376,7 @@ class HfssModeler(COMWrapper):
         # create ellips
         if isinstance(radius, list):
             ratio = (radius[1])/(radius[0])
+            radius = radius[0]
         else:
             ratio = 1
         name = self._modeler.CreateEllipse(
@@ -1388,7 +1389,7 @@ class HfssModeler(COMWrapper):
                 "ZCenter:=",
                 str(pos[2]),
                 "MajRadius:=",
-                str(radius[0]),
+                str(radius),
                 "Ratio:=",
                 str(ratio),
                 "WhichAxis:=",
