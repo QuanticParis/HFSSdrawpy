@@ -1372,6 +1372,12 @@ class HfssModeler(COMWrapper):
     @assert_name
     def disk(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
+        radius =  parse_entry(radius)
+        # create ellips
+        if len(radius) > 1:
+            ratio = (radius[1])/(radius[0])
+        else:
+            ratio = 1
         name = self._modeler.CreateEllipse(
             [
                 "NAME:EllipsdeParameters",
@@ -1382,9 +1388,9 @@ class HfssModeler(COMWrapper):
                 "ZCenter:=",
                 str(pos[2]),
                 "MajRadius:=",
-                str(radius),
+                str(radius[0]),
                 "Ratio:=",
-                1,
+                str(ratio),
                 "WhichAxis:=",
                 axis,
             ],
