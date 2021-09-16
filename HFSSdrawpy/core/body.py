@@ -102,7 +102,7 @@ class Body(Modeler):
 
         pm.bodies.append(self)
 
-    def __call__(self, pos, ori):
+    def __call__(self, pos, ori=[1, 0]):
         pos, ori = parse_entry(pos, ori)
         if len(pos) == 2:
             pos.append(0)

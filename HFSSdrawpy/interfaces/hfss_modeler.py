@@ -2091,6 +2091,9 @@ class HfssModeler(COMWrapper):
             ]
         )
         return new_name
+    
+    def relayer(self, entity, name):
+        pass
 
     def set_units(self, units="m"):
         self._modeler.SetModelUnits(["NAME:Units Parameter", "Units:=", units, "Rescale:=", False])

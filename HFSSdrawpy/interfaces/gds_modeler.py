@@ -53,6 +53,10 @@ class GdsModeler:
     def rename(self, entity, name):
         obj = self.gds_object_instances.pop(entity.name)
         self.gds_object_instances[name] = obj
+        
+    def relayer(self, entity, layer):
+        obj = self.gds_object_instances[entity.name]
+        obj.layers = [layer] * len(obj.polygons)
 
     def generate_gds(self, file, max_points):
         for instance in self.gds_object_instances.keys():

@@ -92,6 +92,8 @@ class Entity:
         )
         if new_name is not None:
             copied.rename(new_name)
+        if new_layer is not None:
+            copied.relayer(new_layer)
         return copied
 
     def rename(self, new_name):
@@ -99,6 +101,10 @@ class Entity:
         self.dict_instances[new_name] = self
         self.body.interface.rename(self, new_name)
         self.name = new_name
+    
+    def relayer(self, new_layer):
+        self.body.interface.relayer(self, new_layer)
+        self.layer = new_layer
 
     def thicken_sheet(self, thickness, bothsides=False):
         self.body.interface.thicken_sheet(self, thickness, bothsides=False)
