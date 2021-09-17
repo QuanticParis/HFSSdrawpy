@@ -841,3 +841,10 @@ class Body(Modeler):
                 bond_number += 1
                 pos = pos + ori * spacing
             jj += 1
+    
+    def delete_layer(self, layer):
+        if layer in self.entities.keys():
+            entity_list = self.entities[layer]
+            for ii in range(len(self.entities[layer])):
+                entity_list[0].delete()
+            self.entities.pop(layer)
