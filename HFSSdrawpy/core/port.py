@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 from ..utils import Vector, check_name, find_last_list, parse_entry, val
-
+from ..parameters import MASK
 
 class Port:
     dict_instances = {}
@@ -44,7 +44,11 @@ class Port:
 
         if self.body.ports_to_move is not None:
             find_last_list(self.body.ports_to_move).append(self)
+        
+            
         if key == "name":  # normal initialisation
+            if self.body.is_mask and not self.constraint_port:
+                self.mask(MASK, self.body.gap_mask)
             self.dict_instances[name] = self
 
             # create a reversed version of the port that can be called by either
@@ -178,18 +182,18 @@ class Port:
             key=None,
         )
 
-    def revert(self):
-        if self.save is not None:
-            self.pos = self.save["pos"]
-            self.widths = self.save["widths"]
-            self.offsets = self.save["offsets"]
+    # def revert(self):
+    #     if self.save is not None:
+    #         self.pos = self.save["pos"]
+    #         self.widths = self.save["widths"]
+    #         self.offsets = self.save["offsets"]
 
-            self.r.pos = self.save["pos"]
-            self.r.widths = self.save["widths"]
-        reversed_offsets = []
-        for ii in range(self.N):
-            reversed_offsets.append(-self.offsets[ii])
-        self.r.offsets = reversed_offsets
+    #         self.r.pos = self.save["pos"]
+    #         self.r.widths = self.save["widths"]
+    #     reversed_offsets = []
+    #     for ii in range(self.N):
+    #         reversed_offsets.append(-self.offsets[ii])
+    #     self.r.offsets = reversed_offsets
 
     def bond_params(self):
         y_max = -np.infty
@@ -313,7 +317,36 @@ class Port:
                           reversed_offsets, self.constraint_port, key=self)
 
         return subports
+    
+    def mask(self, layer, gap_mask):
+        """
+        Creates the mask sub_port by taking the outer most dimensions
 
+        Returns
+        -------
+        None.
 
+        """
+        outter_top_exp = self.widths[0]/2+self.offsets[0]
+        outter_bot_exp = -self.widths[0]/2+self.offsets[0]
 
+        top_exp = outter_top_exp
+        top = val(top_exp)
+        bot_exp = outter_bot_exp
+        bot = val(bot_exp)
+        for ii in range(1, self.N):
+            top_exp = self.widths[ii]/2+self.offsets[ii]
+            bot_exp = -self.widths[ii]/2+self.offsets[ii]
+            
+            if val(top_exp)>top:
+                outter_top_exp = top_exp
+                
+            if val(bot_exp)<bot:
+                outter_bot_exp = bot_exp
+        
+        self.widths.append(outter_top_exp-outter_bot_exp+2*gap_mask)
+        self.offsets.append((outter_top_exp+outter_bot_exp)/2)
+        self.layers.append(layer)
+        self.subnames.append('mask')
+        self.N +=1
 

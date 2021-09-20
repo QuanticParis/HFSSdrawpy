@@ -53,6 +53,10 @@ class GdsModeler:
     def rename(self, entity, name):
         obj = self.gds_object_instances.pop(entity.name)
         self.gds_object_instances[name] = obj
+        
+    def relayer(self, entity, layer):
+        obj = self.gds_object_instances[entity.name]
+        obj.layers = [layer] * len(obj.polygons)
 
     def generate_gds(self, file, max_points):
         for instance in self.gds_object_instances.keys():
@@ -61,7 +65,18 @@ class GdsModeler:
                 self.gds_object_instances[instance] = obj.fracture(
                     max_points=max_points, precision=1e-9
                 )
+        for cell_name in self.gds_cells.keys():
+            filename = file + "_%s.gds" % cell_name
+            gdspy.write_gds(filename, cells=[cell_name], unit=1.0, precision=1e-9)
 
+    def import_gds(self, file):
+        lib.read_gds(file)
+        for instance in self.gds_object_instances.keys():
+            obj = self.gds_object_instances[instance]
+            if isinstance(obj, gdspy.Polygon) or isinstance(obj, gdspy.PolygonSet):
+                self.gds_object_instances[instance] = obj.fracture(
+                    max_points=max_points, precision=1e-9
+                )
         for cell_name in self.gds_cells.keys():
             filename = file + "_%s.gds" % cell_name
             gdspy.write_gds(filename, cells=[cell_name], unit=1.0, precision=1e-9)
@@ -115,6 +130,7 @@ class GdsModeler:
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
+        return poly1
 
     def text(self, pos, size, text, angle, horizontal, **kwargs):
         pos, size = parse_entry(pos, size)
@@ -318,6 +334,9 @@ class GdsModeler:
 
     def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
         pass
+    
+    def assign_lumped_port(self, entity, start, end, name="RLC"):
+        pass
 
     def assign_waveport(self, *args, **kwargs):
         pass
@@ -400,28 +419,22 @@ class GdsModeler:
             gds_entity.rotate(angle / 360 * 2 * np.pi, center=(val(center[0]), val(center[1])))
 
     def rect_array(self, pos, size, columns, rows, spacing, origin=(0, 0), **kwargs):
-        pos, size = parse_entry(pos, size)
+        '''
+        This is a raw function. Better use ab_elt.rect_array
+        '''
+        pos, size, spacing = parse_entry(Vector(pos), Vector(size), spacing)
         name = kwargs["name"]
         layer = kwargs["layer"]
-        points = [
-            (pos[0], pos[1]),
-            (pos[0] + size[0], pos[1] + 0),
-            (pos[0] + size[0], pos[1] + size[1]),
-            (pos[0], pos[1] + size[1]),
-        ]
-        poly1 = gdspy.Polygon(points, layer)
 
-        self.gds_object_instances[name] = poly1
+        rect1 = self.rect(pos-size/2, size, **kwargs)
 
-        cell_to_copy = gdspy.Cell("cell_to_copy_"+name)
-        self.gds_cells["cell_to_copy_"+name] = cell_to_copy
-        cell_to_copy.add(poly1)
-
-        spacing = parse_entry(spacing)
+        cell_to_copy = gdspy.Cell("cell_to_copy")
+        # self.gds_cells["cell_to_copy"] = cell_to_copy
+        # commenting the previous line allow to ignore the cell at gds generation
+        cell_to_copy.add(rect1)
 
         cell_array = gdspy.CellArray(cell_to_copy, columns, rows, spacing, origin)
         polygon_list = cell_array.get_polygons()
-        poly2 = gdspy.PolygonSet(polygon_list, layer)
-        self.cell.add(poly2)
-
-        self.gds_object_instances[name] = poly2
+        _rect_array = gdspy.PolygonSet(polygon_list, layer)
+        self.cell.add(_rect_array)
+        self.gds_object_instances[name] = _rect_array

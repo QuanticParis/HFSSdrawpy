@@ -80,8 +80,8 @@ class Entity:
     def copy(self, new_name=None, new_layer=None):
         generated_name = gen_name(self.name)
         self.body.interface.copy(self)
-        if new_layer is None:
-            new_layer = self.layer
+        if new_layer is None: 
+            new_layer = self.layer # does not work in .gds yet
         copied = Entity(
             self.dimension,
             self.body,
@@ -92,6 +92,8 @@ class Entity:
         )
         if new_name is not None:
             copied.rename(new_name)
+        if new_layer is not None:
+            copied.relayer(new_layer)
         return copied
 
     def rename(self, new_name):
@@ -99,6 +101,10 @@ class Entity:
         self.dict_instances[new_name] = self
         self.body.interface.rename(self, new_name)
         self.name = new_name
+    
+    def relayer(self, new_layer):
+        self.body.interface.relayer(self, new_layer)
+        self.layer = new_layer
 
     def thicken_sheet(self, thickness, bothsides=False):
         self.body.interface.thicken_sheet(self, thickness, bothsides=False)
@@ -166,6 +172,7 @@ class Entity:
             if x <= min_x:
                 min_x = x
                 result_index = index
+        index = result_index
         next_index = (index + 1) % len(vertices)
         prev_index = (index - 1) % len(vertices)
         dx_p = vertices[prev_index][0] - vertices[index][0]
@@ -366,6 +373,52 @@ class Entity:
         r, l, c = rlc
 
         self.body.interface.assign_lumped_rlc(self, r, l, c, point_0, point_1, name="RLC")
+
+    def assign_lumped_port(self, points):
+
+        points = parse_entry(points)
+        given_point_0, given_point_1 = Vector(points[0]), Vector(points[1])
+
+        # move the points coordinate in the global coordinate system
+
+        point_0 = given_point_0
+        point_1 = given_point_1
+
+        pm = self.body.pm
+        current_body = self.body
+
+        while True:
+
+            origin = Vector(current_body.rel_coor[0])
+            new_x = Vector(current_body.rel_coor[1])
+            new_y = Vector(current_body.rel_coor[2])
+            new_z = new_x.cross(new_y)
+
+            change_matrix = np.array([new_x, new_y, new_z])
+
+            point_0 = origin + np.dot(point_0, change_matrix)
+            point_1 = origin + np.dot(point_1, change_matrix)
+
+            if current_body.ref_name == "Global":
+                break
+
+            for body in pm.bodies:
+
+                if body.name == current_body.ref_name:
+                    current_body = body
+                    break
+
+        # origin = Vector(current_body.rel_coor[0])
+        # new_x = Vector(current_body.rel_coor[1])
+        # new_y = Vector(current_body.rel_coor[2])
+        # new_z = new_x.cross(new_y)
+
+        # change_matrix = np.array([new_x.as_nda(), new_y.as_nda(), new_z.as_nda()])
+
+        # point_0 = origin + np.dot(point_0.as_nda(), change_matrix)
+        # point_1 = origin + np.dot(point_1.as_nda(), change_matrix)
+
+        self.body.interface.assign_lumped_port(self, point_0, point_1, name="lumped_port")
 
     def mirrorZ(self):
         raise NotImplementedError()
