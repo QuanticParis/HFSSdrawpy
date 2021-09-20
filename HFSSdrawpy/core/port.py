@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 from ..utils import Vector, check_name, find_last_list, parse_entry, val
-
+from ..parameters import MASK
 
 class Port:
     dict_instances = {}
@@ -44,7 +44,11 @@ class Port:
 
         if self.body.ports_to_move is not None:
             find_last_list(self.body.ports_to_move).append(self)
+        
+            
         if key == "name":  # normal initialisation
+            if self.body.is_mask and not self.constraint_port:
+                self.mask(MASK, self.body.gap_mask)
             self.dict_instances[name] = self
 
             # create a reversed version of the port that can be called by either
@@ -178,18 +182,18 @@ class Port:
             key=None,
         )
 
-    def revert(self):
-        if self.save is not None:
-            self.pos = self.save["pos"]
-            self.widths = self.save["widths"]
-            self.offsets = self.save["offsets"]
+    # def revert(self):
+    #     if self.save is not None:
+    #         self.pos = self.save["pos"]
+    #         self.widths = self.save["widths"]
+    #         self.offsets = self.save["offsets"]
 
-            self.r.pos = self.save["pos"]
-            self.r.widths = self.save["widths"]
-        reversed_offsets = []
-        for ii in range(self.N):
-            reversed_offsets.append(-self.offsets[ii])
-        self.r.offsets = reversed_offsets
+    #         self.r.pos = self.save["pos"]
+    #         self.r.widths = self.save["widths"]
+    #     reversed_offsets = []
+    #     for ii in range(self.N):
+    #         reversed_offsets.append(-self.offsets[ii])
+    #     self.r.offsets = reversed_offsets
 
     def bond_params(self):
         y_max = -np.infty
@@ -323,8 +327,6 @@ class Port:
         None.
 
         """
-        # self.is_mask=True # TODO add a property to the port to tell 
-        # if mask has been applied or not
         outter_top_exp = self.widths[0]/2+self.offsets[0]
         outter_bot_exp = -self.widths[0]/2+self.offsets[0]
 
@@ -347,7 +349,4 @@ class Port:
         self.layers.append(layer)
         self.subnames.append('mask')
         self.N +=1
-
-
-
 

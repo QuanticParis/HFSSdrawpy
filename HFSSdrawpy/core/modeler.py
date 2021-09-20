@@ -26,9 +26,6 @@ class Modeler:
     """
 
     is_overdev = False
-    is_litho = False
-    is_mask = False
-    gap_mask = parse_entry("20um")
     overdev = parse_entry("0um")
 
     def __init__(self, mode):
@@ -55,6 +52,12 @@ class Modeler:
             self.interface = gds_modeler.GdsModeler()
         else:
             print("Mode should be either hfss or gds")
+            
+        # default init for mask values (used to subtract holes from
+        # critical areas)
+        self.is_mask = False
+        self.gap_mask = parse_entry("20um")
+        self.is_litho = False
 
         # The list of bodies pointing to the current Modeler
         self.bodies = []
@@ -89,6 +92,11 @@ class Modeler:
         file = os.path.join(folder, filename)
         if self.mode == "gds":
             self.interface.generate_gds(file, max_points)
+            
+    # def import_gds(self, folder, filename):
+    #     file = os.path.join(folder, filename)
+    #     if self.mode == "gds":
+    #         self.interface.import_gds(file)
 
     def make_material(self, material_params, name):
         raise NotImplementedError()

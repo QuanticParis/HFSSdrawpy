@@ -162,7 +162,7 @@ class Path(object):
             in_pos = Vector(port_in.pos)
             in_ori = Vector(port_in.ori)
             out_pos = Vector(port_out.pos)
-            out_ori = Vector(port_out.ori)
+            out_ori = -Vector(port_out.ori)
             room_bonding = 0 * 100e-6  # SMPD MANU BOND SPACE
 
             dist_y = (out_pos - in_pos).dot(in_ori.orth())
