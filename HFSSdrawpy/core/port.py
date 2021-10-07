@@ -98,6 +98,7 @@ class Port:
 
         adapt_dist = pm.set_variable(1e-5, name=self.name + "_adapt")
         max_diff = 0
+        need_adapt = False
         for ii in range(self.N):
             if self.layers[ii] != other.layers[ii]:
                 raise ValueError(
@@ -113,16 +114,17 @@ class Port:
             offset2 = -other.offsets[ii]
 
             if val(width1) != val(width2) or val(offset1) != val(offset2):
-
-                # need adaptor
-                points.append(
-                    [
-                        Vector(0, offset1 + width1 / 2).rot(self.ori) + self.pos,
-                        Vector(adapt_dist, offset2 + width2 / 2).rot(self.ori) + self.pos,
-                        Vector(adapt_dist, offset2 - width2 / 2).rot(self.ori) + self.pos,
-                        Vector(0, offset1 - width1 / 2).rot(self.ori) + self.pos,
-                    ]
-                )
+                # if we have one discrepancy, then we need the adaptor
+                need_adapt = True
+                
+            points.append(
+                [
+                    Vector(0, offset1 + width1 / 2).rot(self.ori) + self.pos,
+                    Vector(adapt_dist, offset2 + width2 / 2).rot(self.ori) + self.pos,
+                    Vector(adapt_dist, offset2 - width2 / 2).rot(self.ori) + self.pos,
+                    Vector(0, offset1 - width1 / 2).rot(self.ori) + self.pos,
+                ]
+            )
             max_diff = max(
                 max_diff,
                 abs(val(offset1 + width1 / 2 - (offset2 + width2 / 2))),
@@ -130,7 +132,7 @@ class Port:
             )
         adapt_dist = pm.set_variable(max_diff / slope, name=self.name + "_adapt")
 
-        if len(points) != 0:
+        if need_adapt:
             self.save = {
                 "pos": self.pos,
                 "widths": self.widths,
@@ -148,7 +150,9 @@ class Port:
             self.r.pos = self.pos
             self.r.widths = self.widths
             self.r.offsets = other.offsets
-        return points, 2 * max_diff
+            return points, 2 * max_diff
+        else:
+            return [],0
 
     def val(self):
         _widths = []
