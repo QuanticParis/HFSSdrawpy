@@ -428,7 +428,7 @@ class GdsModeler:
 
         rect1 = self.rect(pos-size/2, size, **kwargs)
 
-        cell_to_copy = gdspy.Cell("cell_to_copy")
+        cell_to_copy = gdspy.Cell(f'{name}_cell_to_copy')
         # self.gds_cells["cell_to_copy"] = cell_to_copy
         # commenting the previous line allow to ignore the cell at gds generation
         cell_to_copy.add(rect1)
