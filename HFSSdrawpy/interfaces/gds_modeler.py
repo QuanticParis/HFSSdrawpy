@@ -316,6 +316,35 @@ class GdsModeler:
                 self.gds_object_instances[blank_entity.name] = dummy
                 self.cell.add(dummy)
                 blank_entity.delete()
+                
+    def delete_inside(self, poly_set, mask, keep_originals=False):
+        '''
+        Test if the polygons within the poly_set are in the mask object.
+        If so, delete them.
+        Parameters
+        ----------
+        poly_set : Entity 
+            Typically a hole array.
+        mask : Entity
+        keep_originals : bool, optional
+            Shall we keep the mask element or not. The default is False.
+        '''
+        if isinstance(mask, list):
+            if len(mask)>1:
+                mask = mask[0].unite(mask[1:])
+            else:
+                mask = mask[0]
+        poly_set_gds = self.gds_object_instances[poly_set.name]
+        mask_gds = self.gds_object_instances[mask.name]
+        N = len(poly_set_gds.polygons)
+        for ii in range(len(poly_set_gds.polygons)):
+            points = poly_set_gds.polygons[N-1-ii]
+            condition = bool(sum(gdspy.inside(points, mask_gds, 
+                                              precision=TOLERANCE)))
+            if condition:
+                poly_set_gds.polygons.pop(N-1-ii)
+        if not keep_originals:
+            mask.delete()
 
     def assign_material(self, *args, **kwargs):
         pass

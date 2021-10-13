@@ -111,7 +111,7 @@ class Port:
 
             offset1 = self.offsets[ii]
 
-            offset2 = -other.offsets[ii]
+            offset2 = other.offsets[ii]
 
             if val(width1) != val(width2) or val(offset1) != val(offset2):
                 # if we have one discrepancy, then we need the adaptor

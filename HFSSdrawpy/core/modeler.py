@@ -187,6 +187,24 @@ class Modeler:
                 tools = tool_entities.copy()
                 for tool_entity in tools:
                     tool_entity.delete()
+    
+    def delete_inside(self, polygon_set, mask, keep_originals=False):
+        '''
+        Test if the polygons within the polygon_set are in the mask object.
+        If so, delete them.
+        
+        Not implemented in HFSS
+        Parameters
+        ----------
+        polygon_set : Entity 
+            Typically a hole array.
+        mask : Entity
+        keep_originals : bool, optional
+            Shall we keep the mask element or not. The default is False.
+        '''
+        # TODO handle the case when the polygon_set is fully deleted
+        # TODO handle the HFSS case by doing a substract
+        self.interface.delete_inside(polygon_set, mask, keep_originals=keep_originals)
 
     def rotate(self, entities, angle=0):
         if isinstance(angle, (list, np.ndarray)):

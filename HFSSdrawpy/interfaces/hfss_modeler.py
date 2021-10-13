@@ -2115,6 +2115,9 @@ class HfssModeler(COMWrapper):
         self._modeler.Subtract(
             selection_array, ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
         )
+        
+    def delete_inside(self, poly1, poly2, keep_originals=False):
+        pass
 
     def sweep_along_vector(self, entities, vector):
         names = [entity.name for entity in entities]
