@@ -381,7 +381,27 @@ class HfssDesign(COMWrapper):
         min_converged=1,
         pct_refinement=30,
         basis_order=-1,
+        portaccuracy = 2,
     ):
+        def set_freq(setup, freq_list, delta=max_delta_s):
+            settings = ["NAME:MultipleAdaptiveFreqsSetup"]
+            for i in freq_list:
+                settings.append([
+                        "NAME:AdaptAt",
+                        "Frequency:="		, "%sGHz"%i,
+                        "Delta:="		, delta
+                    ])
+            self._setup_module.EditSetup(setup, 
+            [
+                "NAME:"+setup,
+                "SolveType:="		, "MultiFrequency",
+                [
+                    settings
+                ]
+            ])
+
+        if not isinstance(freq_ghz, list):
+            freq_ghz = [freq_ghz]
 
         name = increment_name(name, self.get_setup_names())
         self._setup_module.InsertSetup(
@@ -389,7 +409,7 @@ class HfssDesign(COMWrapper):
             [
                 "NAME:" + name,
                 "Frequency:=",
-                str(freq_ghz) + "GHz",
+                str(freq_ghz[0]) + "GHz",
                 "MaxDeltaS:=",
                 max_delta_s,
                 "MaximumPasses:=",
@@ -404,8 +424,12 @@ class HfssDesign(COMWrapper):
                 True,
                 "BasisOrder:=",
                 basis_order,
+                "PortAccuracy:=", portaccuracy,
             ],
         )
+        
+        set_freq(name, freq_ghz, delta=max_delta_s)
+
         return HfssDMSetup(self, name)
 
     def create_em_setup(
