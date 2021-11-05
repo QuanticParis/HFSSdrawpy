@@ -18,15 +18,16 @@ class Entity:
     # each method of this class should act in return in HFSS/GDS when possible
     dict_instances = {}
 
-    def __init__(
-        self, dimension, body, nonmodel=False, layer=DEFAULT, copy=None, name="entity_0", **kwargs
-    ):
+    def __init__(self, dimension, body, nonmodel=False, layer=DEFAULT, 
+                 copy=None, name="entity_0", esc=False, **kwargs):
+        
         name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
         self.body = body
         self.nonmodel = nonmodel
         self.layer = layer
+        self.esc = esc
 
         Entity.dict_instances[name] = self
         if layer in self.body.entities.keys():

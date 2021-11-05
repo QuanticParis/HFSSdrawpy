@@ -512,7 +512,7 @@ class HfssDesign(COMWrapper):
     def set_variable(self, name, value, postprocessing=False):
         if name not in self._design.GetVariables() + self._design.GetPostProcessingVariables():
             self.create_variable(name, value, postprocessing=postprocessing)
-        else:
+        else:   
             self._design.SetVariableValue(name, value)
 
     def get_variable_value(self, name):
@@ -2046,7 +2046,7 @@ class HfssModeler(COMWrapper):
             # angle_center = coor2angle(center[0], center[1])
         if not isinstance(entities, list):
             entities = [entities]
-        names = [entity.name for entity in entities]
+        names = [entity.name for entity in entities if not entity.esc]
         self._modeler.Rotate(
             self._selections_array(*names),
             [

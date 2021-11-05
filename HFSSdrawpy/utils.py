@@ -10,12 +10,14 @@ LENGTH = "[length]"
 INDUCTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2"
 CAPACITANCE = "[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]"
 RESISTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3"
+FREQUENCY = "1 / [time]"
 DIMENSIONLESS = "dimensionless"
 
 LENGTH_UNIT = "meter"
 INDUCTANCE_UNIT = "nH"
-CAPACITANCE_UNIT = "fF"
+CAPACITANCE_UNIT = "nF"
 RESISTANCE_UNIT = "ohm"
+FREQUENCY_UNIT = "GHz"
 DIMENSIONLESS_UNIT = ""
 
 ### List handling
@@ -293,6 +295,8 @@ def store_variable(symbol, value):  # put value in SI
             unit = CAPACITANCE_UNIT
         if RESISTANCE == extract_value_dim(value):
             unit = RESISTANCE_UNIT
+        if FREQUENCY == extract_value_dim(value):
+            unit = FREQUENCY_UNIT
         if DIMENSIONLESS == extract_value_dim(value):
             unit = DIMENSIONLESS_UNIT
         value = extract_value_unit(value, unit)
