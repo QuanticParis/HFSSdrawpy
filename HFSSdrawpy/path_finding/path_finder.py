@@ -401,7 +401,7 @@ class Path(object):
                 left_p_start.append(B)
                 to_meander.pop(0)
         else:
-            print("Warning: Could not find points to elongate cable %s" % self.name)
+            #print("Warning: Could not find points to elongate cable %s" % self.name)
             left_p = left_p_start + left_p_end[::-1]
             return [], left_p, 0
 

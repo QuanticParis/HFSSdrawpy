@@ -121,7 +121,7 @@ class Entity:
         RenormValue="50ohm",
         DoDeembed=False,
         DeembedDist="0mm",
-        prefix="port",
+        prefix="port", start=None, stop=None
     ):
         self.body.interface.assign_waveport(
             self,
@@ -130,8 +130,7 @@ class Entity:
             DoRenorm,
             RenormValue,
             DoDeembed,
-            DeembedDist,
-        )
+            DeembedDist, start=start, stop=stop)
 
     def assign_terminal_auto(self, ground, prefix="port"):
         self.body.interface.assign_terminal_auto(self, prefix + "_" + self.name, ground)

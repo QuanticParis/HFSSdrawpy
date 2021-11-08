@@ -1610,7 +1610,8 @@ class HfssModeler(COMWrapper):
             ]
         )
 
-    def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, DoDeembed, DeembedDist):
+    def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, 
+                        DoDeembed, DeembedDist, start=None, stop=None):
         """Creates a Waveport at an arbitrary face
 
         name (str):  port name
@@ -1625,9 +1626,11 @@ class HfssModeler(COMWrapper):
         TODO:
         implement integration line
         """
-        UseIntLine = False
-        start = [0, 0, 0]
-        stop = [0, 0, 0]
+        UseIntLine = True
+        if start is None:
+            start = [0, 0, 0]
+        if stop is None:
+            stop = [0, 0, 0]
         DeembedDist = parse_entry(DeembedDist)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
@@ -1635,41 +1638,33 @@ class HfssModeler(COMWrapper):
         for n in range(Nmodes):
             inlinearray = [
                 "NAME:IntLine",
-                "Start:=",
-                start,
-                "End:=",
-                stop,
-                "CharImp:=",
-                "Zpi",
+                "Start:=", start,
+                "End:=", stop,
             ]
             modesarray.append(
                 [
                     "NAME:Mode" + str(n + 1),
-                    "ModeNum:=",
-                    n + 1,
-                    "UseIntLine:=",
-                    UseIntLine,
+                    "ModeNum:=", n + 1,
+                    "UseIntLine:=", UseIntLine,
                     inlinearray,
+                    "AlignmentGroup:="	, 0,
+				    "CharImp:="		, "Zpi",
+				    "RenormImp:="	, str(RenormValue)
                 ]
             )
+        # print(val(start), val(stop))
         self._boundaries.AssignWavePort(
             [
                 "NAME:" + name,
-                "Faces:=",
-                faces,
-                "NumModes:=",
-                Nmodes,
-                "DoDeembed:=",
-                DoDeembed,
-                "DeembedDist:=",
-                str(DeembedDist),
-                "DoRenorm:=",
-                DoRenorm,
-                "RenormValue:=",
-                RenormValue,
+                "Faces:=", faces,
+                "NumModes:=", Nmodes,
+                "DoDeembed:=", DoDeembed,
+                "DeembedDist:=", str(DeembedDist),
+                "RenormalizeAllTerminals:=", DoRenorm,
                 modesarray,
             ]
         )
+        
 
     def assign_terminal_auto(self, entity, name, ground):
         """auto-generates Terminals on a Waveport
