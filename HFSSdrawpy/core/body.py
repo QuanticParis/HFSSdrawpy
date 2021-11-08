@@ -327,6 +327,7 @@ class Body(Modeler):
     @set_body
     def wirebond(self, pos, ori, ymax, ymin, name="wb_0", **kwargs):
         pos, ymax, ymin = parse_entry(pos, ymax, ymin)
+        pos, ori = Vector(pos), Vector(ori)
         name = check_name(Entity, name)
         kwargs["name"] = name
         if self.mode == "gds":
@@ -816,7 +817,8 @@ class Body(Modeler):
             spacing = (B - A).norm() / n_bond
             pos = A + ori * spacing / 2
             for ii in range(n_bond):
-                self.wirebond(pos, ori, ymax, ymin, name=name + "_%d" % (bond_number))
+                self.wirebond(pos, ori, ymax, ymin, layer=PORT, 
+                              name=name + "_%d" % (bond_number))
                 bond_number += 1
                 pos = pos + ori * spacing
             jj += 1
