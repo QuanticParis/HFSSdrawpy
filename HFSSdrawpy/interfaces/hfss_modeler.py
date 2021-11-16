@@ -1619,18 +1619,18 @@ class HfssModeler(COMWrapper):
         DoDeembed(bool): deembed port
         DeembedDist(str): deembedding distance
 
+        TODO:
         !!! DOES NOT WORK
         DoRenorm (bool): renormalize port impedance
         RenormValue (str): port impedance
 
-        TODO:
-        implement integration line
         """
-        UseIntLine = True
         if start is None:
+            UseIntLine = False
             start = [0, 0, 0]
-        if stop is None:
             stop = [0, 0, 0]
+        else:
+            UseIntLine = True
         DeembedDist = parse_entry(DeembedDist)
         faces = list(self.get_face_ids(entity))
         faces = [int(ii) for ii in faces]
