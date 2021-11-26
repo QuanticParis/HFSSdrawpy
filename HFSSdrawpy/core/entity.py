@@ -418,7 +418,7 @@ class Entity:
         # point_0 = origin + np.dot(point_0.as_nda(), change_matrix)
         # point_1 = origin + np.dot(point_1.as_nda(), change_matrix)
 
-        self.body.interface.assign_lumped_port(self, point_0, point_1, name="lumped_port")
+        self.body.interface.assign_lumped_port(self, point_0, point_1, name="lumped_port_0")
 
     def mirrorZ(self):
         raise NotImplementedError()

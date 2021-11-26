@@ -1747,7 +1747,7 @@ class HfssModeler(COMWrapper):
             "RenormalizeAllTerminals:=",
             True,
             "DoDeembed:=",
-            False,
+            True,
             [
                 "NAME:Modes",
                 [
