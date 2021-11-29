@@ -539,8 +539,11 @@ class HfssDesign(COMWrapper):
 
     def _evaluate_variable_expression(self, expr, units):
         """
+
         :type expr: str
+
         :type units: str
+
         :return: float
         """
         try:
@@ -1869,14 +1872,16 @@ class HfssModeler(COMWrapper):
 
     def get_faces(self, entity):
         """
+        
         Only for boxes
-        Output :
-           x_back_face,
-           x_front_face,
-           y_back_face,
-           y_front_face,
-           z_back_face,
-           z_front_face
+
+        Output : x_back_face, \
+            x_front_face,\
+            y_back_face,\
+            y_front_face,\
+            z_back_face,\
+            z_front_face\
+
         """
         assert entity.dimension == 3, "This function is only callable for 3D objects"
         faces = self.get_face_ids(entity)

@@ -241,18 +241,22 @@ class Port:
 
     def split(self, splitnames=None, gap=None):
         """
+
         Creates CPW like ports out of the listed subports
-        If some subports are not split (splitnames argument is neither empty or
-        -1), all the remaining subports are grouped in a new port overwriting
-        the initial one
+
+        If some subports are not split (splitnames argument is neither empty or -1), \
+            all the remaining subports are grouped in a new port overwriting \
+            the initial one
 
         Parameters
         ----------
-        splitnames : list of str, must be part of eponymous instance attribute
-                     if empty, split all ports
-                     if -1 is passed, split all ports but last (last=cutout)
-        gap        : str, gap size for the output CPW ports
-                     if None, track size is used
+        splitnames : list of str, must be part of eponymous instance attribute \
+            if empty, split all ports \
+            if -1 is passed, split all ports but last (last=cutout)
+
+        gap        : str, gap size for the output CPW ports \
+            if None, track size is used
+            
         Returns
         -------
         subports : list of Port instances

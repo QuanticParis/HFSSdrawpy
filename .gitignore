@@ -6,7 +6,7 @@ __pycache__/
 *.egg-info/
 build/
 dist/
-doc/
+doc/build/html
 
 # IDE settings directory
 .idea/

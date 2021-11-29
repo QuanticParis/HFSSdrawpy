@@ -319,15 +319,20 @@ class GdsModeler:
                 
     def delete_inside(self, poly_set, mask, keep_originals=False):
         '''
-        Test if the polygons within the poly_set are in the mask object.
-        If so, delete them.
+        
+        Test if the polygons within the poly_set are in the mask object. \
+            If so, delete them.
+
         Parameters
         ----------
-        poly_set : Entity 
+        poly_set : Entity \
             Typically a hole array.
+
         mask : Entity
-        keep_originals : bool, optional
+
+        keep_originals : bool, optional \
             Shall we keep the mask element or not. The default is False.
+
         '''
         if isinstance(mask, list):
             if len(mask)>1:

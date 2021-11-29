@@ -1,9 +1,15 @@
-##################################################################
-# This file is ment to regroup the constant parameters of DrawPy #
-# so that they are not defined more than one time, and we avoid  #
-# circular inclusion at the same time.                           #
-##################################################################
+"""
 
+================================================================
+
+This file is ment to regroup the constant parameters of DrawPy \
+so that they are not defined more than one time, and we avoid\ 
+circular inclusion at the same time.                           
+
+================================================================
+
+
+"""
 
 # PARAMETERS FOR THE GDS OUTPUT AND FOR FILLETS
 eps = 1e-7

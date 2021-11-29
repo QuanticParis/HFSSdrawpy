@@ -182,18 +182,19 @@ class Body(Modeler):
 
     @set_body
     def box(self, pos, size, name="box_0", **kwargs):
-        """
-        Draws a 3D box based on the coordinates of its corner.
+        """Draws a 3D box based on the coordinates of its corner.
 
         Inputs:
-        -------
-        pos: [x,y,z] the coordinates of the corner of the rectangle in the euclidian basis.
-        size: [lx,ly,lz] the dimensions of the rectangle
 
-        **kwargs include layer and name
+        :param pos: [x,y,z] the coordinates of the corner of the rectangle in the euclidian basis.
+        :param size: [lx,ly,lz] the dimensions of the rectangle
+
+        :param kwargs: include layer and name
+
         Outputs:
-        -------
-        box: Corresponding 3D Model Entity
+
+        :param box: Corresponding 3D Model Entity
+
         """
         pos, size = parse_entry(pos, size)
         name = check_name(Entity, name)
@@ -203,18 +204,19 @@ class Body(Modeler):
 
     @set_body
     def box_center(self, pos, size, name="box_0", **kwargs):
-        """
-        Draws a 3D box based on the coordinates of its center.
+        """Draws a 3D box based on the coordinates of its center.
 
         Inputs:
-        -------
-        pos: [x,y,z] the coordinates of the center of the rectangle in the euclidian basis.
-        size: [lx,ly,lz] the dimensions of the rectangle
 
-        **kwargs include layer and name
+        :param pos: [x,y,z] the coordinates of the center of the rectangle in the euclidian basis.
+        :param size: [lx,ly,lz] the dimensions of the rectangle
+
+        :param kwargs: include layer and name
+
         Outputs:
-        -------
-        box: Corresponding 3D Model Entity
+
+        :param box: Corresponding 3D Model Entity
+
         """
         pos, size = parse_entry(pos, size)
         pos = [p - s / 2 for p, s in zip(pos, size)]
@@ -344,15 +346,19 @@ class Body(Modeler):
 
     @set_body
     def text(self, pos, size, text, angle=0, horizontal=True, name="text_0", **kwargs):
-        """
-        Place text in GDS layout.
+        """Place text in GDS layout.
 
-        size (number) – Height of the character. The width of a character and the distance between characters are
+        :param size: (number) – Height of the character. The width of a character and the distance between characters are
             this value multiplied by 5 / 9 and 8 / 9, respectively. For vertical text, the distance is multiplied by 11 / 9.
-        text (string) – The text to be converted in geometric objects.
-        angle (number) – The angle of rotation of the text.
-        horizontal (bool) – If True, the text is written from left to right; if False, from top to bottom.
-        name (string) – The GDSII layer number for these elements.
+
+        :param text: (string) – The text to be converted in geometric objects.
+
+        :param angle: (number) – The angle of rotation of the text.
+
+        :param horizontal: (bool) – If True, the text is written from left to right; if False, from top to bottom.
+
+        :param name: (string) – The GDSII layer number for these elements.
+
         """
         if self.mode == "gds":
             pos, size = parse_entry(pos, size)
@@ -587,7 +593,7 @@ class Body(Modeler):
         ----------
         name : TYPE
             DESCRIPTION.
-        *ports : TYPE
+        ports : TYPE
             DESCRIPTION.
         fillet : TYPE, optional
             DESCRIPTION. The default is "0.3mm".

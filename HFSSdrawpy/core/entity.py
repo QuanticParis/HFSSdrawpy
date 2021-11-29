@@ -431,17 +431,22 @@ class Entity:
 
     def subtract(self, tool_entities, keep_originals=False):
         """
-        tool_entities: a list of Entity or a Entity
-        keep_originals: Boolean, True : the tool entities still exist after
-                        boolean operation
+
+        tool_entities : a list of Entity or a Entity
+        keep_originals : Boolean, True : the tool entities still exist after boolean operation
+
         """
         return self.body.subtract([self], tool_entities, keep_originals=keep_originals)
 
     def unite(self, tool_entities, keep_originals=False, new_name=None):
         """
-        tool_entities: a list of Entity or a Entity
-        if new_name (str) is provided, the tool_entities + self are kept and
-        the union is named new_name
+
+        tool_entities : a list of Entity or a Entity
+
+        keep_originals : Boolean, True : the tool entities still exist after boolean operation
+
+        new_name : (str) is provided, the tool_entities + self are kept and the union is named new_name
+
         """
         return self.body.unite(
             tool_entities, main=self, keep_originals=keep_originals, new_name=new_name

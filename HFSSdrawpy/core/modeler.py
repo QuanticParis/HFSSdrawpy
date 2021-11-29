@@ -13,16 +13,18 @@ sympy.init_printing(use_latex=False)
 
 class Modeler:
     """
+
     Modeler which defines basic operations and methods to perform on Entity and on the chosen interface.
     To create a new interface, one needs to copy an existing one in a new file, and adapt all methods to the formalism of the new interface.
 
     The Modeler class is called at the beginning of a script but then it is the body that is always used.
     The syntax is the following:
-        # TODO
+    # TODO
 
     Inputs:
     -------
-    mode: string in "gds" or "hfss"
+    mode : string in "gds" or "hfss"
+
     """
 
     is_overdev = False
@@ -70,9 +72,11 @@ class Modeler:
 
     def set_variable(self, value, name=None):
         """
+
         name (str): name of the variable in HFSS e.g. 'chip_length'
         value (str, VarStr, float): value of the variable
-                                    if str will try to analyse the unit
+        if str will try to analyse the unit
+
         """
         if name is None:
             # this auto-parsing is clearly a hack and not robust
@@ -157,7 +161,7 @@ class Modeler:
         """
         tool_entities: a list of Entity or a Entity
         keep_originals: Boolean, True : the tool entities still exist after
-                        boolean operation
+        boolean operation
         """
         if not isinstance(blank_entities, list):
             blank_entities = [blank_entities]
@@ -197,10 +201,10 @@ class Modeler:
         Parameters
         ----------
         polygon_set : Entity 
-            Typically a hole array.
+        Typically a hole array.
         mask : Entity
         keep_originals : bool, optional
-            Shall we keep the mask element or not. The default is False.
+        Shall we keep the mask element or not. The default is False.
         '''
         # TODO handle the case when the polygon_set is fully deleted
         # TODO handle the HFSS case by doing a substract

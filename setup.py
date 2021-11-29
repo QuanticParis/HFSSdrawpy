@@ -23,6 +23,7 @@ setuptools.setup(
         "Pint>=0.10",
         "numpy",
         "sympy>=1.5.1",
+        "Sphinx"
         'gdspy>=1.5.2 ; platform_system!="Windows"',
         'pywin32>=227 ; platform_system=="Windows"',
     ],
