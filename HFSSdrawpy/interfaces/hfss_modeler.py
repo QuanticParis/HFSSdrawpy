@@ -335,6 +335,26 @@ class HfssDesign(COMWrapper):
         self.modeler = HfssModeler(self, self._modeler, self._boundaries, self._mesh)
         self.variables = {}
 
+    def set_SolutionType(self, solutiontype = None):
+        '''set the solution type of HFSS
+
+        Parameters
+        ----------
+        solutiontype : str
+            Soultion type - Possible values are: "DrivenModal", "DrivenTerminal",\
+                "Transient", "Transient Network",or "Eigenmode"
+
+        Returns
+        -------
+        str
+            solutiontype
+        
+        '''
+        self._design.SetSolutionType(solutiontype)
+        self.solution_type = self._design.GetSolutionType()
+
+        return self.solution_type
+
     def rename_design(self, name):
         old_name = self._design.GetName()
         self._design.RenameDesignInstance(old_name, name)
