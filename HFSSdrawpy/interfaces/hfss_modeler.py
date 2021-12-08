@@ -1571,6 +1571,52 @@ class HfssModeler(COMWrapper):
         self._boundaries.AssignPerfectE(
             ["NAME:" + name, "Objects:=", entity_names, "InfGroundPlane:=", False]
         )
+    
+    def assign_coupled_lattice_pair(self, entity, faces, phase, name):
+        """
+        Assigns a coupled lattice pair boundary condition to a pair of faces. These
+        were previously known as a master and slave boundary pair.
+        The phase delay between faces is defined via a variable.
+        
+        Inputs:
+        -------
+        entity:     the HFSSdrawpy entity
+        faces:      a list of ints indicating which faces should be used
+                    faces indexed 0 to 5 correspond to z+, z-, y-, x-, y+, x+ 
+        phase:      name of variable that is swept over for phase
+        name:       string to add to boundary name
+        
+        Returns:
+        --------
+        None
+        
+        """
+        
+        # Get faceID of 
+        faceIDs =  self.get_face_ids(entity)
+        
+        # Take the last 6 faces from array since operations on body append faces to
+        # start of list of face ids
+        
+        faceIDs = faceIDs[-6:]
+        
+        # Convert to ints
+        faceIDs = [int(i) for i in faceIDs]
+
+        
+        # Delete undesired faceIDs
+        faceIDs = [faceIDs[faces[0]], faceIDs[faces[1]]]
+            
+        # Assign boundaries
+        self._boundaries.AssignLatticePair(
+            	[
+            		"NAME:" + "LatticePair_" + name,
+            		"Faces:="		, faceIDs,
+            		"ReverseV:="		, True,
+            		"PhaseDelay:="		, "InputPhaseDelay",
+            		"Phase:="		, phase
+            	])
+        return
 
     def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
         if not isinstance(entities, list):

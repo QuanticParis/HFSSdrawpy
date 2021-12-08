@@ -113,6 +113,12 @@ class Entity:
 
     def assign_perfect_E(self, suffix="perfE"):
         self.body.interface.assign_perfect_E(self, self.name + "_" + suffix)
+        
+    def assign_coupled_lattice_pair(self, faces, phase, name = "LatticePair"):
+        if self.body.mode=='hfss':
+            self.body.interface.assign_coupled_lattice_pair(self, faces, phase, name)
+        else:
+            pass
 
     def assign_waveport(
         self,
