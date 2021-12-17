@@ -176,7 +176,19 @@ class Body(Modeler):
             return func(*args, **kwargs)
 
         return updated
-
+    
+    def current_pos(self):
+        """
+        Compute the current value of the position of the cursor
+        Assume no rotation is done ! (e.g. location of junctions in dosetest)
+        TODO do full change of basis
+        """
+        pos_x = 0
+        pos_y = 0
+        for coor in self.cursors:
+            pos_x += val(coor[0][0])
+            pos_y += val(coor[0][1])
+        return pos_x, pos_y
 
     ### Basic drawing
 
@@ -366,7 +378,7 @@ class Body(Modeler):
             pass
 
     @set_body
-    def path(self, points, port, fillet, name="path_0", **kwargs):
+    def path(self, points, port, fillet, drop_mask=False, name="path_0", **kwargs):
         # fillet should be either 0 or larger than half of the port width
         name = check_name(Entity, name)
         kwargs["name"] = name
@@ -374,7 +386,8 @@ class Body(Modeler):
         if self.mode == "gds":
             points = val(points)
             fillet = val(fillet)
-            _port = port.val()
+            _port = port.val(drop_mask=drop_mask)
+            
 
             # TODO, this is a dirty fixe cause of Vector3D
 
@@ -579,6 +592,7 @@ class Body(Modeler):
         name="cable_0",
         mesh_size=None,
         slanted=False,
+        drop_mask=False
     ):
         """
 
@@ -767,7 +781,7 @@ class Body(Modeler):
     
                 total_path.clean()
                 # plot cable
-                cable = self.path(total_path.points, total_path.port_in, total_path.fillet, name=name)
+                cable = self.path(total_path.points, total_path.port_in, total_path.fillet, name=name, drop_mask=drop_mask)
     
                 # assign mesh_size to the mesh layer in the new cable
                 if mesh_size is not None:

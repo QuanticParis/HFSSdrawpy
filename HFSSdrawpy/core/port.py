@@ -154,14 +154,17 @@ class Port:
         else:
             return [],0
 
-    def val(self):
+    def val(self, drop_mask=False):
         _widths = []
         _offsets = []
         for ii in range(self.N):
-            width = self.widths[ii]
-            offset = self.offsets[ii]
-            _widths.append(val(width))
-            _offsets.append(val(offset))
+            if self.subnames[ii]=='mask' and drop_mask:
+                pass
+            else:
+                width = self.widths[ii]
+                offset = self.offsets[ii]
+                _widths.append(val(width))
+                _offsets.append(val(offset))
 
         _pos = []
         for coor in self.pos:
