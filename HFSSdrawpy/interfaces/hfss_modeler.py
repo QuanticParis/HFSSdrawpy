@@ -2503,6 +2503,10 @@ class CalcObject(COMWrapper):
     def _integrate(self, name, type):
         stack = self.stack + [(type, name), ("CalcOp", "Integrate")]
         return CalcObject(stack, self.setup)
+        
+    def _normal(self, name, type):
+        stack = self.stack + [(type, name), ("CalcOp", "NormalComponent")]
+        return CalcObject(stack, self.setup)
 
     def getQty(self, name):
         stack = self.stack + [("EnterQty", name)]
