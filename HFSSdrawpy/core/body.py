@@ -722,6 +722,7 @@ class Body(Modeler):
                             )
                 print('Total Cable "%s" length = %.3f mm' % (name, 
                                                              length * 1000))
+                return length
             else:
                 # to_meander should be a list since at this stage we are within
                 # one cable portion
