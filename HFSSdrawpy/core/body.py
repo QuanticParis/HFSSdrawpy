@@ -718,6 +718,7 @@ class Body(Modeler):
                             meander_offset=meander_offset[ii],
                             reverse_adaptor=bool(ii),
                             mesh_size=mesh_size,
+                            slope=slope,
                             name=name + "_%d" % ii
                             )
                 print('Total Cable "%s" length = %.3f mm' % (name, 
