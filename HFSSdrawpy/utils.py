@@ -206,8 +206,10 @@ def extract_value_dim(expr):
     """
     type expr: str
     """
-    return str(Q(expr).dimensionality)
-
+    try:
+        return str(Q(expr).dimensionality)
+    except Exception:
+        return DIMENSIONLESS
 
 def parse_entry(*entries, marker=True):
     # should take a list of tuple of list... of int, float or str...
@@ -242,6 +244,20 @@ def rem_unit(other):
 def _val(elt):
     if isinstance(elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)):
         return elt
+    elif isinstance(elt, str):
+        if LENGTH == extract_value_dim(elt):
+            unit = LENGTH_UNIT
+        if INDUCTANCE == extract_value_dim(elt):
+            unit = INDUCTANCE_UNIT
+        if CAPACITANCE == extract_value_dim(elt):
+            unit = CAPACITANCE_UNIT
+        if RESISTANCE == extract_value_dim(elt):
+            unit = RESISTANCE_UNIT
+        if FREQUENCY == extract_value_dim(elt):
+            unit = FREQUENCY_UNIT
+        if DIMENSIONLESS == extract_value_dim(elt):
+            unit = DIMENSIONLESS_UNIT
+        return extract_value_unit(elt, unit)
     else:
         return float(elt.evalf(subs=variables))
 
