@@ -1,6 +1,7 @@
 from functools import wraps
 
 import numpy as np
+from sympy import posify
 
 from ..parameters import DEFAULT, MASK, MESH, PORT
 from ..path_finding.path_finder import Path
@@ -311,7 +312,7 @@ class Body(Modeler):
     #####draw arrays of rectangles with dimension (colums x row) with spacing given by a list [x_spacing,y_spacing]
     def rect_array(self, pos, size, columns, rows, spacing, name="rect_array_0", **kwargs):
 
-        pos, size, spacing = parse_entry(pos, size, spacing)
+        pos, size, spacing = parse_entry(Vector(pos), Vector(size), spacing)
 
         if self.mode == "gds":
             name = check_name(Entity, name)
@@ -323,7 +324,8 @@ class Body(Modeler):
             return Entity(2, self, **kwargs)
         else:
             columns, rows = parse_entry(columns, rows)
-            rect = self.rect(pos, size, name, **kwargs)
+            # rect = self.rect(pos-size/2, size, name, **kwargs)
+            rect = self.rect_center(pos, size, name, **kwargs)
             self.duplicate_along_line(
                 rect, [0, spacing[1], 0], n=rows)
             self.duplicate_along_line(
