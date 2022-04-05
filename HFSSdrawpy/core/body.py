@@ -4,7 +4,7 @@ import numpy as np
 from sympy import posify
 
 from ..parameters import DEFAULT, MASK, MESH, PORT
-from ..path_finding.path_finder import Path
+from ..path_finding.path_finder_new import Path
 from ..utils import (
     Vector,
     check_name,
@@ -587,6 +587,9 @@ class Body(Modeler):
         fillet="0.3mm",
         is_bond=False,
         to_meander=None,
+        mid=0.5,
+        first=0,
+        last=0,
         meander_length=0,
         meander_offset=0,
         reverse_adaptor=False,
@@ -637,6 +640,7 @@ class Body(Modeler):
         meander_length, meander_offset, fillet, mesh_size = parse_entry(
             meander_length, meander_offset, fillet, mesh_size
         )
+        mid, first, last = parse_entry(mid, first, last)
 
         ports = list(ports)
 
@@ -695,6 +699,7 @@ class Body(Modeler):
             _ports[-1].append(ports[-1])
             
             if len(_ports)>1:
+                print('Several section cable')
                 # to_meander should be a list of list: a list for each cable portion
                 # meander_length, meander_offset should be lists
                 if to_meander is None:
@@ -771,12 +776,13 @@ class Body(Modeler):
                 # find all intermediate paths
                 total_path = None
                 for ii in range(len(ports) - 1):
-                    path = Path(name, ports[ii], ports[ii + 1], fillet)
+                    path = Path(name, ports[ii], ports[ii + 1], fillet,
+                                mid=mid, first=first, last=last)
                     if total_path is None:
                         total_path = path
                     else:
                         total_path += path
-    
+                        
                 total_path.clean()
     
                 # do meandering (not supported for even partially slanted cables)
