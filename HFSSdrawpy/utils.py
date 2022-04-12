@@ -285,18 +285,31 @@ def val(*entries, marker=True):
 
 def way(vec):
     if vec[1] != 0:
-        if abs(vec[0] / vec[1]) < 1e-2:
+        if abs(vec[0] / vec[1]) < 1e-3:
             if vec[1] > 0:
                 return Vector(0, 1)
             elif vec[1] < 0:
                 return Vector(0, -1)
     if vec[0] != 0:
-        if abs(vec[1] / vec[0]) < 1e-2:
+        if abs(vec[1] / vec[0]) < 1e-3:
             if vec[0] > 0:
                 return Vector(1, 0)
             elif vec[0] < 0:
                 return Vector(-1, 0)
+    return Vector(0, 0) # diagonal
 
+def way_approx(vec):
+    vec_val = val(vec)
+    if abs(vec_val[0])>abs(vec_val[1]):
+        if vec_val[0]>0:
+            return Vector(1, 0)
+        else:
+            return Vector(-1, 0)
+    else:
+        if vec_val[1]>0:
+            return Vector(0, 1)
+        else:
+            return Vector(0, -1)
 
 variables = {}
 

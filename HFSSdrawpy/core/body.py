@@ -4,7 +4,8 @@ import numpy as np
 from sympy import posify
 
 from ..parameters import DEFAULT, MASK, MESH, PORT
-from ..path_finding.path_finder_new import Path
+from ..path_finding.path_finder import Path
+from ..path_finding.path_finder_auto import PathAuto
 from ..utils import (
     Vector,
     check_name,
@@ -580,6 +581,7 @@ class Body(Modeler):
         result = Port(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port)
         return [result]
 
+
     @move_port
     def draw_cable(
         self,
@@ -587,9 +589,6 @@ class Body(Modeler):
         fillet="0.3mm",
         is_bond=False,
         to_meander=None,
-        mid=0.5,
-        first=0,
-        last=0,
         meander_length=0,
         meander_offset=0,
         reverse_adaptor=False,
@@ -600,8 +599,6 @@ class Body(Modeler):
         drop_mask=False
     ):
         """
-
-
         Parameters
         ----------
         name : TYPE
@@ -622,25 +619,21 @@ class Body(Modeler):
             DESCRIPTION. The default is False.
         reverse_adaptor : TYPE, optional
             DESCRIPTION. The default is False.
-
         Raises
         ------
         IndentationError
             DESCRIPTION.
         ValueError
             DESCRIPTION.
-
         Returns
         -------
         length : TYPE
             DESCRIPTION.
-
         """
 
         meander_length, meander_offset, fillet, mesh_size = parse_entry(
             meander_length, meander_offset, fillet, mesh_size
         )
-        mid, first, last = parse_entry(mid, first, last)
 
         ports = list(ports)
 
@@ -699,7 +692,6 @@ class Body(Modeler):
             _ports[-1].append(ports[-1])
             
             if len(_ports)>1:
-                print('Several section cable')
                 # to_meander should be a list of list: a list for each cable portion
                 # meander_length, meander_offset should be lists
                 if to_meander is None:
@@ -776,13 +768,12 @@ class Body(Modeler):
                 # find all intermediate paths
                 total_path = None
                 for ii in range(len(ports) - 1):
-                    path = Path(name, ports[ii], ports[ii + 1], fillet,
-                                mid=mid, first=first, last=last)
+                    path = Path(name, ports[ii], ports[ii + 1], fillet)
                     if total_path is None:
                         total_path = path
                     else:
                         total_path += path
-                        
+    
                 total_path.clean()
     
                 # do meandering (not supported for even partially slanted cables)
@@ -818,6 +809,221 @@ class Body(Modeler):
                         entity.assign_mesh_length(mesh_size)
             if is_bond:
                 raise Exception("Bonding is not supported with slanted cables")
+                
+    @move_port
+    def draw_cable_auto(
+        self,
+        *ports,
+        fillet="0.3mm",
+        is_bond=False,
+        mid=0.5,
+        meanders=None,
+        reverse_adaptor=False,
+        slope=0.5,
+        name="cable_0",
+        mesh_size=None,
+        drop_mask=False, 
+        target_length=None,
+    ):
+        """
+
+
+        Parameters
+        ----------
+        name : TYPE
+            DESCRIPTION.
+        *ports : TYPE
+            DESCRIPTION.
+        fillet : TYPE, optional
+            DESCRIPTION. The default is "0.3mm".
+        is_bond : TYPE, optional
+            DESCRIPTION. The default is False.
+        is_mesh : TYPE, optional
+            DESCRIPTION. The default is False.
+        reverse_adaptor : TYPE, optional
+            DESCRIPTION. The default is False.
+
+        Raises
+        ------
+        IndentationError
+            DESCRIPTION.
+        ValueError
+            DESCRIPTION.
+
+        Returns
+        -------
+        length : TYPE
+            DESCRIPTION.
+
+        """
+
+        fillet, mesh_size = parse_entry(fillet, mesh_size)
+        mid, target_length = parse_entry(mid, target_length)
+        if meanders is None:
+            meanders = []
+            
+        ports = list(ports)
+
+        do_not_beyong = [port.name for port in ports if port.body != self]
+        if do_not_beyong:
+            raise ValueError("%s ports do not beyond to %s" % (do_not_beyong, self))
+        
+        # check the indentation level of connected ports
+        # you should not try to connect ports different with body(...): levels
+        indent_level = find_corresponding_list(ports[0], self.ports_to_move)
+        if indent_level is not None:
+            if indent_level:  # the found list
+                for port in ports:
+                    if not port in indent_level:
+                        msg = (
+                            "Trying to connect ports from different \
+                                indentation levels: port %s"
+                            % (port.name)
+                        )
+                        raise IndentationError(msg)
+
+        # asserts neither in nor out port are constraint_ports
+        if ports[0].constraint_port and ports[-1].constraint_port:
+            raise ValueError(
+                "At least the first (%s) or last port (%s) \
+                             should define the port parameters"
+                % (ports[0].name, ports[-1].name)
+            )
+        elif ports[0].constraint_port:
+            ports[0].widths = ports[-1].widths
+            ports[0].offsets = ports[-1].offsets
+            ports[0].layers = ports[-1].layers
+            ports[0].subnames = ports[-1].subnames
+            ports[0].N = ports[-1].N
+            ports[0].constraint_port = False  # ports[0] is now defined
+        elif ports[-1].constraint_port:
+            ports[-1].widths = ports[0].widths
+            ports[-1].offsets = ports[0].offsets
+            ports[-1].layers = ports[0].layers
+            ports[-1].subnames = ports[0].subnames
+            ports[-1].N = ports[0].N
+            ports[-1].constraint_port = False  # ports[-1] is now defined
+        else:
+            pass
+
+        # if not slanted:  # slanted cables are specific
+        
+        # first determine the intermediate non constrain ports
+        _ports = [[ports[0]]]
+        for port in ports[1:-1]:
+            if port.constraint_port:
+                _ports[-1].append(port)
+            else:
+                _ports[-1].append(port)
+                _ports.append([port])
+        _ports[-1].append(ports[-1])
+        
+        if len(_ports)>1:
+            print('Several section cable')
+            # to_meander should be a list of list: a list for each cable portion
+            # meander_length, meander_offset should be lists
+            if to_meander is None:
+                to_meander = [[]]*len(_ports)
+            if not isinstance(to_meander[0], list):
+                to_meander = [to_meander]
+            if not isinstance(meander_length, list):
+                meander_length = [meander_length] * len(_ports)
+            if not isinstance(meander_offset, list):
+                meander_offset = [meander_offset] * len(_ports)
+            if len(to_meander)!=len(_ports):
+                raise Exception("""to_meander should be a list of list, 
+                                the outer list length being the number of 
+                                cable portions""")
+            length = 0
+            for ii, port_list in enumerate(_ports):
+                length += self.draw_cable(
+                        *port_list,
+                        fillet=fillet,
+                        is_bond=is_bond,
+                        to_meander=to_meander[ii],
+                        meander_length=meander_length[ii],
+                        meander_offset=meander_offset[ii],
+                        reverse_adaptor=bool(ii),
+                        mesh_size=mesh_size,
+                        slope=slope,
+                        name=name + "_%d" % ii
+                        )
+            print('Total Cable "%s" length = %.3f mm' % (name, 
+                                                         length * 1000))
+            return length
+        else:
+            # to_meander should be a list since at this stage we are within
+            # one cable portion
+            ports = _ports[0]
+
+            # find and plot adaptor geometry
+            if reverse_adaptor:
+                points, length_adaptor = ports[-1].r.compare(ports[0], self.pm, slope=slope)
+                index_modified = -1
+            else:
+                points, length_adaptor = ports[0].compare(ports[-1], self.pm, slope=slope)
+                index_modified = 0
+
+            # plot adaptors
+            for jj, pts in enumerate(points):
+                adaptor = self.polyline(
+                            pts,
+                            name=ports[index_modified].name
+                            + "_"
+                            + ports[index_modified].subnames[jj]
+                            + "_adapt",
+                            layer=ports[index_modified].layers[jj],
+                            )
+                if adaptor.layer==MESH and mesh_size is not None:
+                    adaptor.assign_mesh_length(mesh_size)
+                    
+
+            # define the constraint_port parameters
+            for port in ports[1:-1]:
+                port.widths = ports[0].widths
+                port.offsets = ports[0].offsets
+                port.layers = ports[0].layers
+                port.subnames = ports[0].subnames
+                port.N = ports[0].N
+
+            # find all intermediate paths
+            total_path = None
+            for ii in range(len(ports) - 1):
+                path = PathAuto(name, ports[ii], ports[ii + 1], fillet,
+                            mid=mid)
+                if total_path is None:
+                    total_path = path
+                else:
+                    total_path += path    
+            total_path.analyse_path()     
+            
+            total_path.meander(meanders, target_length=target_length)
+            
+            total_path.analyse_path()     
+
+            # meandering
+            # if not total_path.is_slanted:
+            #     total_path.meander(to_meander, meander_length, meander_offset)
+
+            
+            # plot cable
+            cable = self.path(total_path.path, total_path.port_in, total_path.fillet, name=name, drop_mask=drop_mask)
+
+            # assign mesh_size to the mesh layer in the new cable
+            if mesh_size is not None:
+                for entity in cable:
+                    if entity.layer == MESH:
+                        entity.assign_mesh_length(mesh_size)
+            
+            # length should be computed before to_bond method
+            length = total_path.length + length_adaptor
+            
+            # if bond plot bonds
+            if is_bond:
+                self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb")
+
+            print('Cable "%s" length = %.3f mm' % (name, length * 1000))
+            return length
 
     def draw_bond(self, to_bond, ymax, ymin, min_dist="0.5mm", name="wb_0"):
         # to_bond list of segments
