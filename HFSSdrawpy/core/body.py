@@ -824,6 +824,7 @@ class Body(Modeler):
         mesh_size=None,
         drop_mask=False, 
         target_length=None,
+        editable_in_hfss=False # obscur parameter to check that design will adjust fine in HFSS
     ):
         """
 
@@ -859,6 +860,8 @@ class Body(Modeler):
 
         fillet, mesh_size = parse_entry(fillet, mesh_size)
         mid, target_length = parse_entry(mid, target_length)
+        
+        # TODO, make mid a list in the case there are constraints port in the middle
         if meanders is None:
             meanders = []
             
@@ -919,38 +922,7 @@ class Body(Modeler):
         _ports[-1].append(ports[-1])
         
         if len(_ports)>1:
-            print('Several section cable')
-            # to_meander should be a list of list: a list for each cable portion
-            # meander_length, meander_offset should be lists
-            if to_meander is None:
-                to_meander = [[]]*len(_ports)
-            if not isinstance(to_meander[0], list):
-                to_meander = [to_meander]
-            if not isinstance(meander_length, list):
-                meander_length = [meander_length] * len(_ports)
-            if not isinstance(meander_offset, list):
-                meander_offset = [meander_offset] * len(_ports)
-            if len(to_meander)!=len(_ports):
-                raise Exception("""to_meander should be a list of list, 
-                                the outer list length being the number of 
-                                cable portions""")
-            length = 0
-            for ii, port_list in enumerate(_ports):
-                length += self.draw_cable(
-                        *port_list,
-                        fillet=fillet,
-                        is_bond=is_bond,
-                        to_meander=to_meander[ii],
-                        meander_length=meander_length[ii],
-                        meander_offset=meander_offset[ii],
-                        reverse_adaptor=bool(ii),
-                        mesh_size=mesh_size,
-                        slope=slope,
-                        name=name + "_%d" % ii
-                        )
-            print('Total Cable "%s" length = %.3f mm' % (name, 
-                                                         length * 1000))
-            return length
+            raise Exception('Too many ports : \n Please make several cables or use constraint ports')
         else:
             # to_meander should be a list since at this stage we are within
             # one cable portion
@@ -997,15 +969,21 @@ class Body(Modeler):
                     total_path += path    
             total_path.analyse_path()     
             
-            total_path.meander(meanders, target_length=target_length)
+            if target_length is None:
+                total_path.meander(meanders, target_length=target_length)
+            else:
+                total_path.meander(meanders, target_length=target_length-length_adaptor, editable_in_hfss=editable_in_hfss)
             
-            total_path.analyse_path()     
-
-            # meandering
-            # if not total_path.is_slanted:
-            #     total_path.meander(to_meander, meander_length, meander_offset)
-
+            total_path.analyse_path()   
             
+            # check cable length
+            length = val(total_path.length+length_adaptor)
+            if target_length is not None:
+                if not equal_float(val(total_path.length+length_adaptor), val(target_length)):
+                    print('/!\ Cable "%s" length = %.3f (!= %.3f) mm /!\ ' %(name, length * 1000, val(target_length)*1000))
+            else:
+                print('Cable "%s" length = %.3f mm' % (name, length * 1000))
+                
             # plot cable
             cable = self.path(total_path.path, total_path.port_in, total_path.fillet, name=name, drop_mask=drop_mask)
 
@@ -1014,15 +992,11 @@ class Body(Modeler):
                 for entity in cable:
                     if entity.layer == MESH:
                         entity.assign_mesh_length(mesh_size)
-            
-            # length should be computed before to_bond method
-            length = total_path.length + length_adaptor
-            
-            # if bond plot bonds
+                        
+            # if bond, plot bonds
             if is_bond:
                 self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb")
 
-            print('Cable "%s" length = %.3f mm' % (name, length * 1000))
             return length
 
     def draw_bond(self, to_bond, ymax, ymin, min_dist="0.5mm", name="wb_0"):
