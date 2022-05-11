@@ -7,7 +7,7 @@ import types
 from copy import copy
 from functools import wraps
 
-import numpy
+import numpy as np
 import pythoncom
 from pint import UnitRegistry
 from sympy.parsing import sympy_parser
@@ -98,7 +98,9 @@ def make_float_prop(name, prop_tab=None, prop_server=None):
 
 
 def make_prop(name, prop_tab=None, prop_server=None, prop_args=None):
-    def set_prop(self, value, prop_tab=prop_tab, prop_server=prop_server, prop_args=prop_args):
+    def set_prop(
+        self, value, prop_tab=prop_tab, prop_server=prop_server, prop_args=prop_args
+    ):
         prop_tab = self.prop_tab if prop_tab is None else prop_tab
         prop_server = self.prop_server if prop_server is None else prop_server
         if isinstance(prop_tab, types.FunctionType):
@@ -335,8 +337,8 @@ class HfssDesign(COMWrapper):
         self.modeler = HfssModeler(self, self._modeler, self._boundaries, self._mesh)
         self.variables = {}
 
-    def set_SolutionType(self, solutiontype = None):
-        '''set the solution type of HFSS
+    def set_SolutionType(self, solutiontype=None):
+        """set the solution type of HFSS
 
         Parameters
         ----------
@@ -349,7 +351,7 @@ class HfssDesign(COMWrapper):
         str
             solutiontype
         
-        '''
+        """
         self._design.SetSolutionType(solutiontype)
         self.solution_type = self._design.GetSolutionType()
 
@@ -401,24 +403,17 @@ class HfssDesign(COMWrapper):
         min_converged=1,
         pct_refinement=30,
         basis_order=-1,
-        portaccuracy = 2,
+        portaccuracy=2,
     ):
         def set_freq(setup, freq_list, delta=max_delta_s):
             settings = ["NAME:MultipleAdaptiveFreqsSetup"]
             for i in freq_list:
-                settings.append([
-                        "NAME:AdaptAt",
-                        "Frequency:="		, "%sGHz"%i,
-                        "Delta:="		, delta
-                    ])
-            self._setup_module.EditSetup(setup, 
-            [
-                "NAME:"+setup,
-                "SolveType:="		, "MultiFrequency",
-                [
-                    settings
-                ]
-            ])
+                settings.append(
+                    ["NAME:AdaptAt", "Frequency:=", "%sGHz" % i, "Delta:=", delta]
+                )
+            self._setup_module.EditSetup(
+                setup, ["NAME:" + setup, "SolveType:=", "MultiFrequency", [settings]]
+            )
 
         if not isinstance(freq_ghz, list):
             freq_ghz = [freq_ghz]
@@ -444,10 +439,11 @@ class HfssDesign(COMWrapper):
                 True,
                 "BasisOrder:=",
                 basis_order,
-                "PortAccuracy:=", portaccuracy,
+                "PortAccuracy:=",
+                portaccuracy,
             ],
         )
-        
+
         set_freq(name, freq_ghz, delta=max_delta_s)
 
         return HfssDMSetup(self, name)
@@ -530,23 +526,33 @@ class HfssDesign(COMWrapper):
         )
 
     def set_variable(self, name, value, postprocessing=False):
-        if name not in self._design.GetVariables() + self._design.GetPostProcessingVariables():
+        if (
+            name
+            not in self._design.GetVariables()
+            + self._design.GetPostProcessingVariables()
+        ):
             self.create_variable(name, value, postprocessing=postprocessing)
-        else:   
+        else:
             self._design.SetVariableValue(name, value)
 
     def get_variable_value(self, name):
         return self._design.GetVariableValue(name)
 
     def get_variable_names(self):
-        return [s for s in self._design.GetVariables() + self._design.GetPostProcessingVariables()]
+        return [
+            s
+            for s in self._design.GetVariables()
+            + self._design.GetPostProcessingVariables()
+        ]
 
     def get_variables(self):
-        local_variables = self._design.GetVariables() + self._design.GetPostProcessingVariables()
+        local_variables = (
+            self._design.GetVariables() + self._design.GetPostProcessingVariables()
+        )
         return {lv: self.get_variable_value(lv) for lv in local_variables}
 
     def copy_design_variables(self, source_design):
-        """ does not check that variables are all present """
+        """does not check that variables are all present"""
 
         # don't care about values
         source_variables = source_design.get_variables()
@@ -571,7 +577,10 @@ class HfssDesign(COMWrapper):
         sub_exprs = {fs: self.get_variable_value(fs.name) for fs in sexp.free_symbols}
         return float(
             sexp.subs(
-                {fs: self._evaluate_variable_expression(e, units) for fs, e in sub_exprs.items()}
+                {
+                    fs: self._evaluate_variable_expression(e, units)
+                    for fs, e in sub_exprs.items()
+                }
             )
         )
 
@@ -780,7 +789,7 @@ class HfssDMSetup(HfssSetup):
         self._setup_module.EditSetup(self.name, args)
 
     def _map_variables_by_name(self):
-        """ does not check that variables are all present """
+        """does not check that variables are all present"""
         # don't care about values
         project_variables = self.parent.parent.get_variable_names()
         design_variables = self.parent.get_variable_names()
@@ -823,12 +832,16 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         fn = tempfile.mktemp()
         self._solutions.ExportEigenmodes(self.parent.solution_name, lv, fn)
         data = numpy.loadtxt(fn, dtype="str")
-        if numpy.size(numpy.shape(data)) == 1:  # getting around the very annoying fact that
+        if (
+            numpy.size(numpy.shape(data)) == 1
+        ):  # getting around the very annoying fact that
             data = numpy.array([data])  # in Python a 1D array does not have shape (N,1)
         else:  # but rather (N,) ....
             pass
         if numpy.size(data[0, :]) == 6:  # checking if values for Q were saved
-            kappa_over_2pis = [2 * float(ii) for ii in data[:, 3]]  # eigvalue=(omega-i*kappa/2)/2pi
+            kappa_over_2pis = [
+                2 * float(ii) for ii in data[:, 3]
+            ]  # eigvalue=(omega-i*kappa/2)/2pi
             # so kappa/2pi = 2*Im(eigvalue)
         else:
             kappa_over_2pis = None
@@ -1019,7 +1032,7 @@ class HfssModeler(COMWrapper):
         material=None,
         solve_inside=None,
         coor_sys="Global",
-        **kwargs
+        **kwargs,
     ):
         arr = [
             "NAME:Attributes",
@@ -1169,14 +1182,16 @@ class HfssModeler(COMWrapper):
 
     def delete(self, entity):
         objects = [
-            self._modeler.GetObjectName(str(ii)) for ii in range(int(self._modeler.GetNumObjects()))
+            self._modeler.GetObjectName(str(ii))
+            for ii in range(int(self._modeler.GetNumObjects()))
         ]
         if entity.name in objects:
             self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
 
     def delete_all_objects(self):
         objects = [
-            self._modeler.GetObjectName(str(ii)) for ii in range(int(self._modeler.GetNumObjects()))
+            self._modeler.GetObjectName(str(ii))
+            for ii in range(int(self._modeler.GetNumObjects()))
         ]
         self._modeler.Delete(self._selections_array(*objects))
 
@@ -1416,10 +1431,10 @@ class HfssModeler(COMWrapper):
     @assert_name
     def disk(self, pos, radius, axis, **kwargs):
         assert axis in "XYZ"
-        radius =  parse_entry(radius)
+        radius = parse_entry(radius)
         # create ellips
         if isinstance(radius, list):
-            ratio = (radius[1])/(radius[0])
+            ratio = (radius[1]) / (radius[0])
             radius = radius[0]
         else:
             ratio = 1
@@ -1444,7 +1459,9 @@ class HfssModeler(COMWrapper):
         return name
 
     @assert_name
-    def wirebond(self, pos, ori, ymax, ymin, height="0.1mm", **kwargs):  # ori should be normed
+    def wirebond(
+        self, pos, ori, ymax, ymin, height="0.1mm", **kwargs
+    ):  # ori should be normed
         bond_diam = "20um"
         params = parse_entry(pos, ori, ymax, ymin, height, bond_diam)
         pos, ori, ymax, ymin, heigth, bond_diam = params
@@ -1516,7 +1533,9 @@ class HfssModeler(COMWrapper):
         entity_to_sweep.dimension += 1
         return entity_to_sweep.name
 
-    def duplicate_along_line(self, entity, vec, n=2, new_obj=True, duplicate_assign = False):
+    def duplicate_along_line(
+        self, entity, vec, n=2, new_obj=True, duplicate_assign=False
+    ):
         name = self._modeler.DuplicateAlongLine(
             [
                 "NAME:Selections",
@@ -1571,51 +1590,55 @@ class HfssModeler(COMWrapper):
         self._boundaries.AssignPerfectE(
             ["NAME:" + name, "Objects:=", entity_names, "InfGroundPlane:=", False]
         )
-    
+
     def assign_coupled_lattice_pair(self, entity, faces, phase, name):
         """
         Assigns a coupled lattice pair boundary condition to a pair of faces. These
         were previously known as a master and slave boundary pair.
         The phase delay between faces is defined via a variable.
-        
+
         Inputs:
         -------
         entity:     the HFSSdrawpy entity
         faces:      a list of ints indicating which faces should be used
-                    faces indexed 0 to 5 correspond to z+, z-, y-, x-, y+, x+ 
+                    faces indexed 0 to 5 correspond to z+, z-, y-, x-, y+, x+
         phase:      name of variable that is swept over for phase
         name:       string to add to boundary name
-        
+
         Returns:
         --------
         None
-        
+
         """
-        
-        # Get faceID of 
-        faceIDs =  self.get_face_ids(entity)
-        
+
+        # Get faceID of
+        faceIDs = self.get_face_ids(entity)
+
         # Take the last 6 faces from array since operations on body append faces to
         # start of list of face ids
-        
+
         faceIDs = faceIDs[-6:]
-        
+
         # Convert to ints
         faceIDs = [int(i) for i in faceIDs]
 
-        
         # Delete undesired faceIDs
         faceIDs = [faceIDs[faces[0]], faceIDs[faces[1]]]
-            
+
         # Assign boundaries
         self._boundaries.AssignLatticePair(
-            	[
-            		"NAME:" + "LatticePair_" + name,
-            		"Faces:="		, faceIDs,
-            		"ReverseV:="		, True,
-            		"PhaseDelay:="		, "InputPhaseDelay",
-            		"Phase:="		, phase
-            	])
+            [
+                "NAME:" + "LatticePair_" + name,
+                "Faces:=",
+                faceIDs,
+                "ReverseV:=",
+                True,
+                "PhaseDelay:=",
+                "InputPhaseDelay",
+                "Phase:=",
+                phase,
+            ]
+        )
         return
 
     def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
@@ -1676,8 +1699,18 @@ class HfssModeler(COMWrapper):
             ]
         )
 
-    def assign_waveport(self, entity, name, Nmodes, DoRenorm, RenormValue, 
-                        DoDeembed, DeembedDist, start=None, stop=None):
+    def assign_waveport(
+        self,
+        entity,
+        name,
+        Nmodes,
+        DoRenorm,
+        RenormValue,
+        DoDeembed,
+        DeembedDist,
+        start=None,
+        stop=None,
+    ):
         """Creates a Waveport at an arbitrary face
 
         name (str):  port name
@@ -1704,33 +1737,44 @@ class HfssModeler(COMWrapper):
         for n in range(Nmodes):
             inlinearray = [
                 "NAME:IntLine",
-                "Start:=", start,
-                "End:=", stop,
+                "Start:=",
+                start,
+                "End:=",
+                stop,
             ]
             modesarray.append(
                 [
                     "NAME:Mode" + str(n + 1),
-                    "ModeNum:=", n + 1,
-                    "UseIntLine:=", UseIntLine,
+                    "ModeNum:=",
+                    n + 1,
+                    "UseIntLine:=",
+                    UseIntLine,
                     inlinearray,
-                    "AlignmentGroup:="	, 0,
-				    "CharImp:="		, "Zpi",
-				    "RenormImp:="	, str(RenormValue)
+                    "AlignmentGroup:=",
+                    0,
+                    "CharImp:=",
+                    "Zpi",
+                    "RenormImp:=",
+                    str(RenormValue),
                 ]
             )
         # print(val(start), val(stop))
         self._boundaries.AssignWavePort(
             [
                 "NAME:" + name,
-                "Faces:=", faces,
-                "NumModes:=", Nmodes,
-                "DoDeembed:=", DoDeembed,
-                "DeembedDist:=", str(DeembedDist),
-                "RenormalizeAllTerminals:=", DoRenorm,
+                "Faces:=",
+                faces,
+                "NumModes:=",
+                Nmodes,
+                "DoDeembed:=",
+                DoDeembed,
+                "DeembedDist:=",
+                str(DeembedDist),
+                "RenormalizeAllTerminals:=",
+                DoRenorm,
                 modesarray,
             ]
         )
-        
 
     def assign_terminal_auto(self, entity, name, ground):
         """auto-generates Terminals on a Waveport
@@ -1798,7 +1842,7 @@ class HfssModeler(COMWrapper):
             str(c),
         ]
         self._boundaries.AssignLumpedRLC(params)
-        
+
     def assign_lumped_port(self, entity, start, end, name="RLC"):
         # parsing start and end is very peculiar for this function
         # hfss style
@@ -1967,7 +2011,8 @@ class HfssModeler(COMWrapper):
     def get_vertices(self, entity):
         vertices_ids = self.get_vertex_ids(entity)
         return [
-            [*map(float, self._modeler.GetVertexPosition(vertex)[:2])] for vertex in vertices_ids
+            [*map(float, self._modeler.GetVertexPosition(vertex)[:2])]
+            for vertex in vertices_ids
         ]
 
     def get_edge_ids(self, entity):
@@ -2103,7 +2148,9 @@ class HfssModeler(COMWrapper):
 
     def rotate(self, entities, angle, center=None, axis="Z"):
         if center is not None:
-            raise Warning("HFSS modeler cannot handle roatation which are not around (0, 0).")
+            raise Warning(
+                "HFSS modeler cannot handle roatation which are not around (0, 0)."
+            )
             # angle_center = coor2angle(center[0], center[1])
         if not isinstance(entities, list):
             entities = [entities]
@@ -2164,6 +2211,38 @@ class HfssModeler(COMWrapper):
             ],
         )
 
+    def mirror(self, entities, normal_vector_polar):
+        if not isinstance(entities, list):
+            entities = [entities]
+
+        magnitude, orientation = normal_vector_polar
+        normal_vector_cartesian = magnitude * np.array(
+            [np.cos(orientation), np.sin(orientation)]
+        )
+
+        names = [entity.name for entity in entities]
+        selection_array = self._selections_array(*names)
+        selection_array += ["NewPartsModelFlag:=", "Model"]
+        print(selection_array)
+        self._modeler.Mirror(
+            selection_array,
+            [
+                "NAME:MirrorParameters",
+                "DuplicateMirrorBaseX:=",
+                f"{magnitude * np.cos(orientation)}mm",
+                "MirrorBaseY:=",
+                f"{magnitude * np.sin(orientation)}mm",
+                "MirrorBaseZ:=",
+                "0mm",
+                "MirrorNormalX:=",
+                f"{np.cos(orientation)}mm",
+                "MirrorNormalY:=",
+                f"{np.sin(orientation)}mm",
+                "MirrorNormalZ:=",
+                "0mm",
+            ],
+        )
+
     def rename(self, entity, name):
         new_name = self._modeler.ChangeProperty(
             [
@@ -2176,12 +2255,14 @@ class HfssModeler(COMWrapper):
             ]
         )
         return new_name
-    
+
     def relayer(self, entity, name):
         pass
 
     def set_units(self, units="m"):
-        self._modeler.SetModelUnits(["NAME:Units Parameter", "Units:=", units, "Rescale:=", False])
+        self._modeler.SetModelUnits(
+            ["NAME:Units Parameter", "Units:=", units, "Rescale:=", False]
+        )
 
     def subtract(self, blank_entities, tool_entities, keep_originals=False):
         blank_names = []
@@ -2200,7 +2281,7 @@ class HfssModeler(COMWrapper):
         self._modeler.Subtract(
             selection_array, ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
         )
-        
+
     def delete_inside(self, poly1, poly2, keep_originals=False):
         pass
 
@@ -2503,7 +2584,7 @@ class CalcObject(COMWrapper):
     def _integrate(self, name, type):
         stack = self.stack + [(type, name), ("CalcOp", "Integrate")]
         return CalcObject(stack, self.setup)
-        
+
     def _normal(self, name, type):
         stack = self.stack + [(type, name), ("CalcOp", "NormalComponent")]
         return CalcObject(stack, self.setup)
@@ -2642,7 +2723,9 @@ def get_report_arrays(name):
     return r.get_arrays()
 
 
-def load_HFSS_project(proj_name, project_path, extension=".aedt"):  # aedt is for 2016 version
+def load_HFSS_project(
+    proj_name, project_path, extension=".aedt"
+):  # aedt is for 2016 version
     """proj_name == None => get active.
     (make sure 2 run as admin)
     """
