@@ -18,9 +18,18 @@ class Entity:
     # each method of this class should act in return in HFSS/GDS when possible
     dict_instances = {}
 
-    def __init__(self, dimension, body, nonmodel=False, layer=DEFAULT, 
-                 copy=None, name="entity_0", esc=False, **kwargs):
-        
+    def __init__(
+        self,
+        dimension,
+        body,
+        nonmodel=False,
+        layer=DEFAULT,
+        copy=None,
+        name="entity_0",
+        esc=False,
+        **kwargs
+    ):
+
         name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
@@ -81,8 +90,8 @@ class Entity:
     def copy(self, new_name=None, new_layer=None):
         generated_name = gen_name(self.name)
         self.body.interface.copy(self)
-        if new_layer is None: 
-            new_layer = self.layer # does not work in .gds yet
+        if new_layer is None:
+            new_layer = self.layer  # does not work in .gds yet
         copied = Entity(
             self.dimension,
             self.body,
@@ -102,7 +111,7 @@ class Entity:
         self.dict_instances[new_name] = self
         self.body.interface.rename(self, new_name)
         self.name = new_name
-    
+
     def relayer(self, new_layer):
         self.body.interface.relayer(self, new_layer)
         self.layer = new_layer
@@ -113,9 +122,9 @@ class Entity:
 
     def assign_perfect_E(self, suffix="perfE"):
         self.body.interface.assign_perfect_E(self, self.name + "_" + suffix)
-        
-    def assign_coupled_lattice_pair(self, faces, phase, name = "LatticePair"):
-        if self.body.mode=='hfss':
+
+    def assign_coupled_lattice_pair(self, faces, phase, name="LatticePair"):
+        if self.body.mode == "hfss":
             self.body.interface.assign_coupled_lattice_pair(self, faces, phase, name)
         else:
             pass
@@ -127,7 +136,9 @@ class Entity:
         RenormValue="50ohm",
         DoDeembed=False,
         DeembedDist="0mm",
-        prefix="port", start=None, stop=None
+        prefix="port",
+        start=None,
+        stop=None,
     ):
         self.body.interface.assign_waveport(
             self,
@@ -136,7 +147,10 @@ class Entity:
             DoRenorm,
             RenormValue,
             DoDeembed,
-            DeembedDist, start=start, stop=stop)
+            DeembedDist,
+            start=start,
+            stop=stop,
+        )
 
     def assign_terminal_auto(self, ground, prefix="port"):
         self.body.interface.assign_terminal_auto(self, prefix + "_" + self.name, ground)
@@ -227,7 +241,8 @@ class Entity:
             else:
                 nb_vertices = len(self.body.interface.get_vertex_ids(self))
         vertex_indices = [
-            [(index_start + ind) % nb_vertices for ind in index] for index in vertex_indices
+            [(index_start + ind) % nb_vertices for ind in index]
+            for index in vertex_indices
         ]
 
         radius = parse_entry(radius)
@@ -378,7 +393,9 @@ class Entity:
 
         r, l, c = rlc
 
-        self.body.interface.assign_lumped_rlc(self, r, l, c, point_0, point_1, name="RLC")
+        self.body.interface.assign_lumped_rlc(
+            self, r, l, c, point_0, point_1, name="RLC"
+        )
 
     def assign_lumped_port(self, points):
 
@@ -424,7 +441,9 @@ class Entity:
         # point_0 = origin + np.dot(point_0.as_nda(), change_matrix)
         # point_1 = origin + np.dot(point_1.as_nda(), change_matrix)
 
-        self.body.interface.assign_lumped_port(self, point_0, point_1, name="lumped_port_0")
+        self.body.interface.assign_lumped_port(
+            self, point_0, point_1, name="lumped_port_0"
+        )
 
     def mirrorZ(self):
         raise NotImplementedError()
@@ -434,6 +453,9 @@ class Entity:
 
     def translate(self, vector):
         self.body.translate(self, vector)
+
+    def mirror(self, normal_vector):
+        self.body.mirror(self, normal_vector)
 
     def subtract(self, tool_entities, keep_originals=False):
         """

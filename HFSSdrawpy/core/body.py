@@ -5,6 +5,7 @@ import numpy as np
 from .entity import Entity
 from .modeler import Modeler
 from .port import Port
+from .symmetry import BodyMirror
 from ..parameters import DEFAULT, MESH, PORT
 from ..path_finding.path_finder import Path
 from ..path_finding.path_finder_auto import PathAuto
@@ -114,6 +115,13 @@ class Body(Modeler):
             pos.append(0)
         self.cursors.append((pos, ori))
         return BodyMover(self)
+
+    def mirror(self, angle, magnitude=0):
+        """
+        @param angle: (float, in radians) the angle of the normal vector to the plane of symmetry in the (x, y) plane
+        @param magnitude: (float) the angle of the normal vector to the plane of symmetry in the (x, y) plane
+        """
+        return BodyMirror(self, angle, magnitude)
 
     # def __enter__(self):
     #     print("enter(")

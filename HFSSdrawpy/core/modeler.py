@@ -52,7 +52,7 @@ class Modeler:
             self.interface = gds_modeler.GdsModeler()
         else:
             print("Mode should be either hfss or gds")
-            
+
         # default init for mask values (used to subtract holes from
         # critical areas)
         self.is_mask = False
@@ -92,7 +92,7 @@ class Modeler:
         file = os.path.join(folder, filename)
         if self.mode == "gds":
             self.interface.generate_gds(file, max_points)
-            
+
     # def import_gds(self, folder, filename):
     #     file = os.path.join(folder, filename)
     #     if self.mode == "gds":
@@ -127,7 +127,9 @@ class Modeler:
             entities = [main] + entities
 
         if len(entities) != 1:
-            if not all([entity.dimension == entities[0].dimension for entity in entities]):
+            if not all(
+                [entity.dimension == entities[0].dimension for entity in entities]
+            ):
                 raise TypeError(
                     "All united elements should have the \
                                 same dimension"
@@ -136,7 +138,9 @@ class Modeler:
                 if keep_originals:
                     entities[0] = entities[0].copy()
 
-                union_entity = self.interface.unite(entities, keep_originals=keep_originals)
+                union_entity = self.interface.unite(
+                    entities, keep_originals=keep_originals
+                )
                 union_entity.is_boolean = True
                 list_fillet = [entity.is_fillet for entity in entities]
                 union_entity.is_fillet = union_entity.is_fillet or any(list_fillet)
@@ -167,16 +171,24 @@ class Modeler:
             pass
         else:
             if not all(
-                [entity.dimension == blank_entities[0].dimension for entity in blank_entities]
+                [
+                    entity.dimension == blank_entities[0].dimension
+                    for entity in blank_entities
+                ]
             ) or not all(
-                [entity.dimension == tool_entities[0].dimension for entity in tool_entities]
+                [
+                    entity.dimension == tool_entities[0].dimension
+                    for entity in tool_entities
+                ]
             ):
                 raise TypeError(
                     "All subtracted elements should have the \
                                 same dimension"
                 )
             else:
-                self.interface.subtract(blank_entities, tool_entities, keep_originals=True)
+                self.interface.subtract(
+                    blank_entities, tool_entities, keep_originals=True
+                )
                 # actualize the properties of the blank_entities
                 list_fillet_bool = any([entity.is_fillet for entity in tool_entities])
                 for entity in blank_entities:
@@ -187,21 +199,21 @@ class Modeler:
                 tools = tool_entities.copy()
                 for tool_entity in tools:
                     tool_entity.delete()
-    
+
     def delete_inside(self, polygon_set, mask, keep_originals=False):
-        '''
+        """
         Test if the polygons within the polygon_set are in the mask object.
         If so, delete them.
-        
+
         Not implemented in HFSS
         Parameters
         ----------
-        polygon_set : Entity 
+        polygon_set : Entity
             Typically a hole array.
         mask : Entity
         keep_originals : bool, optional
             Shall we keep the mask element or not. The default is False.
-        '''
+        """
         # TODO handle the case when the polygon_set is fully deleted
         # TODO handle the HFSS case by doing a substract
         self.interface.delete_inside(polygon_set, mask, keep_originals=keep_originals)
@@ -209,7 +221,9 @@ class Modeler:
     def rotate(self, entities, angle=0):
         if isinstance(angle, (list, np.ndarray)):
             if len(angle) == 2:
-                angle = np.math.atan2(np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle))
+                angle = np.math.atan2(
+                    np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle)
+                )
                 angle = angle / np.pi * 180
             else:
                 raise Exception("angle should be either a float or a 2-dim array")
@@ -224,3 +238,14 @@ class Modeler:
         if self.mode == "gds":
             vector = val(vector)
         self.interface.translate(entities, vector)
+
+    def apply_mirror(self, entities, normal_vector_polar):
+        """
+        @param entities: entities to move
+        @param normal_vector_polar: normal vector to the mirror plan
+        @return:
+        """
+        normal_vector_polar = parse_entry(normal_vector_polar)
+        if self.mode == "gds":
+            normal_vector_polar = val(normal_vector_polar)
+        self.interface.mirror(entities, normal_vector_polar)
