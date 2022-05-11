@@ -2,7 +2,7 @@ import gdspy
 import numpy as np
 
 from ..core.entity import gen_name
-from ..utils import Vector, parse_entry, val
+from ..utils import Vector, parse_entry, val, points_on_line_tangent_to
 
 TOLERANCE = 1e-9  # for arcs
 print("gdspy_version : ", gdspy.__version__)
@@ -459,14 +459,12 @@ class GdsModeler:
         if not isinstance(entities, list):
             entities = [entities]
 
-        magnitude, angle = normal_vector_polar
-        p1x, p1y = magnitude * np.cos(angle), magnitude * np.sin(angle)
-        p2x, p2y = p1x + np.sin(angle), p1y - np.cos(angle)
+        p1, p2 = points_on_line_tangent_to(normal_vector_polar)
 
         mirror_entities = dict()
         for entity in entities:
             gds_entity = self.gds_object_instances[entity.name]
-            mirror = gds_entity.mirror((p1x, p1y), (p2x, p2y))
+            mirror = gds_entity.mirror(p1, p2)
 
             mirror_name = gen_name(f"{entity.name}_symmetric")
             self.gds_object_instances[mirror_name] = mirror

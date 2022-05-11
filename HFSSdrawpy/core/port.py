@@ -2,8 +2,16 @@ import math
 
 import numpy as np
 
-from ..utils import Vector, check_name, find_last_list, parse_entry, val
+from ..utils import (
+    Vector,
+    check_name,
+    find_last_list,
+    parse_entry,
+    val,
+    points_on_line_tangent_to,
+)
 from ..parameters import MASK
+
 
 class Port:
     dict_instances = {}
@@ -24,11 +32,12 @@ class Port:
         if not (isinstance(key, Port) or key is None):
             name = check_name(self.__class__, name)
         self.name = name
-        self.pos = Vector(pos)
-        self.ori = Vector(ori)
+        self.pos = Vector(pos)  # port position
+        self.ori = Vector(ori)  # port orientation
         self.constraint_port = constraint_port
         self.save = None
         self.body = body
+        self.key = key
         if not constraint_port:
             self.widths = parse_entry(widths)
             self.subnames = subnames
@@ -44,8 +53,7 @@ class Port:
 
         if self.body.ports_to_move is not None:
             find_last_list(self.body.ports_to_move).append(self)
-        
-            
+
         if key == "name":  # normal initialisation
             if self.body.is_mask and not self.constraint_port:
                 self.mask(MASK, self.body.gap_mask)
@@ -116,7 +124,7 @@ class Port:
             if val(width1) != val(width2) or val(offset1) != val(offset2):
                 # if we have one discrepancy, then we need the adaptor
                 need_adapt = True
-                
+
             points.append(
                 [
                     Vector(0, offset1 + width1 / 2).rot(self.ori) + self.pos,
@@ -152,13 +160,13 @@ class Port:
             self.r.offsets = other.offsets
             return points, 2 * max_diff
         else:
-            return [],0
+            return [], 0
 
     def val(self, drop_mask=False):
         _widths = []
         _offsets = []
         for ii in range(self.N):
-            if self.subnames[ii]=='mask' and drop_mask:
+            if self.subnames[ii] == "mask" and drop_mask:
                 pass
             else:
                 width = self.widths[ii]
@@ -228,14 +236,18 @@ class Port:
     def rotate_ports(ports, angle):
         if isinstance(angle, list):
             if len(angle) == 2:
-                new_angle = np.math.atan2(np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle))
+                new_angle = np.math.atan2(
+                    np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle)
+                )
                 new_angle = new_angle / np.pi * 180
             else:
                 raise Exception("angle should be either a float or a 2-dim array")
         else:
             new_angle = angle
         rad = new_angle / 180 * np.pi
-        rotate_matrix = np.array([[np.cos(rad), np.sin(-rad)], [np.sin(rad), np.cos(rad)]])
+        rotate_matrix = np.array(
+            [[np.cos(rad), np.sin(-rad)], [np.sin(rad), np.cos(rad)]]
+        )
         for port in ports:
             port.ori = rotate_matrix.dot(port.ori[0:2])
             posx = port.pos[0] * math.cos(rad) + port.pos[1] * math.sin(-rad)
@@ -265,38 +277,47 @@ class Port:
         leftovers = True
         if not splitnames:
             splitnames = self.subnames
-            leftovers  = False
+            leftovers = False
         elif splitnames == -1:
-            if self.subnames[-1] == 'mask':
+            if self.subnames[-1] == "mask":
                 splitnames = self.subnames[:-2]
             else:
                 splitnames = self.subnames[:-1]
-            leftovers  = False
+            leftovers = False
 
         if not all(sub in self.subnames for sub in splitnames):
-            raise ValueError('Split ports must belong to '+str(self.subnames))
+            raise ValueError("Split ports must belong to " + str(self.subnames))
 
         if leftovers:
-            lo_widths   = self.widths
-            lo_layers   = self.layers
+            lo_widths = self.widths
+            lo_layers = self.layers
             lo_subnames = self.subnames
-            lo_offsets  = self.offsets
+            lo_offsets = self.offsets
 
         subports = []
         for sub in splitnames:
-            isub     = self.subnames.index(sub)
+            isub = self.subnames.index(sub)
             if gap is None:
                 gap = self.widths[isub]
-            name     = self.name+'_'+sub
-            pos      = self.pos + Vector([0,self.offsets[isub]]).rot(self.ori)
-            widths   = [self.widths[isub], self.widths[isub]+2*gap]
-            layers   = [self.layers[isub], GAP]
-            cpwnames = ['track', 'gap']
-            offsets  = [0, 0]
-            subports.append(Port(body=self.body, name=name, pos=pos,
-                                 ori=self.ori, widths=widths, layers=layers,
-                                 offsets=offsets, subnames=cpwnames,
-                                 constraint_port=False))
+            name = self.name + "_" + sub
+            pos = self.pos + Vector([0, self.offsets[isub]]).rot(self.ori)
+            widths = [self.widths[isub], self.widths[isub] + 2 * gap]
+            layers = [self.layers[isub], GAP]
+            cpwnames = ["track", "gap"]
+            offsets = [0, 0]
+            subports.append(
+                Port(
+                    body=self.body,
+                    name=name,
+                    pos=pos,
+                    ori=self.ori,
+                    widths=widths,
+                    layers=layers,
+                    offsets=offsets,
+                    subnames=cpwnames,
+                    constraint_port=False,
+                )
+            )
             if leftovers:
                 lo_widths.pop(isub)
                 lo_layers.pop(isub)
@@ -304,14 +325,14 @@ class Port:
                 lo_offsets.pop(isub)
 
         if leftovers:
-            #we update the dictionary of the initial port
-            self.width    = lo_widths
-            self.layers   = lo_layers
-            self.offsets  = lo_offsets
+            # we update the dictionary of the initial port
+            self.width = lo_widths
+            self.layers = lo_layers
+            self.offsets = lo_offsets
             self.subnames = lo_subnames
-            self.N        = len(lo_widths)
+            self.N = len(lo_widths)
 
-            #we reset the r version and make a new one
+            # we reset the r version and make a new one
             self.r.reset()
             reversed_ori = -self.ori
             reversed_offsets = None
@@ -319,12 +340,21 @@ class Port:
                 reversed_offsets = []
                 for ii in range(self.N):
                     reversed_offsets.append(-self.offsets[ii])
-            self.r = Port(self.body, self.name+'_r', self.pos, reversed_ori,
-                          self.widths, self.subnames, self.layers,
-                          reversed_offsets, self.constraint_port, key=self)
+            self.r = Port(
+                self.body,
+                self.name + "_r",
+                self.pos,
+                reversed_ori,
+                self.widths,
+                self.subnames,
+                self.layers,
+                reversed_offsets,
+                self.constraint_port,
+                key=self,
+            )
 
         return subports
-    
+
     def mask(self, layer, gap_mask):
         """
         Creates the mask sub_port by taking the outer most dimensions
@@ -334,26 +364,38 @@ class Port:
         None.
 
         """
-        outter_top_exp = self.widths[0]/2+self.offsets[0]
-        outter_bot_exp = -self.widths[0]/2+self.offsets[0]
+        outter_top_exp = self.widths[0] / 2 + self.offsets[0]
+        outter_bot_exp = -self.widths[0] / 2 + self.offsets[0]
 
         top_exp = outter_top_exp
         top = val(top_exp)
         bot_exp = outter_bot_exp
         bot = val(bot_exp)
         for ii in range(1, self.N):
-            top_exp = self.widths[ii]/2+self.offsets[ii]
-            bot_exp = -self.widths[ii]/2+self.offsets[ii]
-            
-            if val(top_exp)>top:
-                outter_top_exp = top_exp
-                
-            if val(bot_exp)<bot:
-                outter_bot_exp = bot_exp
-        
-        self.widths.append(outter_top_exp-outter_bot_exp+2*gap_mask)
-        self.offsets.append((outter_top_exp+outter_bot_exp)/2)
-        self.layers.append(layer)
-        self.subnames.append('mask')
-        self.N +=1
+            top_exp = self.widths[ii] / 2 + self.offsets[ii]
+            bot_exp = -self.widths[ii] / 2 + self.offsets[ii]
 
+            if val(top_exp) > top:
+                outter_top_exp = top_exp
+
+            if val(bot_exp) < bot:
+                outter_bot_exp = bot_exp
+
+        self.widths.append(outter_top_exp - outter_bot_exp + 2 * gap_mask)
+        self.offsets.append((outter_top_exp + outter_bot_exp) / 2)
+        self.layers.append(layer)
+        self.subnames.append("mask")
+        self.N += 1
+
+    def copy(self, name=None):
+        return Port(
+            self.body,
+            name or self.name,
+            self.pos,
+            self.ori,
+            self.widths,
+            self.subnames,
+            self.layers,
+            self.offsets,
+            self.constraint_port,
+        )

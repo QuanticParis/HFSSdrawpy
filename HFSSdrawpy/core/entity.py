@@ -455,7 +455,7 @@ class Entity:
         self.body.translate(self, vector)
 
     def mirror(self, normal_vector):
-        self.body.mirror(self, normal_vector)
+        self.body.get_symmetric_of(self, normal_vector)
 
     def subtract(self, tool_entities, keep_originals=False):
         """
