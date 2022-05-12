@@ -386,16 +386,3 @@ class Port:
         self.layers.append(layer)
         self.subnames.append("mask")
         self.N += 1
-
-    def copy(self, name=None):
-        return Port(
-            self.body,
-            name or self.name,
-            self.pos,
-            self.ori,
-            self.widths,
-            self.subnames,
-            self.layers,
-            self.offsets,
-            self.constraint_port,
-        )

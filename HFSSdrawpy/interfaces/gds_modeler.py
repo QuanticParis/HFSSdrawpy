@@ -56,7 +56,7 @@ class GdsModeler:
 
     def relayer(self, entity, layer):
         obj = self.gds_object_instances[entity.name]
-        obj.layers = [layer] * len(obj.polygons)
+        obj.layers = [layer] * len(obj.layers)
 
     def generate_gds(self, file, max_points):
         for instance in self.gds_object_instances.keys():
@@ -463,13 +463,12 @@ class GdsModeler:
 
         mirror_entities = dict()
         for entity in entities:
-            gds_entity = self.gds_object_instances[entity.name]
+            mirror_name = entity.name
+            gds_entity = self.gds_object_instances[mirror_name]
+            if isinstance(gds_entity, gdspy.FlexPath):
+                continue
             mirror = gds_entity.mirror(p1, p2)
-
-            mirror_name = gen_name(f"{entity.name}_symmetric")
             self.gds_object_instances[mirror_name] = mirror
-            self.cell.polygons.append(mirror)
-
             mirror_entities[mirror_name] = mirror
 
         return mirror_entities

@@ -3,11 +3,13 @@ import copy
 import numpy as np
 
 from HFSSdrawpy import Port
+from HFSSdrawpy.core.move import clean_body_to_move
 from HFSSdrawpy.parameters import PORT
 from HFSSdrawpy.utils import (
     find_last_list,
     find_penultimate_list,
     points_on_line_tangent_to,
+    check_name,
 )
 
 
@@ -46,20 +48,19 @@ class BodyMirror:
                 symmetric_entities.append(symmetric_entity)
 
             self.body.apply_mirror(symmetric_entities, self.normal_vector_polar)
-            pass
 
         if len(list_ports_new) > 0:
-            symmetric_ports = []
             for port in list_ports_new:
                 if port.key != "name":  # if the port is an inverse, we don't copy it
                     continue
-                name = f"{port.name}_symmetric"
+                name = check_name(Port, f"{port.name}_symmetric")
 
                 # Compute symmetric position
                 position = np.array(port.pos[:2])
                 p1, p2 = points_on_line_tangent_to(self.normal_vector_polar)
                 p1, p2 = np.array(p1), np.array(p2)
                 n = p1 - p2
+                n = n.astype(float)
                 n /= np.linalg.norm(n)
                 position += 2 * (np.eye(2) - np.outer(n, n)) @ (p1 - position)
 
@@ -75,12 +76,20 @@ class BodyMirror:
 
                 # draw it
                 with self.body(position.tolist(), orientation.tolist()):
+                    port_args = port.val(
+                        drop_mask=True
+                    )  # the mask will be re-added in `body.port`
                     (new_port,) = self.body.port(
-                        port.widths, port.subnames, port.layers, port.offsets, name
+                        port_args.widths,
+                        port_args.subnames,
+                        port_args.layers,
+                        port_args.offsets,
+                        name,
                     )
 
-                symmetric_ports.append(new_port)
                 self.port_symmetry_correspondence[port] = new_port
+
+        clean_body_to_move(self.body)
 
     def get_symmetric_of(self, port):
         return self.port_symmetry_correspondence[port]
