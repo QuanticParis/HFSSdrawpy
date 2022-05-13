@@ -1,8 +1,7 @@
 import gdspy
 import numpy as np
 
-from ..core.entity import gen_name
-from ..utils import Vector, parse_entry, val, points_on_line_tangent_to
+from ..utils import Vector, parse_entry, val, points_on_line_tangent_to, check_name
 
 TOLERANCE = 1e-9  # for arcs
 print("gdspy_version : ", gdspy.__version__)
@@ -46,13 +45,10 @@ class GdsModeler:
 
     def copy(self, entity):
         new_polygon = gdspy.copy(self.gds_object_instances[entity.name], 0, 0)
-        new_name = gen_name(entity.name)
+        new_name = check_name(entity.__class__, entity.name)
         self.gds_object_instances[new_name] = new_polygon
         self.cell.add(new_polygon)
-
-    def rename(self, entity, name):
-        obj = self.gds_object_instances.pop(entity.name)
-        self.gds_object_instances[name] = obj
+        return new_name
 
     def relayer(self, entity, layer):
         obj = self.gds_object_instances[entity.name]
@@ -235,9 +231,9 @@ class GdsModeler:
         self.cell.polygons.remove(self.gds_object_instances[entity.name])
         self.gds_object_instances.pop(entity.name)
 
-    def rename_entity(self, entity, name):
-        polygon = self.gds_object_instances.pop(entity.name)
-        self.gds_object_instances[name] = polygon
+    def rename_entity(self, old_name, new_name):
+        polygon = self.gds_object_instances.pop(old_name)
+        self.gds_object_instances[new_name] = polygon
 
     def unite(self, entities, keep_originals=True):
 
@@ -464,12 +460,13 @@ class GdsModeler:
         mirror_entities = dict()
         for entity in entities:
             mirror_name = entity.name
+            print("Register mirror object", mirror_name)
             gds_entity = self.gds_object_instances[mirror_name]
             if isinstance(gds_entity, gdspy.FlexPath):
                 continue
             mirror = gds_entity.mirror(p1, p2)
-            self.gds_object_instances[mirror_name] = mirror
             mirror_entities[mirror_name] = mirror
+            self.gds_object_instances[mirror_name] = mirror
 
         return mirror_entities
 

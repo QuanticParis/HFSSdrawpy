@@ -2243,18 +2243,17 @@ class HfssModeler(COMWrapper):
             ],
         )
 
-    def rename(self, entity, name):
-        new_name = self._modeler.ChangeProperty(
+    def rename_entity(self, old_name, new_name):
+        return self._modeler.ChangeProperty(
             [
                 "NAME:AllTabs",
                 [
                     "NAME:Geometry3DAttributeTab",
-                    ["NAME:PropServers", str(entity.name)],
-                    ["NAME:ChangedProps", ["NAME:Name", "Value:=", str(name)]],
+                    ["NAME:PropServers", str(old_name)],
+                    ["NAME:ChangedProps", ["NAME:Name", "Value:=", str(new_name)]],
                 ],
             ]
         )
-        return new_name
 
     def relayer(self, entity, name):
         pass

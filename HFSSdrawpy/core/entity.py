@@ -27,9 +27,8 @@ class Entity:
         copy=None,
         name="entity_0",
         esc=False,
-        **kwargs
+        **kwargs,
     ):
-
         name = check_name(self.__class__, name)
         self.name = name
         self.dimension = dimension
@@ -88,8 +87,6 @@ class Entity:
             general_remove(self, self.body.entities_to_move)
 
     def copy(self, new_name=None, new_layer=None):
-        generated_name = gen_name(self.name)
-        self.body.interface.copy(self)
         if new_layer is None:
             new_layer = self.layer  # does not work in .gds yet
         copied = Entity(
@@ -98,8 +95,11 @@ class Entity:
             nonmodel=self.nonmodel,
             layer=new_layer,
             copy=self,
-            name=generated_name,
         )
+
+        new_interface_name = self.body.interface.copy(self)
+        self.body.interface.rename_entity(new_interface_name, copied.name)
+
         if new_name is not None:
             copied.rename(new_name)
         if new_layer is not None:
@@ -109,7 +109,7 @@ class Entity:
     def rename(self, new_name):
         self.dict_instances.pop(self.name)
         self.dict_instances[new_name] = self
-        self.body.interface.rename(self, new_name)
+        self.body.interface.rename_entity(self.name, new_name)
         self.name = new_name
 
     def relayer(self, new_layer):
