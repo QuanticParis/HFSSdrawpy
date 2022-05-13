@@ -48,6 +48,7 @@ class BodyMirror:
                 symmetric_entities.append(symmetric_entity)
 
             self.body.apply_mirror(symmetric_entities, self.normal_vector_polar)
+            print(symmetric_entities)
 
         if len(list_ports_new) > 0:
             for port in list_ports_new:
@@ -56,23 +57,13 @@ class BodyMirror:
                 name = check_name(Port, f"{port.name}_symmetric")
 
                 # Compute symmetric position
-                position = np.array(port.pos[:2])
-                p1, p2 = points_on_line_tangent_to(self.normal_vector_polar)
-                p1, p2 = np.array(p1), np.array(p2)
-                n = p1 - p2
-                n = n.astype(float)
-                n /= np.linalg.norm(n)
-                position += 2 * (np.eye(2) - np.outer(n, n)) @ (p1 - position)
-
-                # computed symmetric orientation
-                orientation = np.array(port.ori[:2])
-                tangent_vector = np.array(
-                    [
-                        np.cos(self.normal_vector_polar[1]),
-                        np.sin(self.normal_vector_polar[1]),
-                    ]
+                position = port.pos[:2]
+                orientation = port.ori[:2]
+                d_position, d_orientation = compute_translation_rotation(
+                    position, orientation, self.normal_vector_polar
                 )
-                orientation += -2 * (orientation @ tangent_vector) * tangent_vector
+                position += d_position
+                orientation += d_orientation
 
                 # draw it
                 with self.body(position.tolist(), orientation.tolist()):
@@ -93,3 +84,25 @@ class BodyMirror:
 
     def get_symmetric_of(self, port):
         return self.port_symmetry_correspondence[port]
+
+
+def compute_translation_rotation(position, orientation, normal_vector_polar):
+    position = np.array(position)
+    p1, p2 = points_on_line_tangent_to(normal_vector_polar)
+    p1, p2 = np.array(p1), np.array(p2)
+    n = p1 - p2
+    n = n.astype(float)
+    n /= np.linalg.norm(n)
+    d_position = 2 * (np.eye(2) - np.outer(n, n)) @ (p1 - position)
+
+    # computed symmetric orientation
+    orientation = np.array(orientation)
+    tangent_vector = np.array(
+        [
+            np.cos(normal_vector_polar[1]),
+            np.sin(normal_vector_polar[1]),
+        ]
+    )
+    d_orientation = -2 * (orientation @ tangent_vector) * tangent_vector
+
+    return d_position, d_orientation

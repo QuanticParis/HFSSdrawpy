@@ -1,6 +1,8 @@
 import gdspy
 import numpy as np
+from gdspy import FlexPath
 
+from ..core.symmetry import compute_translation_rotation
 from ..utils import Vector, parse_entry, val, points_on_line_tangent_to, check_name
 
 TOLERANCE = 1e-9  # for arcs
@@ -463,8 +465,20 @@ class GdsModeler:
             print("Register mirror object", mirror_name)
             gds_entity = self.gds_object_instances[mirror_name]
             if isinstance(gds_entity, gdspy.FlexPath):
-                continue
-            mirror = gds_entity.mirror(p1, p2)
+                points = gds_entity.points
+                mirrored_points = []
+                for point in points:
+                    dp, _ = compute_translation_rotation(
+                        point, np.zeros(2), normal_vector_polar
+                    )
+                    mirrored_point = point + dp
+                    mirrored_points.append(mirrored_point)
+                mirrored_points = np.array(mirrored_points)
+                gds_entity.points = mirrored_points
+                mirror = gds_entity
+            else:
+                mirror = gds_entity.mirror(p1, p2)
+
             mirror_entities[mirror_name] = mirror
             self.gds_object_instances[mirror_name] = mirror
 
