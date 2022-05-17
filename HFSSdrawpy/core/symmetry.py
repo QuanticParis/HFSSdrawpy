@@ -42,8 +42,6 @@ class BodyMirror:
         if len(list_entities_new) > 0:
             symmetric_entities = []
             for entity in list_entities_new:
-                if entity.layer == PORT:
-                    continue
                 symmetric_entity = entity.copy(entity.name + "_symmetric")
                 symmetric_entities.append(symmetric_entity)
 
