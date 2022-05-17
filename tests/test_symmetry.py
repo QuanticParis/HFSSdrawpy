@@ -23,15 +23,16 @@ with body([0, 0], [1, 0]):
         with body([0, 0.5], [1, 0]):
             with body([-1, 0.6], [1, 0]):
                 (port_1,) = body.port(name="port_1", widths=[track, track + 2 * gap])
-            with body([0, 0], [0, -1]):
-                (port_2,) = body.port(name="port_2", widths=None)
-            with body([1, 0.6], [0, 1]):
+            # with body([0, 0], [0, -1]):
+            #     (port_2,) = body.port(name="port_2", widths=None)
+            with body([0, 0.1], [0, -1]):
                 (port_3,) = body.port(name="port_3", widths=[track, track + 2 * gap])
-        path = Path("my_path", port_1, port_2, fillet)
-        body.path(path.points, port_3.r, fillet=fillet)
+        # path = Path("my_path", port_1, port_2, fillet)
+        # body.path(path.points, port_3.r, fillet=fillet)
+        body.draw_cable(port_1, port_3, fillet=fillet)
 
-# port_1_mirror = mirror.get_symmetric_of(port_1)
-# body.draw_cable_auto(port_1, port_1_mirror.r, fillet="0mm")
+    port_3_mirror = mirror.get_symmetric_of(port_3)
+body.draw_cable_auto(port_3, port_3_mirror.r, fillet=fillet)
 
 path = r"."
 pm.generate_gds(path, "test_symmetry")

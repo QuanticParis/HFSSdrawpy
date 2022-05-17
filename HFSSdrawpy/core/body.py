@@ -364,7 +364,10 @@ class Body(Modeler):
             for name, layer in zip(names, layers):
                 kwargs["layer"] = layer
                 kwargs["name"] = name
-                model_entities.append(Entity(2, self, **kwargs))
+                entity = Entity(2, self, **kwargs)
+                model_entities.append(entity)
+                if entity.name != name:
+                    self.interface.rename_entity(name, entity.name)
         elif self.mode == "hfss":
             # check that port is at the BEGINNING of the path (hfss only)
             ori = Vector(port.ori)
@@ -593,9 +596,9 @@ class Body(Modeler):
 
         ports = list(ports)
 
-        do_not_beyong = [port.name for port in ports if port.body != self]
-        if do_not_beyong:
-            raise ValueError("%s ports do not beyond to %s" % (do_not_beyong, self))
+        do_not_belong = [port.name for port in ports if port.body != self]
+        if do_not_belong:
+            raise ValueError("%s ports do not belong to %s" % (do_not_belong, self))
 
         # check the indentation level of connected ports
         # you should not try to connect ports different with body(...): levels

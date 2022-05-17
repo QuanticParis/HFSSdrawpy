@@ -48,7 +48,6 @@ class BodyMirror:
                 symmetric_entities.append(symmetric_entity)
 
             self.body.apply_mirror(symmetric_entities, self.normal_vector_polar)
-            print(symmetric_entities)
 
         if len(list_ports_new) > 0:
             for port in list_ports_new:
@@ -62,11 +61,13 @@ class BodyMirror:
                 d_position, d_orientation = compute_translation_rotation(
                     position, orientation, self.normal_vector_polar
                 )
-                position += d_position
-                orientation += d_orientation
+                symmetric_position = position + d_position
+                symmetric_orientation = orientation + d_orientation
 
                 # draw it
-                with self.body(position.tolist(), orientation.tolist()):
+                with self.body(
+                    symmetric_position.tolist(), symmetric_orientation.tolist()
+                ):
                     port_args = port.val(
                         drop_mask=True
                     )  # the mask will be re-added in `body.port`
