@@ -110,8 +110,7 @@ class Port:
         for ii in range(self.N):
             if self.layers[ii] != other.layers[ii]:
                 raise ValueError(
-                    "Tried to connect ports form different \
-                                 layers: %s != %s"
+                    "Tried to connect ports form different layers: %s != %s"
                     % (self.layers[ii], other.layers[ii])
                 )
             width1 = self.widths[ii]

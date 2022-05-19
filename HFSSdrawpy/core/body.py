@@ -860,8 +860,7 @@ class Body(Modeler):
         # asserts neither in nor out port are constraint_ports
         if ports[0].constraint_port and ports[-1].constraint_port:
             raise ValueError(
-                "At least the first (%s) or last port (%s) \
-                             should define the port parameters"
+                "At least the first (%s) or last port (%s) should define the port parameters"
                 % (ports[0].name, ports[-1].name)
             )
         elif ports[0].constraint_port:
