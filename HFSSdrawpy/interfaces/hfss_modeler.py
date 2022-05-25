@@ -223,6 +223,9 @@ class HfssProject(COMWrapper):
 
     def make_active(self):
         self.parent.set_active_project(self.name)
+    
+    def delete_design(self, name):
+        self._project.DeleteDesign(name)
 
     def get_designs(self):
         return [HfssDesign(self, d) for d in self._project.GetDesigns()]
