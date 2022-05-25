@@ -70,10 +70,10 @@ class BodyMirror:
                         drop_mask=True
                     )  # the mask will be re-added in `body.port`
                     (new_port,) = self.body.port(
-                        port_args.widths,
+                        port_args.widths or None,
                         port_args.subnames,
                         port_args.layers,
-                        port_args.offsets,
+                        port_args.offsets or None,
                         name,
                     )
 
