@@ -503,6 +503,9 @@ class HfssDesign(COMWrapper):
 
     def analyze_setup(self,name):
         self._design.Analyze(name)
+    
+    def analyse_all(self):
+        self._design.AnalyzeAllNominal()
 
     def get_nominal_variation(self):
         return self._design.GetNominalVariation()
