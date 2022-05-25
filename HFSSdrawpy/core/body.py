@@ -1033,3 +1033,31 @@ class Body(Modeler):
             for ii in range(len(self.entities[layer])):
                 entity_list[0].delete()
             self.entities.pop(layer)
+
+    def entity_finder(self, keylist, match_case=True):
+        '''
+        Finding entities base on its name or part of it
+
+        Inputs:
+            keylist : list
+                strings of entity names
+            match_case: bool
+                name of the entity
+
+        Returns:
+            sublist: list
+                list of entities
+        '''
+
+        if not isinstance(keylist, list):
+            keylist = [keylist]
+
+        sublist=[]
+        for idx in self.entities:
+            for key in keylist:
+                if match_case:
+                    sublist+=[s for s in self.entities[idx] if key == s.name]
+                else:
+                    sublist+=[s for s in self.entities[idx] if key in s.name]
+
+        return sublist
