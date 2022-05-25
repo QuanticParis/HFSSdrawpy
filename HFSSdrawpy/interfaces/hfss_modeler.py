@@ -612,6 +612,43 @@ class HfssDesign(COMWrapper):
 
     def Clear_Field_Clac_Stack(self):
         self._fields_calc.CalcStack("Clear")
+    
+    def plot_ComplexMag_E(self,setup,entity):
+        module = self._design.GetModule("FieldsReporter")
+        module.CreateFieldPlot(
+            [
+                "NAME:ComplexMag_E1",
+                "SolutionName:="	, "%s : LastAdaptive"%setup.name,
+                "UserSpecifyName:="	, 0,
+                "UserSpecifyFolder:="	, 0,
+                "QuantityName:="	, "ComplexMag_E",
+                "PlotFolder:="		, "E Field",
+                "StreamlinePlot:="	, False,
+                "AdjacentSidePlot:="	, False,
+                "FullModelPlot:="	, False,
+                "IntrinsicVar:="	, "Phase=\'0deg\'",
+                "PlotGeomInfo:="	, [1,"Volume","ObjList",1,"%s"%entity.name],
+                "FilterBoxes:="		, [0],
+                [
+                    "NAME:PlotOnVolumeSettings",
+                    "PlotIsoSurface:="	, True,
+                    "PointSize:="		, 1,
+                    "Refinement:="		, 0,
+                    "CloudSpacing:="	, 0.5,
+                    "CloudMinSpacing:="	, -1,
+                    "CloudMaxSpacing:="	, -1,
+                    "ShadingType:="		, 0,
+                    [
+                        "NAME:Arrow3DSpacingSettings",
+                        "ArrowUniform:="	, True,
+                        "ArrowSpacing:="	, 0,
+                        "MinArrowSpacing:="	, 0,
+                        "MaxArrowSpacing:="	, 0
+                    ]
+                ],
+                "EnableGaussianSmoothing:=", False
+            ], "Field")
+
 
 
 class HfssSetup(HfssPropertyObject):
