@@ -187,9 +187,15 @@ class Body(Modeler):
         """
         pos_x = 0
         pos_y = 0
+        rotation_matrix = np.array([[1,0],[0,1]])
         for coor in self.cursors:
-            pos_x += val(coor[0][0])
-            pos_y += val(coor[0][1])
+            pos_x += np.matmul(np.linalg.inv(rotation_matrix),np.array(val(coor[0]))[:-1])[0]
+            pos_y += np.matmul(np.linalg.inv(rotation_matrix),np.array(val(coor[0]))[:-1])[1] 
+            
+            #update rotation matrix
+            new_matrix = np.array([[val(coor[1][0]),-val(coor[1][1])],[val(coor[1][1]),val(coor[1][0])]])
+            rotation_matrix = np.matmul(new_matrix, rotation_matrix)
+
         return pos_x, pos_y
 
     ### Basic drawing
