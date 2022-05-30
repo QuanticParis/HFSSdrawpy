@@ -1,4 +1,5 @@
 import atexit
+from distutils.core import setup
 import os
 import signal
 import tempfile
@@ -501,8 +502,8 @@ class HfssDesign(COMWrapper):
         if name in self.get_setup_names():
             self._setup_module.DeleteSetups(name)
 
-    def analyze_setup(self,name):
-        self._design.Analyze(name)
+    def analyze_setup(self,setup):
+        self._design.Analyze(setup.name)
     
     def analyze_all(self):
         self._design.AnalyzeAllNominal()
@@ -881,6 +882,20 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
 
         freqs = [float(ii) for ii in data[:, 1]]
         return freqs, kappa_over_2pis
+    
+    def eigenmodes_v2(self, setup, lv=""):
+        # implemented because eigenmodes was bugged
+        fn = tempfile.mktemp()
+        self._solutions.ExportEigenmodes("%s : LastAdaptive"%setup.name, lv, fn)
+        data = numpy.loadtxt(fn, dtype="str")
+        " data has the following structure:"
+        "[ ['mode number' 'frequency' 'Q factor']"
+        freqs = [float(ii) for ii in data[:, 1]]
+        if data[0,-1] == 0:
+            print('Q is non defined')
+        else:
+            Qs = [float(ii) for ii in data[:, -1]]
+        return freqs, Qs
 
     def set_mode(self, n, phase):
         n_modes = int(self.parent.n_modes)
