@@ -42,9 +42,7 @@ class Port:
             self.offsets = offsets
             self.N = 0
 
-        if self.body.ports_to_move is not None:
-            find_last_list(self.body.ports_to_move).append(self)
-        
+        self.body.current.ports.append(self)
             
         if key == "name":  # normal initialisation
             if self.body.is_mask and not self.constraint_port:

@@ -7,7 +7,6 @@ from ..utils import (
     check_name,
     find_last_list,
     gen_name,
-    general_remove,
     parse_entry,
     val,
 )
@@ -36,14 +35,14 @@ class Entity:
             self.body.entities[layer] = [self]
 
         if copy is None:
-            if self.body.entities_to_move is not None:
-                find_last_list(self.body.entities_to_move).append(self)
+            self.body.current.entities.append(self)
+            self.entities_list = self.body.current.entities
             self.is_boolean = False  # did it suffer a bool operation already ?
             self.is_fillet = False  # did it suffer a fillet operation already ?
         else:
             # copy is indeed the original object
-            # the new object should be put in the same list indent
-            add_to_corresponding_list(copy, self.body.entities_to_move, self)
+            self.body.current.entities.append(copy)
+            self.entities_list = self.body.current.entities
             self.is_boolean = copy.is_boolean
             self.is_fillet = copy.is_fillet
 
@@ -58,9 +57,6 @@ class Entity:
     @staticmethod
     def reset():
         raise NotImplementedError()
-        # self.body.entities = {}
-        # Entity.dict_instances = {}
-        # Entity.instances_to_move = []
 
     @classmethod
     def print_instances(cls):
@@ -75,8 +71,7 @@ class Entity:
         self.body.interface.delete(self)
         self.dict_instances.pop(self.name)
         self.body.entities[self.layer].remove(self)
-        if self.body.entities_to_move is not None:
-            general_remove(self, self.body.entities_to_move)
+        self.entities_list.remove(self)
 
     def copy(self, new_name=None, new_layer=None):
         generated_name = gen_name(self.name)

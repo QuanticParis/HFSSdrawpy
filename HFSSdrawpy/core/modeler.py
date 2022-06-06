@@ -50,6 +50,9 @@ class Modeler:
             from ..interfaces import gds_modeler
 
             self.interface = gds_modeler.GdsModeler()
+        elif mode == "mpl":
+            from ..interfaces import mpl_modeler
+            self.interface = mpl_modeler.MplModeler()
         else:
             print("Mode should be either hfss or gds")
             

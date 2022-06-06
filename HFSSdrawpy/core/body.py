@@ -1,7 +1,11 @@
 from functools import wraps
 
 import numpy as np
-from sympy import posify
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle, Polygon
+from matplotlib.transforms import Affine2D
+from anytree import Node
+plt.close('all')
 
 from ..parameters import DEFAULT, MASK, MESH, PORT
 from ..path_finding.path_finder import Path
@@ -22,58 +26,273 @@ from .modeler import Modeler
 from .port import Port
 
 
+mat = np.array([[0, 1], [-1, 0]])
+
+class MplPort:
+    def __init__(self, xy, ori):
+        self.xy = np.array(xy)
+        self.ori = np.array(ori)
+        self.vertices = np.array([self.ori*0.025, 
+                                  mat @ self.ori*0.025, 
+                                  -mat @ self.ori*0.025])
+        self._patch_xy = self.xy
+        self.poly = Polygon(self._patch_xy + self.vertices, fill=False, color='k')
+        ax.add_patch(self.poly)
+        
+        self.transform = None
+
+    @property
+    def patch_xy(self):
+        return self._patch_xy
+    
+    @patch_xy.setter
+    def patch_xy(self, xy):
+        self.poly.set_xy(xy + self.vertices)
+        self._patch_xy = xy
+        
+    def set_transform(self, translation, rotation):
+        angle = np.arctan2(*rotation[::-1])
+        if self.transform is None:
+            self.transform = Affine2D().rotate(angle)
+        else:
+            self.transform += Affine2D().rotate(angle)
+        self.transform += Affine2D().translate(translation[0]*1e3, translation[1]*1e3)
+        
+        self.poly.set_transform(self.transform + ax.transData)
+        fig.canvas.draw()
+        
+class Connection():
+    
+    def __init__(self, port0, port1):
+        pass
+
+    # def on_press(self, event):
+    #     if event.inaxes != self.poly.axes: return
+    #     contains, attrd = self.poly.contains(event)
+    #     if not contains: return
+    #     if self.press is None:
+    #         self.press = True
+            
+    #         self.line = Polygon([self.xy, [event.xdata, event.ydata]], closed=False, fill=False, color='k')
+    #         ax.add_patch(self.line)
+    #         self.poly.figure.canvas.draw()
+    #     else:
+    #         self.press = None
+        
+    # def on_motion(self, event):
+    #     if self.press is None: return
+    #     self.line.set_xy([self.xy, [event.xdata, event.ydata]])
+    #     self.poly.figure.canvas.draw()
+
+class Collection():
+    
+    def __init__(self, dr, others=None):
+        self.dr = dr
+        if others is None:
+            self.others = []
+        else:
+            self.others = others
+            
+        self.xy = dr.xy
+        self.poly = dr.poly
+        
+    @property
+    def patch_xy(self):
+        return self.dr.patch_xy
+    
+    @patch_xy.setter
+    def patch_xy(self, xy):
+        self.dr.patch_xy = xy
+        for port in self.ports:
+            port.patch_xy = xy + port.xy - self.dr.xy
+        
+class DraggableRectangle:
+    def __init__(self, xy, length, width):
+        self.xy = np.array(xy) 
+        self.poly = Rectangle(xy, length, width, fill=False, color='k')
+        ax.add_patch(self.poly)
+        
+        self.transform = None
+        
+    @property
+    def patch_xy(self):
+        return self.poly.xy
+    
+    @patch_xy.setter
+    def patch_xy(self, xy):
+        self.poly.set_xy(xy)
+        
+    def set_transform(self, translation, rotation):
+        angle = np.arctan2(*rotation[::-1])
+        if self.transform is None:
+            self.transform = Affine2D().rotate(angle)
+        else:
+            self.transform += Affine2D().rotate(angle)
+        self.transform += Affine2D().translate(translation[0]*1e3, translation[1]*1e3)
+        
+        self.poly.set_transform(self.transform + ax.transData)
+        fig.canvas.draw()
+        
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.set_xlim(-0.5, 3.5)
+ax.set_ylim(-0.5, 3.5)
+ax.set_aspect('equal')
+
+drs = []
+ps = []
+
+status = None
+xy_start = None
+objects = []
+
+def on_press(event):
+    global status, xy_start, objects
+    if event.inaxes != ax: return
+    for dr in drs:
+        contains, attrd = dr.poly.contains(event)
+        if contains:
+            objects.append(dr)
+    for p in ps:
+        contains, attrd = p.poly.contains(event)
+        if contains:
+            objects.append(dr)
+    if len(objects) != 0:
+        status = 'drag'
+        xy_start = np.array([event.xdata, event.ydata])
+
+def on_motion(event):
+    global status, xy_start, objects
+    if status is None: return
+    xy_event = np.array([event.xdata, event.ydata])
+    dxy = np.rint((xy_event - xy_start)*10)/10
+    for obj in objects:
+        xy_obj = obj.xy        
+        obj.patch_xy = xy_obj+dxy
+    fig.canvas.draw()
+        
+def on_release(event):
+    global status, xy_start, objects
+    if status is None: return
+    for obj in objects:
+        obj.xy = obj.patch_xy
+    objects = []
+    status = None
+    xy_start = None
+        
+def disconnect():
+    'disconnect all the stored connection ids'
+    fig.canvas.mpl_disconnect(cidpress)
+    fig.canvas.mpl_disconnect(cidrelease)
+    fig.canvas.mpl_disconnect(cidmotion)
+        
+
+
+cidpress = fig.canvas.mpl_connect(
+    'button_press_event', on_press)
+cidrelease = fig.canvas.mpl_connect(
+    'button_release_event', on_release)
+cidmotion = fig.canvas.mpl_connect(
+    'motion_notify_event', on_motion)
+
+
+
+
+
+# dr0 = DraggableRectangle((0.1, 0.1), 0.2, 0.1)
+# dr1 = DraggableRectangle((0.3, 0.3), 0.1, 0.2)
+
+# p0 = MplPlot((0.5, 0.5), [1, 0])
+# p1 = MplPlot((0.7, 0.8), [1, 0])
+
+# c0 = Collection(dr0, ports=[p0, p1])
+
+# drs.append(c0)
+# drs.append(dr1)
+
+def iterate_entities(node):
+    for entity in node.entities:
+        yield entity
+    if node.children is not None:
+        for child in node.children:
+            for entity in iterate_entities(child):
+                yield entity
+
+def iterate_ports(node):
+    for entity in node.ports:
+        yield entity
+    if node.children is not None:
+        for child in node.children:
+            for entity in iterate_ports(child):
+                yield entity
+                
+def iterate_ips(node):
+    for entity in node.ips:
+        yield entity
+    if node.children is not None:
+        for child in node.children:
+            for entity in iterate_ips(child):
+                yield entity
+                
+def iterate_drs(node):
+    yield node.dr
+    if node.children is not None:
+        for child in node.children:
+            for entity in iterate_drs(child):
+                yield entity
+
 class BodyMover:
     def __init__(self, body):
-
         self.body = body
-        self.id = np.random.rand()
 
     def __enter__(self):
         # 1 We need to keep track of the entities created during the execution of a function
-        if self.body.entities_to_move is None:
-            self.body.entities_to_move = []
-        else:
-            find_last_list(self.body.entities_to_move).append([])
-
-        if self.body.ports_to_move is None:
-            self.body.ports_to_move = []
-        else:
-            find_last_list(self.body.ports_to_move).append([])
-
+        pass
+    
     def __exit__(self, *exc):
+        
+        # move all elements according to node transform
+        pos = self.body.current.pos
+        ori = self.body.current.ori
+        # for entity in iterate(self.body.current):
+        entities = list(iterate_entities(self.body.current))
+        ports = list(iterate_ports(self.body.current))
+        new_ports = self.body.current.ports
+        
+        # Add a bounding box from the list of entities
+        if len(entities) > 0:
+            vertices = self.body.interface.get_vertices(entities[0])
+            for entity in entities[1:]:
+                vertices = np.concatenate((vertices, self.body.interface.get_vertices(entity)))
+            vertices_x, vertices_y = vertices.T
+            xmin = np.amin(vertices_x)
+            xmax = np.amax(vertices_x)
+            ymin = np.amin(vertices_y)
+            ymax = np.amax(vertices_y)
+            
+            bounding_box = self.body.rect([xmin, ymin], [xmax-xmin, ymax-ymin], name='bounding_box_%s'%(self.body.current.name))
+            dr = DraggableRectangle((xmin*1e3, ymin*1e3), (xmax-xmin)*1e3, (ymax-ymin)*1e3)
+            self.body.current.dr = dr
+            
 
-        # 4 We move the entity that were created by the last function
-        list_entities_new = find_last_list(self.body.entities_to_move)
-        list_ports_new = find_last_list(self.body.ports_to_move)
-        pos, angle = self.body.cursors[-1]
-
-        # 5 We move the entities_to_move with the right operation
-        if len(list_entities_new) > 0:
-            self.body.rotate(list_entities_new, angle=angle)
-            self.body.translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
-
-        if len(list_ports_new) > 0:
-            Port.rotate_ports(list_ports_new, angle)
-            Port.translate_ports(list_ports_new, vector=[pos[0], pos[1], pos[2]])
-
-        # 6 We empty a part of the 'to_move' lists
-        penultimate_entity_list = find_penultimate_list(self.body.entities_to_move)
-        if penultimate_entity_list:
-            a = penultimate_entity_list.pop(-1)
-            for entity in a:
-                penultimate_entity_list.append(entity)
-        else:
-            self.body.entities_to_move = None
-
-        penultimate_port_list = find_penultimate_list(self.body.ports_to_move)
-        if penultimate_port_list:
-            a = penultimate_port_list.pop(-1)
-            for entity in a:
-                penultimate_port_list.append(entity)
-        else:
-            self.body.ports_to_move = None
-
-        self.body.cursors.pop(-1)
+        if len(new_ports) > 0:
+            for port in new_ports[::2]:
+                p = MplPort(port.pos[:2]*1e3, port.ori[:2])
+                self.body.current.ips.append(p)
+                
+        
+        self.body.rotate(entities+[bounding_box], angle=ori)
+        self.body.translate(entities+[bounding_box], vector=[pos[0], pos[1], pos[2]])
+        
+        Port.rotate_ports(ports, angle=ori)
+        Port.translate_ports(ports, vector=[pos[0], pos[1], pos[2]])
+        
+        for dr in iterate_drs(self.body.current):
+            dr.set_transform(val(pos), ori)
+        for ip in iterate_ips(self.body.current):
+            ip.set_transform(val(pos), ori)
+        
+        self.body.current = self.body.current.parent
+        
         return False
 
 
@@ -98,72 +317,30 @@ class Body(Modeler):
         self.mode = pm.mode  # 'hfss' or 'gds'
         self.dict_instances[name] = self
         self.entities = {DEFAULT: []}  # entities sorted by layer
-        self.cursors = []  # tuple to escape list parsing
-        self.ports_to_move = None
-        self.entities_to_move = None
+
         self.is_mask = pm.is_mask
         self.gap_mask = parse_entry(pm.gap_mask)
         self.is_litho = pm.is_litho
+        self.counter = 0
+        self.root = Node('%d'%self.counter, entities=[], ports=[], dr=None, ips=[])
+        self.current = self.root
+        self.params = {}
 
         pm.bodies.append(self)
-
+        
     def __call__(self, pos, ori=[1, 0]):
+        if isinstance(pos, str):
+            name = pos
+            pos = self.params[name].pos
+            ori = self.params[name].ori
         pos, ori = parse_entry(pos, ori)
         if len(pos) == 2:
             pos.append(0)
-        self.cursors.append((pos, ori))
+
+        self.counter += 1
+        node = Node('%d'%self.counter, parent=self.current, entities=[], ports=[], dr=None, ips=[], pos=pos, ori=ori)
+        self.current = node
         return BodyMover(self)
-
-    # def __enter__(self):
-    #     print("enter(")
-    #     #1 We need to keep track of the entities created during the execution of a function
-    #     if self.entities_to_move is None:
-    #         self.entities_to_move = []
-    #     else:
-    #         find_last_list(self.entities_to_move).append([])
-
-    #     if self.ports_to_move is None:
-    #         self.ports_to_move = []
-    #     else:
-    #         find_last_list(self.ports_to_move).append([])
-
-    #     return self
-
-    # def __exit__(self, *exc):
-    #     print(")exit")
-    #     #4 We move the entity that were created by the last function
-    #     list_entities_new = find_last_list(self.entities_to_move)
-    #     list_ports_new = find_last_list(self.ports_to_move)
-    #     pos, angle = self.cursors[-1]
-
-    #     #5 We move the entities_to_move with the right operation
-    #     if len(list_entities_new)>0:
-    #         self.rotate(list_entities_new, angle=angle)
-    #         self.translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
-
-    #     if len(list_ports_new)>0:
-    #         Port.rotate_ports(list_ports_new, angle)
-    #         Port.translate_ports(list_ports_new, vector=[pos[0], pos[1], pos[2]])
-
-    #     #6 We empty a part of the 'to_move' lists
-    #     penultimate_entity_list = find_penultimate_list(self.entities_to_move)
-    #     if penultimate_entity_list:
-    #         a = penultimate_entity_list.pop(-1)
-    #         for entity in a:
-    #             penultimate_entity_list.append(entity)
-    #     else:
-    #         self.entities_to_move = None
-
-    #     penultimate_port_list = find_penultimate_list(self.ports_to_move)
-    #     if penultimate_port_list:
-    #         a = penultimate_port_list.pop(-1)
-    #         for entity in a:
-    #             penultimate_port_list.append(entity)
-    #     else:
-    #         self.ports_to_move = None
-
-    #     self.cursors.pop(-1)
-    #     return False
 
     def set_body(func):
         """
@@ -184,13 +361,14 @@ class Body(Modeler):
         Compute the current value of the position of the cursor
         Assume no rotation is done ! (e.g. location of junctions in dosetest)
         TODO do full change of basis
+        TODO change this function
         """
-        pos_x = 0
-        pos_y = 0
-        for coor in self.cursors:
-            pos_x += val(coor[0][0])
-            pos_y += val(coor[0][1])
-        return pos_x, pos_y
+        # pos_x = 0
+        # pos_y = 0
+        # for coor in self.cursors:
+        #     pos_x += val(coor[0][0])
+        #     pos_y += val(coor[0][1])
+        return 0, 0
 
     ### Basic drawing
 
@@ -641,19 +819,20 @@ class Body(Modeler):
         if do_not_beyong:
             raise ValueError("%s ports do not beyond to %s" % (do_not_beyong, self))
         
-        # check the indentation level of connected ports
-        # you should not try to connect ports different with body(...): levels
-        indent_level = find_corresponding_list(ports[0], self.ports_to_move)
-        if indent_level is not None:
-            if indent_level:  # the found list
-                for port in ports:
-                    if not port in indent_level:
-                        msg = (
-                            "Trying to connect ports from different \
-                                indentation levels: port %s"
-                            % (port.name)
-                        )
-                        raise IndentationError(msg)
+        # TODO redo this check
+        # # check the indentation level of connected ports
+        # # you should not try to connect ports different with body(...): levels
+        # indent_level = find_corresponding_list(ports[0], self.ports_to_move)
+        # if indent_level is not None:
+        #     if indent_level:  # the found list
+        #         for port in ports:
+        #             if not port in indent_level:
+        #                 msg = (
+        #                     "Trying to connect ports from different \
+        #                         indentation levels: port %s"
+        #                     % (port.name)
+        #                 )
+        #                 raise IndentationError(msg)
 
         # asserts neither in nor out port are constraint_ports
         if ports[0].constraint_port and ports[-1].constraint_port:
@@ -871,19 +1050,20 @@ class Body(Modeler):
         if do_not_beyong:
             raise ValueError("%s ports do not beyond to %s" % (do_not_beyong, self))
         
+        # TODO redo this check
         # check the indentation level of connected ports
         # you should not try to connect ports different with body(...): levels
-        indent_level = find_corresponding_list(ports[0], self.ports_to_move)
-        if indent_level is not None:
-            if indent_level:  # the found list
-                for port in ports:
-                    if not port in indent_level:
-                        msg = (
-                            "Trying to connect ports from different \
-                                indentation levels: port %s"
-                            % (port.name)
-                        )
-                        raise IndentationError(msg)
+        # indent_level = find_corresponding_list(ports[0], self.ports_to_move)
+        # if indent_level is not None:
+        #     if indent_level:  # the found list
+        #         for port in ports:
+        #             if not port in indent_level:
+        #                 msg = (
+        #                     "Trying to connect ports from different \
+        #                         indentation levels: port %s"
+        #                     % (port.name)
+        #                 )
+        #                 raise IndentationError(msg)
 
         # asserts neither in nor out port are constraint_ports
         if ports[0].constraint_port and ports[-1].constraint_port:
@@ -985,6 +1165,11 @@ class Body(Modeler):
                 print('Cable "%s" length = %.3f mm' % (name, length * 1000))
                 
             # plot cable
+            self.polyline(total_path.path, closed=False, name=name+'_line')
+            path_x = [val(point[0])*1e3 for point in total_path.path]
+            path_y = [val(point[1])*1e3 for point in total_path.path]
+            print()
+            ax.plot(path_x, path_y)
             cable = self.path(total_path.path, total_path.port_in, total_path.fillet, name=name, drop_mask=drop_mask)
 
             # assign mesh_size to the mesh layer in the new cable
