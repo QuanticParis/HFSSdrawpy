@@ -1,4 +1,5 @@
 from functools import wraps
+import numpy as np
 
 from .entity import Entity
 from .modeler import Modeler
