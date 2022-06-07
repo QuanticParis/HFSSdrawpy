@@ -1,4 +1,5 @@
 import atexit
+from distutils.core import setup
 import os
 import signal
 import tempfile
@@ -225,6 +226,9 @@ class HfssProject(COMWrapper):
 
     def make_active(self):
         self.parent.set_active_project(self.name)
+    
+    def delete_design(self, name):
+        self._project.DeleteDesign(name)
 
     def get_designs(self):
         return [HfssDesign(self, d) for d in self._project.GetDesigns()]
@@ -494,6 +498,12 @@ class HfssDesign(COMWrapper):
         if name in self.get_setup_names():
             self._setup_module.DeleteSetups(name)
 
+    def analyze_setup(self,setup):
+        self._design.Analyze(setup.name)
+    
+    def analyze_all(self):
+        self._design.AnalyzeAllNominal()
+
     def get_nominal_variation(self):
         return self._design.GetNominalVariation()
 
@@ -612,6 +622,43 @@ class HfssDesign(COMWrapper):
 
     def Clear_Field_Clac_Stack(self):
         self._fields_calc.CalcStack("Clear")
+    
+    def plot_ComplexMag_E(self,setup,entity):
+        module = self._design.GetModule("FieldsReporter")
+        module.CreateFieldPlot(
+            [
+                "NAME:ComplexMag_E1",
+                "SolutionName:="	, "%s : LastAdaptive"%setup.name,
+                "UserSpecifyName:="	, 0,
+                "UserSpecifyFolder:="	, 0,
+                "QuantityName:="	, "ComplexMag_E",
+                "PlotFolder:="		, "E Field",
+                "StreamlinePlot:="	, False,
+                "AdjacentSidePlot:="	, False,
+                "FullModelPlot:="	, False,
+                "IntrinsicVar:="	, "Phase=\'0deg\'",
+                "PlotGeomInfo:="	, [1,"Volume","ObjList",1,"%s"%entity.name],
+                "FilterBoxes:="		, [0],
+                [
+                    "NAME:PlotOnVolumeSettings",
+                    "PlotIsoSurface:="	, True,
+                    "PointSize:="		, 1,
+                    "Refinement:="		, 0,
+                    "CloudSpacing:="	, 0.5,
+                    "CloudMinSpacing:="	, -1,
+                    "CloudMaxSpacing:="	, -1,
+                    "ShadingType:="		, 0,
+                    [
+                        "NAME:Arrow3DSpacingSettings",
+                        "ArrowUniform:="	, True,
+                        "ArrowSpacing:="	, 0,
+                        "MinArrowSpacing:="	, 0,
+                        "MaxArrowSpacing:="	, 0
+                    ]
+                ],
+                "EnableGaussianSmoothing:=", False
+            ], "Field")
+
 
 
 class HfssSetup(HfssPropertyObject):
@@ -848,6 +895,20 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
 
         freqs = [float(ii) for ii in data[:, 1]]
         return freqs, kappa_over_2pis
+    
+    def eigenmodes_v2(self, setup, lv=""):
+        # implemented because eigenmodes was bugged
+        fn = tempfile.mktemp()
+        self._solutions.ExportEigenmodes("%s : LastAdaptive"%setup.name, lv, fn)
+        data = numpy.loadtxt(fn, dtype="str")
+        " data has the following structure:"
+        "[ ['mode number' 'frequency' 'Q factor']"
+        freqs = [float(ii) for ii in data[:, 1]]
+        if data[0,-1] == 0:
+            print('Q is non defined')
+        else:
+            Qs = [float(ii) for ii in data[:, -1]]
+        return freqs, Qs
 
     def set_mode(self, n, phase):
         n_modes = int(self.parent.n_modes)

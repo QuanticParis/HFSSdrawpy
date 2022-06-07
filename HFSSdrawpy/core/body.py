@@ -138,9 +138,15 @@ class Body(Modeler):
         """
         pos_x = 0
         pos_y = 0
+        rotation_matrix = np.array([[1,0],[0,1]])
         for coor in self.cursors:
-            pos_x += val(coor[0][0])
-            pos_y += val(coor[0][1])
+            pos_x += np.matmul(np.linalg.inv(rotation_matrix),np.array(val(coor[0]))[:-1])[0]
+            pos_y += np.matmul(np.linalg.inv(rotation_matrix),np.array(val(coor[0]))[:-1])[1] 
+            
+            #update rotation matrix
+            new_matrix = np.array([[val(coor[1][0]),-val(coor[1][1])],[val(coor[1][1]),val(coor[1][0])]])
+            rotation_matrix = np.matmul(new_matrix, rotation_matrix)
+
         return pos_x, pos_y
 
     ### Basic drawing
@@ -1026,3 +1032,32 @@ class Body(Modeler):
             for ii in range(len(self.entities[layer])):
                 entity_list[0].delete()
             self.entities.pop(layer)
+
+    def entity_finder(self, keylist, match_case=True):
+        '''
+        Finding entities base on its name or part of it
+
+        Inputs:
+            keylist : list
+                strings of entity names
+            match_case: bool
+                name of the entity
+
+        Returns:
+            sublist: list
+                list of entities
+        '''
+
+        if not isinstance(keylist, list):
+            keylist = [keylist]
+
+        sublist=[]
+        for idx in self.entities:
+            for key in keylist:
+                if match_case:
+                    sublist+=[s for s in self.entities[idx] if key == s.name]
+                else:
+                    sublist+=[s for s in self.entities[idx] if key in s.name]
+
+        return sublist
+
