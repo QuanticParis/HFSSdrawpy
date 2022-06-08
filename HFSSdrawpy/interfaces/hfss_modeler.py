@@ -1721,8 +1721,9 @@ class HfssModeler(COMWrapper):
         )
 
     def assign_perfect_E_faces(self,face_list,name):
-        # get the face_list you're interested in by using the get_face_ids function
-        # face_list is the list of face numbers, eg: ['17655','17656']
+        # get the face_list (tuple) you're interested in by using the get_face_ids function
+        # face_list is the list of face numbers, eg: ['17655','17656'] 
+        face_list = [face_list]
         face_list = [int(i) for i in face_list]
         self._boundaries.AssignPerfectE(
             [
