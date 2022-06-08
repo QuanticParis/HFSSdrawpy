@@ -1,4 +1,5 @@
 import numpy
+import numpy as np
 import sympy
 from pint import UnitRegistry
 from sympy.parsing import sympy_parser
@@ -211,6 +212,7 @@ def extract_value_dim(expr):
     except Exception:
         return DIMENSIONLESS
 
+
 def parse_entry(*entries, marker=True):
     # should take a list of tuple of list... of int, float or str...
     parsed = []
@@ -242,7 +244,9 @@ def rem_unit(other):
 
 
 def _val(elt):
-    if isinstance(elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)):
+    if isinstance(
+        elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)
+    ):
         return elt
     elif isinstance(elt, str):
         if LENGTH == extract_value_dim(elt):
@@ -296,20 +300,22 @@ def way(vec):
                 return Vector(1, 0)
             elif vec[0] < 0:
                 return Vector(-1, 0)
-    return Vector(0, 0) # diagonal
+    return Vector(0, 0)  # diagonal
+
 
 def way_approx(vec):
     vec_val = val(vec)
-    if abs(vec_val[0])>abs(vec_val[1]):
-        if vec_val[0]>0:
+    if abs(vec_val[0]) > abs(vec_val[1]):
+        if vec_val[0] > 0:
             return Vector(1, 0)
         else:
             return Vector(-1, 0)
     else:
-        if vec_val[1]>0:
+        if vec_val[1] > 0:
             return Vector(0, 1)
         else:
             return Vector(0, -1)
+
 
 variables = {}
 
@@ -560,9 +566,12 @@ class Vector(numpy.ndarray):
             ortho = -other.cross(ref)
 
             return (
-                Vector([self.dot(other.refx()), self.dot(other.orth().refy()), 0]) * ref[2]
-                + Vector([self.dot(other.orth().refx()), 0, self.dot(other.refz())]) * ref[1]
-                + Vector([0, self.dot(other.refy()), self.dot(other.orth().refz())]) * ref[0]
+                Vector([self.dot(other.refx()), self.dot(other.orth().refy()), 0])
+                * ref[2]
+                + Vector([self.dot(other.orth().refx()), 0, self.dot(other.refz())])
+                * ref[1]
+                + Vector([0, self.dot(other.refy()), self.dot(other.orth().refz())])
+                * ref[0]
             )
         else:
             raise TypeError("other must be a Vector")
@@ -599,7 +608,7 @@ def coor2angle(x, y=None):
     if y is None:
         x, y = x
 
-    norm = (x ** 2 + y ** 2) ** 0.5
+    norm = (x**2 + y**2) ** 0.5
 
     if x != 0 and abs(y / x) < 1:
         angle = numpy.arcsin(y / norm)
@@ -611,6 +620,19 @@ def coor2angle(x, y=None):
             angle = -numpy.arccos(x / norm) + 2 * numpy.pi
 
     return angle % (2 * numpy.pi)
+
+
+def points_on_line_tangent_to(vector_polar):
+    """
+    @param vector_polar: a vector, expressed in polar coordinates (magnitude, angle)
+    @return: two points on the tangent line defined by the vector. Their coordinates are in Cartesian coordinate system
+    """
+    magnitude, angle = vector_polar
+
+    p1x, p1y = magnitude * np.cos(angle), magnitude * np.sin(angle)
+    p2x, p2y = p1x + np.sin(angle), p1y - np.cos(angle)
+
+    return (p1x, p1y), (p2x, p2y)
 
 
 # if(__name__=="__main__"):

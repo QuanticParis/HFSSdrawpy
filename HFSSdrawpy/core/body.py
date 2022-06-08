@@ -1,9 +1,12 @@
 from functools import wraps
-
 import numpy as np
-from sympy import posify
 
-from ..parameters import DEFAULT, MASK, MESH, PORT
+from .entity import Entity
+from .modeler import Modeler
+from .move import BodyMover
+from .port import Port
+from .symmetry import BodyMirror
+from ..parameters import DEFAULT, MESH, PORT
 from ..path_finding.path_finder import Path
 from ..path_finding.path_finder_auto import PathAuto
 from ..utils import (
@@ -11,70 +14,10 @@ from ..utils import (
     check_name,
     equal_float,
     find_corresponding_list,
-    find_last_list,
-    find_penultimate_list,
     parse_entry,
     val,
     way,
 )
-from .entity import Entity
-from .modeler import Modeler
-from .port import Port
-
-
-class BodyMover:
-    def __init__(self, body):
-
-        self.body = body
-        self.id = np.random.rand()
-
-    def __enter__(self):
-        # 1 We need to keep track of the entities created during the execution of a function
-        if self.body.entities_to_move is None:
-            self.body.entities_to_move = []
-        else:
-            find_last_list(self.body.entities_to_move).append([])
-
-        if self.body.ports_to_move is None:
-            self.body.ports_to_move = []
-        else:
-            find_last_list(self.body.ports_to_move).append([])
-
-    def __exit__(self, *exc):
-
-        # 4 We move the entity that were created by the last function
-        list_entities_new = find_last_list(self.body.entities_to_move)
-        list_ports_new = find_last_list(self.body.ports_to_move)
-        pos, angle = self.body.cursors[-1]
-
-        # 5 We move the entities_to_move with the right operation
-        if len(list_entities_new) > 0:
-            self.body.rotate(list_entities_new, angle=angle)
-            self.body.translate(list_entities_new, vector=[pos[0], pos[1], pos[2]])
-
-        if len(list_ports_new) > 0:
-            Port.rotate_ports(list_ports_new, angle)
-            Port.translate_ports(list_ports_new, vector=[pos[0], pos[1], pos[2]])
-
-        # 6 We empty a part of the 'to_move' lists
-        penultimate_entity_list = find_penultimate_list(self.body.entities_to_move)
-        if penultimate_entity_list:
-            a = penultimate_entity_list.pop(-1)
-            for entity in a:
-                penultimate_entity_list.append(entity)
-        else:
-            self.body.entities_to_move = None
-
-        penultimate_port_list = find_penultimate_list(self.body.ports_to_move)
-        if penultimate_port_list:
-            a = penultimate_port_list.pop(-1)
-            for entity in a:
-                penultimate_port_list.append(entity)
-        else:
-            self.body.ports_to_move = None
-
-        self.body.cursors.pop(-1)
-        return False
 
 
 class Body(Modeler):
@@ -88,7 +31,9 @@ class Body(Modeler):
         else:
             rel_coor = parse_entry(rel_coor)
 
-        pm.interface.create_coor_sys(coor_sys=name, rel_coor=rel_coor, ref_name=ref_name)
+        pm.interface.create_coor_sys(
+            coor_sys=name, rel_coor=rel_coor, ref_name=ref_name
+        )
 
         self.pm = pm
         self.name = name
@@ -113,6 +58,13 @@ class Body(Modeler):
             pos.append(0)
         self.cursors.append((pos, ori))
         return BodyMover(self)
+
+    def mirror(self, angle, magnitude=0):
+        """
+        @param angle: (float, in radians) the angle of the normal vector to the plane of symmetry in the (x, y) plane
+        @param magnitude: (float) the angle of the normal vector to the plane of symmetry in the (x, y) plane
+        """
+        return BodyMirror(self, angle, magnitude)
 
     # def __enter__(self):
     #     print("enter(")
@@ -178,7 +130,7 @@ class Body(Modeler):
             return func(*args, **kwargs)
 
         return updated
-    
+
     def current_pos(self):
         """
         Compute the current value of the position of the cursor
@@ -241,7 +193,9 @@ class Body(Modeler):
         return self.rect(pos, size, name=name, **kwargs)
 
     @set_body
-    def cylinder(self, pos, radius, height, axis, segments=0, name="cylinder_0", **kwargs):
+    def cylinder(
+        self, pos, radius, height, axis, segments=0, name="cylinder_0", **kwargs
+    ):
         pos, radius, height = parse_entry(pos, radius, height)
         name = check_name(Entity, name)
         kwargs["name"] = name
@@ -291,7 +245,8 @@ class Body(Modeler):
         i = 0
         while i < len(points[:-1]):
             points_equal = [
-                equal_float(val(p0), val(p1)) for p0, p1 in zip(points[i], points[i + 1])
+                equal_float(val(p0), val(p1))
+                for p0, p1 in zip(points[i], points[i + 1])
             ]
             if all(points_equal):
                 points.pop(i)
@@ -317,7 +272,9 @@ class Body(Modeler):
 
     @set_body
     #####draw arrays of rectangles with dimension (colums x row) with spacing given by a list [x_spacing,y_spacing]
-    def rect_array(self, pos, size, columns, rows, spacing, name="rect_array_0", **kwargs):
+    def rect_array(
+        self, pos, size, columns, rows, spacing, name="rect_array_0", **kwargs
+    ):
 
         pos, size, spacing = parse_entry(Vector(pos), Vector(size), spacing)
 
@@ -333,10 +290,8 @@ class Body(Modeler):
             columns, rows = parse_entry(columns, rows)
             # rect = self.rect(pos-size/2, size, name, **kwargs)
             rect = self.rect_center(pos, size, name, **kwargs)
-            self.duplicate_along_line(
-                rect, [0, spacing[1], 0], n=rows)
-            self.duplicate_along_line(
-                rect, [spacing[0], 0, 0], n=columns)
+            self.duplicate_along_line(rect, [0, spacing[1], 0], n=rows)
+            self.duplicate_along_line(rect, [spacing[0], 0, 0], n=columns)
             return rect
 
     @set_body
@@ -396,7 +351,6 @@ class Body(Modeler):
             points = val(points)
             fillet = val(fillet)
             _port = port.val(drop_mask=drop_mask)
-            
 
             # TODO, this is a dirty fixe cause of Vector3D
 
@@ -417,7 +371,10 @@ class Body(Modeler):
             for name, layer in zip(names, layers):
                 kwargs["layer"] = layer
                 kwargs["name"] = name
-                model_entities.append(Entity(2, self, **kwargs))
+                entity = Entity(2, self, **kwargs)
+                model_entities.append(entity)
+                if entity.name != name:
+                    self.interface.rename_entity(name, entity.name)
         elif self.mode == "hfss":
             # check that port is at the BEGINNING of the path (hfss only)
             ori = Vector(port.ori)
@@ -446,11 +403,13 @@ class Body(Modeler):
             path_entity.delete()
 
         return model_entities
-    
-    @set_body
-    def duplicate_along_line(self, entity, vec, n=2, new_obj=False, duplicate_assign=False, **kwargs):
 
-        if(self.mode=='hfss'):
+    @set_body
+    def duplicate_along_line(
+        self, entity, vec, n=2, new_obj=False, duplicate_assign=False
+    ):
+
+        if self.mode == "hfss":
             vec, n = parse_entry(vec, n)
             self.interface.duplicate_along_line(
                 entity, vec, n=n, new_obj=new_obj, duplicate_assign=duplicate_assign
@@ -584,9 +543,10 @@ class Body(Modeler):
                     nonmodel=True,
                 )
 
-        result = Port(self, name, pos, ori, widths, subnames, layers, offsets, constraint_port)
+        result = Port(
+            self, name, pos, ori, widths, subnames, layers, offsets, constraint_port
+        )
         return [result]
-
 
     @move_port
     def draw_cable(
@@ -643,10 +603,10 @@ class Body(Modeler):
 
         ports = list(ports)
 
-        do_not_beyong = [port.name for port in ports if port.body != self]
-        if do_not_beyong:
-            raise ValueError("%s ports do not beyond to %s" % (do_not_beyong, self))
-        
+        do_not_belong = [port.name for port in ports if port.body != self]
+        if do_not_belong:
+            raise ValueError("%s ports do not belong to %s" % (do_not_belong, self))
+
         # check the indentation level of connected ports
         # you should not try to connect ports different with body(...): levels
         indent_level = find_corresponding_list(ports[0], self.ports_to_move)
@@ -686,7 +646,7 @@ class Body(Modeler):
             pass
 
         if not slanted:  # slanted cables are specific
-        
+
             # first determine the intermediate non constrain ports
             _ports = [[ports[0]]]
             for port in ports[1:-1]:
@@ -696,38 +656,39 @@ class Body(Modeler):
                     _ports[-1].append(port)
                     _ports.append([port])
             _ports[-1].append(ports[-1])
-            
-            if len(_ports)>1:
+
+            if len(_ports) > 1:
                 # to_meander should be a list of list: a list for each cable portion
                 # meander_length, meander_offset should be lists
                 if to_meander is None:
-                    to_meander = [[]]*len(_ports)
+                    to_meander = [[]] * len(_ports)
                 if not isinstance(to_meander[0], list):
                     to_meander = [to_meander]
                 if not isinstance(meander_length, list):
                     meander_length = [meander_length] * len(_ports)
                 if not isinstance(meander_offset, list):
                     meander_offset = [meander_offset] * len(_ports)
-                if len(to_meander)!=len(_ports):
-                    raise Exception("""to_meander should be a list of list, 
+                if len(to_meander) != len(_ports):
+                    raise Exception(
+                        """to_meander should be a list of list, 
                                     the outer list length being the number of 
-                                    cable portions""")
+                                    cable portions"""
+                    )
                 length = 0
                 for ii, port_list in enumerate(_ports):
                     length += self.draw_cable(
-                            *port_list,
-                            fillet=fillet,
-                            is_bond=is_bond,
-                            to_meander=to_meander[ii],
-                            meander_length=meander_length[ii],
-                            meander_offset=meander_offset[ii],
-                            reverse_adaptor=bool(ii),
-                            mesh_size=mesh_size,
-                            slope=slope,
-                            name=name + "_%d" % ii
-                            )
-                print('Total Cable "%s" length = %.3f mm' % (name, 
-                                                             length * 1000))
+                        *port_list,
+                        fillet=fillet,
+                        is_bond=is_bond,
+                        to_meander=to_meander[ii],
+                        meander_length=meander_length[ii],
+                        meander_offset=meander_offset[ii],
+                        reverse_adaptor=bool(ii),
+                        mesh_size=mesh_size,
+                        slope=slope,
+                        name=name + "_%d" % ii
+                    )
+                print('Total Cable "%s" length = %.3f mm' % (name, length * 1000))
                 return length
             else:
                 # to_meander should be a list since at this stage we are within
@@ -739,30 +700,32 @@ class Body(Modeler):
                     meander_length = meander_length[0]
                 if isinstance(meander_offset, list):
                     meander_offset = meander_offset[0]
-                
-    
+
                 # find and plot adaptor geometry
                 if reverse_adaptor:
-                    points, length_adaptor = ports[-1].r.compare(ports[0], self.pm, slope=slope)
+                    points, length_adaptor = ports[-1].r.compare(
+                        ports[0], self.pm, slope=slope
+                    )
                     index_modified = -1
                 else:
-                    points, length_adaptor = ports[0].compare(ports[-1], self.pm, slope=slope)
+                    points, length_adaptor = ports[0].compare(
+                        ports[-1], self.pm, slope=slope
+                    )
                     index_modified = 0
-    
+
                 # plot adaptors
                 for jj, pts in enumerate(points):
                     adaptor = self.polyline(
-                                pts,
-                                name=ports[index_modified].name
-                                + "_"
-                                + ports[index_modified].subnames[jj]
-                                + "_adapt",
-                                layer=ports[index_modified].layers[jj],
-                                )
-                    if adaptor.layer==MESH and mesh_size is not None:
+                        pts,
+                        name=ports[index_modified].name
+                        + "_"
+                        + ports[index_modified].subnames[jj]
+                        + "_adapt",
+                        layer=ports[index_modified].layers[jj],
+                    )
+                    if adaptor.layer == MESH and mesh_size is not None:
                         adaptor.assign_mesh_length(mesh_size)
-                        
-    
+
                 # define the constraint_port parameters
                 for port in ports[1:-1]:
                     port.widths = ports[0].widths
@@ -770,7 +733,7 @@ class Body(Modeler):
                     port.layers = ports[0].layers
                     port.subnames = ports[0].subnames
                     port.N = ports[0].N
-    
+
                 # find all intermediate paths
                 total_path = None
                 for ii in range(len(ports) - 1):
@@ -779,33 +742,43 @@ class Body(Modeler):
                         total_path = path
                     else:
                         total_path += path
-    
+
                 total_path.clean()
-    
+
                 # do meandering (not supported for even partially slanted cables)
                 if not total_path.is_slanted:
                     total_path.meander(to_meander, meander_length, meander_offset)
-    
+
                 total_path.clean()
                 # plot cable
-                cable = self.path(total_path.points, total_path.port_in, total_path.fillet, name=name, drop_mask=drop_mask)
-    
+                cable = self.path(
+                    total_path.points,
+                    total_path.port_in,
+                    total_path.fillet,
+                    name=name,
+                    drop_mask=drop_mask,
+                )
+
                 # assign mesh_size to the mesh layer in the new cable
                 if mesh_size is not None:
                     for entity in cable:
                         if entity.layer == MESH:
                             entity.assign_mesh_length(mesh_size)
-    
+
                 # if bond plot bonds
                 if is_bond:
-                    self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb")
-    
+                    self.draw_bond(
+                        total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb"
+                    )
+
                 length = total_path.length() + length_adaptor
                 print('Cable "%s" length = %.3f mm' % (name, length * 1000))
                 return length
         else:
             if len(ports) > 2:
-                raise Exception("Constraint_ports are not supported with slanted cables")
+                raise Exception(
+                    "Constraint_ports are not supported with slanted cables"
+                )
             path = Path(name, ports[0], ports[1], fillet, is_slanted=True)
             cable = self.path(path.points, path.port_in, path.fillet, name=name)
             # assign mesh_size to the mesh layer in the new cable
@@ -815,7 +788,7 @@ class Body(Modeler):
                         entity.assign_mesh_length(mesh_size)
             if is_bond:
                 raise Exception("Bonding is not supported with slanted cables")
-                
+
     @move_port
     def draw_cable_auto(
         self,
@@ -828,9 +801,9 @@ class Body(Modeler):
         slope=0.5,
         name="cable_0",
         mesh_size=None,
-        drop_mask=False, 
+        drop_mask=False,
         target_length=None,
-        editable_in_hfss=False # obscur parameter to check that design will adjust fine in HFSS
+        editable_in_hfss=False  # obscur parameter to check that design will adjust fine in HFSS
     ):
         """
 
@@ -866,17 +839,17 @@ class Body(Modeler):
 
         fillet, mesh_size = parse_entry(fillet, mesh_size)
         mid, target_length = parse_entry(mid, target_length)
-        
+
         # TODO, make mid a list in the case there are constraints port in the middle
         if meanders is None:
             meanders = []
-            
+
         ports = list(ports)
 
         do_not_beyong = [port.name for port in ports if port.body != self]
         if do_not_beyong:
             raise ValueError("%s ports do not beyond to %s" % (do_not_beyong, self))
-        
+
         # check the indentation level of connected ports
         # you should not try to connect ports different with body(...): levels
         indent_level = find_corresponding_list(ports[0], self.ports_to_move)
@@ -894,8 +867,7 @@ class Body(Modeler):
         # asserts neither in nor out port are constraint_ports
         if ports[0].constraint_port and ports[-1].constraint_port:
             raise ValueError(
-                "At least the first (%s) or last port (%s) \
-                             should define the port parameters"
+                "At least the first (%s) or last port (%s) should define the port parameters"
                 % (ports[0].name, ports[-1].name)
             )
         elif ports[0].constraint_port:
@@ -916,7 +888,7 @@ class Body(Modeler):
             pass
 
         # if not slanted:  # slanted cables are specific
-        
+
         # first determine the intermediate non constrain ports
         _ports = [[ports[0]]]
         for port in ports[1:-1]:
@@ -926,9 +898,11 @@ class Body(Modeler):
                 _ports[-1].append(port)
                 _ports.append([port])
         _ports[-1].append(ports[-1])
-        
-        if len(_ports)>1:
-            raise Exception('Too many ports : \n Please make several cables or use constraint ports')
+
+        if len(_ports) > 1:
+            raise Exception(
+                "Too many ports : \n Please make several cables or use constraint ports"
+            )
         else:
             # to_meander should be a list since at this stage we are within
             # one cable portion
@@ -936,25 +910,28 @@ class Body(Modeler):
 
             # find and plot adaptor geometry
             if reverse_adaptor:
-                points, length_adaptor = ports[-1].r.compare(ports[0], self.pm, slope=slope)
+                points, length_adaptor = ports[-1].r.compare(
+                    ports[0], self.pm, slope=slope
+                )
                 index_modified = -1
             else:
-                points, length_adaptor = ports[0].compare(ports[-1], self.pm, slope=slope)
+                points, length_adaptor = ports[0].compare(
+                    ports[-1], self.pm, slope=slope
+                )
                 index_modified = 0
 
             # plot adaptors
             for jj, pts in enumerate(points):
                 adaptor = self.polyline(
-                            pts,
-                            name=ports[index_modified].name
-                            + "_"
-                            + ports[index_modified].subnames[jj]
-                            + "_adapt",
-                            layer=ports[index_modified].layers[jj],
-                            )
-                if adaptor.layer==MESH and mesh_size is not None:
+                    pts,
+                    name=ports[index_modified].name
+                    + "_"
+                    + ports[index_modified].subnames[jj]
+                    + "_adapt",
+                    layer=ports[index_modified].layers[jj],
+                )
+                if adaptor.layer == MESH and mesh_size is not None:
                     adaptor.assign_mesh_length(mesh_size)
-                    
 
             # define the constraint_port parameters
             for port in ports[1:-1]:
@@ -967,41 +944,57 @@ class Body(Modeler):
             # find all intermediate paths
             total_path = None
             for ii in range(len(ports) - 1):
-                path = PathAuto(name, ports[ii], ports[ii + 1], fillet,
-                            mid=mid)
+                path = PathAuto(name, ports[ii], ports[ii + 1], fillet, mid=mid)
                 if total_path is None:
                     total_path = path
                 else:
-                    total_path += path    
-            total_path.analyse_path()     
-            
+                    total_path += path
+            total_path.analyse_path()
+
             if target_length is None:
                 total_path.meander(meanders, target_length=target_length)
             else:
-                total_path.meander(meanders, target_length=target_length-length_adaptor, editable_in_hfss=editable_in_hfss)
-            
-            total_path.analyse_path()   
-            
+                total_path.meander(
+                    meanders,
+                    target_length=target_length - length_adaptor,
+                    editable_in_hfss=editable_in_hfss,
+                )
+
+            total_path.analyse_path()
+
             # check cable length
-            length = val(total_path.length+length_adaptor)
+            length = val(total_path.length + length_adaptor)
             if target_length is not None:
-                if not equal_float(val(total_path.length+length_adaptor), val(target_length)):
-                    print('/!\ Cable "%s" length = %.3f (!= %.3f) mm /!\ ' %(name, length * 1000, val(target_length)*1000))
+                if not equal_float(
+                    val(total_path.length + length_adaptor), val(target_length)
+                ):
+                    print(
+                        '/!\ Cable "%s" length = %.3f (!= %.3f) mm /!\ '
+                        % (name, length * 1000, val(target_length) * 1000)
+                    )
             else:
                 print('Cable "%s" length = %.3f mm' % (name, length * 1000))
-                
+
             # plot cable
-            cable = self.path(total_path.path, total_path.port_in, total_path.fillet, name=name, drop_mask=drop_mask)
+            cable = self.path(
+                total_path.path,
+                total_path.port_in,
+                total_path.fillet,
+                name=name,
+                drop_mask=drop_mask,
+            )
 
             # assign mesh_size to the mesh layer in the new cable
             if mesh_size is not None:
                 for entity in cable:
                     if entity.layer == MESH:
                         entity.assign_mesh_length(mesh_size)
-                        
+
             # if bond, plot bonds
             if is_bond:
-                self.draw_bond(total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb")
+                self.draw_bond(
+                    total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb"
+                )
 
             return length
 
@@ -1027,12 +1020,13 @@ class Body(Modeler):
             spacing = (B - A).norm() / n_bond
             pos = A + ori * spacing / 2
             for ii in range(n_bond):
-                self.wirebond(pos, ori, ymax, ymin, layer=PORT, 
-                              name=name + "_%d" % (bond_number))
+                self.wirebond(
+                    pos, ori, ymax, ymin, layer=PORT, name=name + "_%d" % (bond_number)
+                )
                 bond_number += 1
                 pos = pos + ori * spacing
             jj += 1
-    
+
     def delete_layer(self, layer):
         if layer in self.entities.keys():
             entity_list = self.entities[layer]
@@ -1067,3 +1061,4 @@ class Body(Modeler):
                     sublist+=[s for s in self.entities[idx] if key in s.name]
 
         return sublist
+

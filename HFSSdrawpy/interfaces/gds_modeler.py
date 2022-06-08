@@ -1,10 +1,11 @@
 import gdspy
 import numpy as np
+from gdspy import FlexPath
 
-from ..core.entity import gen_name
-from ..utils import Vector, parse_entry, val
+from ..core.symmetry import compute_translation_rotation
+from ..utils import Vector, parse_entry, val, points_on_line_tangent_to, check_name
 
-TOLERANCE = 1e-9 # for arcs
+TOLERANCE = 1e-9  # for arcs
 print("gdspy_version : ", gdspy.__version__)
 
 
@@ -46,17 +47,14 @@ class GdsModeler:
 
     def copy(self, entity):
         new_polygon = gdspy.copy(self.gds_object_instances[entity.name], 0, 0)
-        new_name = gen_name(entity.name)
+        new_name = check_name(entity.__class__, entity.name)
         self.gds_object_instances[new_name] = new_polygon
         self.cell.add(new_polygon)
+        return new_name
 
-    def rename(self, entity, name):
-        obj = self.gds_object_instances.pop(entity.name)
-        self.gds_object_instances[name] = obj
-        
     def relayer(self, entity, layer):
         obj = self.gds_object_instances[entity.name]
-        obj.layers = [layer] * len(obj.polygons)
+        obj.layers = [layer] * len(obj.layers)
 
     def generate_gds(self, file, max_points):
         for instance in self.gds_object_instances.keys():
@@ -137,7 +135,9 @@ class GdsModeler:
         name = kwargs["name"]
         layer = kwargs["layer"]
 
-        poly1 = gdspy.Text(text, size, pos, horizontal=horizontal, angle=angle, layer=layer)
+        poly1 = gdspy.Text(
+            text, size, pos, horizontal=horizontal, angle=angle, layer=layer
+        )
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
@@ -165,7 +165,9 @@ class GdsModeler:
         self.gds_object_instances[name] = round1
         self.cell.add(round1)
 
-    def wirebond(self, pos, ori, ymax, ymin, height="0.1mm", **kwargs):  # ori should be normed
+    def wirebond(
+        self, pos, ori, ymax, ymin, height="0.1mm", **kwargs
+    ):  # ori should be normed
         bond_diam = "20um"
         pos, ori, ymax, ymin, heigth, bond_diam = parse_entry(
             (pos, ori, ymax, ymin, height, bond_diam)
@@ -231,9 +233,9 @@ class GdsModeler:
         self.cell.polygons.remove(self.gds_object_instances[entity.name])
         self.gds_object_instances.pop(entity.name)
 
-    def rename_entity(self, entity, name):
-        polygon = self.gds_object_instances.pop(entity.name)
-        self.gds_object_instances[name] = polygon
+    def rename_entity(self, old_name, new_name):
+        polygon = self.gds_object_instances.pop(old_name)
+        self.gds_object_instances[new_name] = polygon
 
     def unite(self, entities, keep_originals=True):
 
@@ -273,7 +275,9 @@ class GdsModeler:
     def subtract(self, blank_entities, tool_entities, keep_originals=True):
         if isinstance(blank_entities, list):
             for blank_entity in blank_entities:
-                self.subtract(blank_entity, tool_entities, keep_originals=keep_originals)
+                self.subtract(
+                    blank_entity, tool_entities, keep_originals=keep_originals
+                )
         else:
             blank_entity = blank_entities
             # 1 We clear the cell of all elements and create lists to store the polygons
@@ -316,21 +320,21 @@ class GdsModeler:
                 self.gds_object_instances[blank_entity.name] = dummy
                 self.cell.add(dummy)
                 blank_entity.delete()
-                
+
     def delete_inside(self, poly_set, mask, keep_originals=False):
-        '''
+        """
         Test if the polygons within the poly_set are in the mask object.
         If so, delete them.
         Parameters
         ----------
-        poly_set : Entity 
+        poly_set : Entity
             Typically a hole array.
         mask : Entity
         keep_originals : bool, optional
             Shall we keep the mask element or not. The default is False.
-        '''
+        """
         if isinstance(mask, list):
-            if len(mask)>1:
+            if len(mask) > 1:
                 mask = mask[0].unite(mask[1:])
             else:
                 mask = mask[0]
@@ -338,11 +342,10 @@ class GdsModeler:
         mask_gds = self.gds_object_instances[mask.name]
         N = len(poly_set_gds.polygons)
         for ii in range(len(poly_set_gds.polygons)):
-            points = poly_set_gds.polygons[N-1-ii]
-            condition = bool(sum(gdspy.inside(points, mask_gds, 
-                                              precision=TOLERANCE)))
+            points = poly_set_gds.polygons[N - 1 - ii]
+            condition = bool(sum(gdspy.inside(points, mask_gds, precision=TOLERANCE)))
             if condition:
-                poly_set_gds.polygons.pop(N-1-ii)
+                poly_set_gds.polygons.pop(N - 1 - ii)
         if not keep_originals:
             mask.delete()
 
@@ -363,7 +366,7 @@ class GdsModeler:
 
     def assign_lumped_rlc(self, entity, r, l, c, start, end, name="RLC"):
         pass
-    
+
     def assign_lumped_port(self, entity, start, end, name="RLC"):
         pass
 
@@ -446,19 +449,52 @@ class GdsModeler:
             # if entity!=None:
             if not entity.esc:
                 gds_entity = self.gds_object_instances[entity.name]
-                gds_entity.rotate(angle / 360 * 2 * np.pi, center=(val(center[0]), val(center[1])))
+                gds_entity.rotate(
+                    angle / 360 * 2 * np.pi, center=(val(center[0]), val(center[1]))
+                )
+
+    def mirror(self, entities, normal_vector_polar):
+        if not isinstance(entities, list):
+            entities = [entities]
+
+        p1, p2 = points_on_line_tangent_to(normal_vector_polar)
+
+        mirror_entities = dict()
+        for entity in entities:
+            mirror_name = entity.name
+            print("Register mirror object", mirror_name)
+            gds_entity = self.gds_object_instances[mirror_name]
+            if isinstance(gds_entity, gdspy.FlexPath):
+                points = gds_entity.points
+                mirrored_points = []
+                for point in points:
+                    dp, _ = compute_translation_rotation(
+                        point, np.zeros(2), normal_vector_polar
+                    )
+                    mirrored_point = point + dp
+                    mirrored_points.append(mirrored_point)
+                mirrored_points = np.array(mirrored_points)
+                gds_entity.points = mirrored_points
+                mirror = gds_entity
+            else:
+                mirror = gds_entity.mirror(p1, p2)
+
+            mirror_entities[mirror_name] = mirror
+            self.gds_object_instances[mirror_name] = mirror
+
+        return mirror_entities
 
     def rect_array(self, pos, size, columns, rows, spacing, origin=(0, 0), **kwargs):
-        '''
+        """
         This is a raw function. Better use ab_elt.rect_array
-        '''
+        """
         pos, size, spacing = parse_entry(Vector(pos), Vector(size), spacing)
         name = kwargs["name"]
         layer = kwargs["layer"]
 
-        rect1 = self.rect(pos-size/2, size, **kwargs)
+        rect1 = self.rect(pos - size / 2, size, **kwargs)
 
-        cell_to_copy = gdspy.Cell(f'{name}_cell_to_copy')
+        cell_to_copy = gdspy.Cell(f"{name}_cell_to_copy")
         # self.gds_cells["cell_to_copy"] = cell_to_copy
         # commenting the previous line allow to ignore the cell at gds generation
         cell_to_copy.add(rect1)
