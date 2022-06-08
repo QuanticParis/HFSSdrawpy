@@ -1697,43 +1697,17 @@ class HfssModeler(COMWrapper):
             ]
         )
 
-    def assign_perfect_E_faces(self, entity):
-        # this is very peculiar to cavity Si chips
-        faces = list(self.get_face_ids(entity.name))
-        faces = [int(ii) for ii in faces]
-        faces.sort()
-        faces_perfE = [faces[1]] + faces[6:]
-        faces_loss = faces[2:6]
-
+    def assign_perfect_E_faces(self,face_list,name):
+        # get the face_list you're interested in by using the get_face_ids function
+        # face_list is the list of face numbers, eg: ['17655','17656']
+        face_list = [int(i) for i in face_list]
         self._boundaries.AssignPerfectE(
             [
-                "NAME:" + str(name) + "_PerfE",
+                "NAME:PerfE_%s"%name,
                 "Faces:=",
-                faces_perfE,
+                face_list,
                 "InfGroundPlane:=",
                 False,
-            ]
-        )
-
-        self._boundaries.AssignFiniteCond(
-            [
-                "NAME:FiniteCond3",
-                "Faces:=",
-                faces_loss,
-                "UseMaterial:=",
-                True,
-                "Material:=",
-                "lossy conductor",
-                "UseThickness:=",
-                False,
-                "Roughness:=",
-                "0um",
-                "InfGroundPlane:=",
-                False,
-                "IsTwoSided:=",
-                False,
-                "IsInternal:=",
-                True,
             ]
         )
 
@@ -1905,7 +1879,7 @@ class HfssModeler(COMWrapper):
 
     def create_object_from_face(self, entity):
         faces = list(self._modeler.GetFaceIDs(entity.name))
-        faces.sort()
+        #faces.sort()
         face = faces[0]
         self._modeler.CreateObjectFromFaces(
             [
@@ -1913,7 +1887,7 @@ class HfssModeler(COMWrapper):
                 "Selections:=",
                 entity.name,
                 "NewPartsModelFlag:=",
-                "Model",
+                "Unassigned",
             ],
             [
                 "NAME:Parameters",
