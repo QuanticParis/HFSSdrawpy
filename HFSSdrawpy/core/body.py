@@ -406,7 +406,7 @@ class Body(Modeler):
 
     @set_body
     def duplicate_along_line(
-        self, entity, vec, n=2, new_obj=False, duplicate_assign=False
+        self, entity, vec, n=2, new_obj=False, duplicate_assign=False, **kwargs
     ):
 
         if self.mode == "hfss":
