@@ -1295,9 +1295,9 @@ class HfssModeler(COMWrapper):
         if entity.name in objects:
             self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
 
-    # def delete_with_names(self, str_names):
-    #         # eg "box0,box1,box2"
-    #         self._modeler.Delete(["NAME:Selections", "Selections:=", str_names])
+    def delete_with_names(self, str_names):
+            # eg "box0,box1,box2"
+            self._modeler.Delete(["NAME:Selections", "Selections:=", str_names])
 
     def delete_all_objects(self):
         objects = [
