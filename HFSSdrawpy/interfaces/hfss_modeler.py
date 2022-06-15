@@ -2484,9 +2484,9 @@ class HfssModeler(COMWrapper):
         )
         return entities.pop(0)
     
-    # def unite_with_names(self, str_names,keep_originals=False):
-    #     # eg "box0,box1,box2"
-    #     self._modeler.Unite(["NAME:Selections", "Selections:=", str_names],["NAME:UniteParameters","KeepOriginals:=", keep_originals])
+    def unite_with_names(self, str_names,keep_originals=False):
+        # eg "box0,box1,box2"
+        self._modeler.Unite(["NAME:Selections", "Selections:=", str_names],["NAME:UniteParameters","KeepOriginals:=", keep_originals])
 
     def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
         if not isinstance(entities, list):
