@@ -2009,25 +2009,25 @@ class HfssModeler(COMWrapper):
         )
         return entity.name + "_ObjectFromFace1"
     
-    # def create_object_from_face_with_names(self, entity, str_names):
-    #     # str_names = ['1209','1210'] ie associated number of the face.
-    #     # Get the numbers with get_face_ids() function
-    #     face_list = [int(ii) for ii in str_names]
-    #     self._modeler.CreateObjectFromFaces(
-    #         [
-    #             "NAME:Selections",
-    #             "Selections:=",
-    #             entity.name,
-    #             "NewPartsModelFlag:=",
-    #             "Unassigned",
-    #         ],
-    #         [
-    #             "NAME:Parameters",
-    #             ["NAME:BodyFromFaceToParameters", "FacesToDetach:=", face_list],
-    #         ],
-    #         ["CreateGroupsForNewObjects:=", False],
-    #     )
-    #     return entity.name + "_ObjectFromFace1"
+    def create_object_from_face_with_names(self, entity, str_names):
+        # str_names = ['1209','1210'] ie associated number of the face.
+        # Get the numbers with get_face_ids() function
+        face_list = [int(ii) for ii in str_names]
+        self._modeler.CreateObjectFromFaces(
+            [
+                "NAME:Selections",
+                "Selections:=",
+                entity.name,
+                "NewPartsModelFlag:=",
+                "Unassigned",
+            ],
+            [
+                "NAME:Parameters",
+                ["NAME:BodyFromFaceToParameters", "FacesToDetach:=", face_list],
+            ],
+            ["CreateGroupsForNewObjects:=", False],
+        )
+        return entity.name + "_ObjectFromFace1"
 
     def eval_expr(self, expr, units="mm"):
         if not isinstance(expr, str):
