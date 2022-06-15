@@ -7,6 +7,7 @@ import time
 import types
 from copy import copy
 from functools import wraps
+from typing import Type
 
 import numpy as np
 import pythoncom
@@ -494,6 +495,51 @@ class HfssDesign(COMWrapper):
         )
         return HfssEMSetup(self, name)
 
+    # def create_optiparametric_sweep_linear_count(
+    #     self,
+    #     setup,
+    #     parameter,
+    #     min_value,
+    #     max_value,
+    #     n_values,
+    #     name="Parametric sweep",
+    #     save_fields = True,
+    #     copy_mesh = True,
+    #     solved_with_copied_mesh_only = True
+    # ):
+    #     self._optimetrics.InsertSetup(
+    #         "OptiParametric",
+    #         [
+	# 	"NAME:"+name,
+	# 	"IsEnabled:="		, True,
+	# 	[
+	# 		"NAME:ProdOptiSetupDataV2",
+	# 		"SaveFields:="		, save_fields,
+	# 		"CopyMesh:="		, copy_mesh,
+	# 		"SolveWithCopiedMeshOnly:=", solved_with_copied_mesh_only
+	# 	],
+	# 	[
+	# 		"NAME:StartingPoint"
+	# 	],
+	# 	"Sim. Setups:="		, [setup.name],
+	# 	[
+	# 		"NAME:Sweeps",
+	# 		[
+	# 			"NAME:SweepDefinition",
+	# 			"Variable:="		, parameter.name,
+	# 			"Data:="		, "LINC %smm %smm %s"%(min_value,max_value,n_values),
+	# 			"OffsetF1:="		, False,
+	# 			"Synchronize:="		, 0
+	# 		]
+	# 	],
+	# 	[
+	# 		"NAME:Sweep Operations"
+	# 	],
+	# 	[
+	# 		"NAME:Goals"
+	# 	]
+	# ])
+
     def delete_setup(self, name):
         if name in self.get_setup_names():
             self._setup_module.DeleteSetups(name)
@@ -791,17 +837,17 @@ class HfssSetup(HfssPropertyObject):
     def get_convergence(self, variation=""):
         fn = tempfile.mktemp()
         self.parent._design.ExportConvergence(self.name, variation, fn, False)
-        return numpy.loadtxt(fn)
+        return np.loadtxt(fn)
 
     def get_mesh_stats(self, variation=""):
         fn = tempfile.mktemp()
         self.parent._design.ExportMeshStats(self.name, variation, fn, False)
-        return numpy.loadtxt(fn)
+        return np.loadtxt(fn)
 
     def get_profile(self, variation=""):
         fn = tempfile.mktemp()
         self.parent._design.ExportProfile(self.name, variation, fn, False)
-        return numpy.loadtxt(fn)
+        return np.loadtxt(fn)
 
     def get_fields(self):
         return HfssFieldsCalc(self)
@@ -878,14 +924,14 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
     def eigenmodes(self, lv=""):
         fn = tempfile.mktemp()
         self._solutions.ExportEigenmodes(self.parent.solution_name, lv, fn)
-        data = numpy.loadtxt(fn, dtype="str")
+        data = np.loadtxt(fn, dtype="str")
         if (
-            numpy.size(numpy.shape(data)) == 1
+            np.size(np.shape(data)) == 1
         ):  # getting around the very annoying fact that
-            data = numpy.array([data])  # in Python a 1D array does not have shape (N,1)
+            data = np.array([data])  # in Python a 1D array does not have shape (N,1)
         else:  # but rather (N,) ....
             pass
-        if numpy.size(data[0, :]) == 6:  # checking if values for Q were saved
+        if np.size(data[0, :]) == 6:  # checking if values for Q were saved
             kappa_over_2pis = [
                 2 * float(ii) for ii in data[:, 3]
             ]  # eigvalue=(omega-i*kappa/2)/2pi
@@ -900,7 +946,7 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         # implemented because eigenmodes was bugged
         fn = tempfile.mktemp()
         self._solutions.ExportEigenmodes("%s : LastAdaptive"%setup.name, lv, fn)
-        data = numpy.loadtxt(fn, dtype="str")
+        data = np.loadtxt(fn, dtype="str")
         " data has the following structure:"
         "[ ['mode number' 'frequency' 'Q factor']"
         freqs = [float(ii) for ii in data[:, 1]]
@@ -1020,7 +1066,7 @@ class HfssFrequencySweep(COMWrapper):
                 with open(fn) as f:
                     f.readline()
                     colnames = f.readline().split()
-                array = numpy.loadtxt(fn, skiprows=2)
+                array = np.loadtxt(fn, skiprows=2)
                 if freq is None:
                     freq = array[:, 0]
                 for i, j in list:
@@ -1070,7 +1116,7 @@ class HfssReport(COMWrapper):
     def get_arrays(self):
         fn = tempfile.mktemp(suffix=".csv")
         self.export_to_file(fn)
-        return numpy.loadtxt(fn, skiprows=1, delimiter=",").transpose()
+        return np.loadtxt(fn, skiprows=1, delimiter=",").transpose()
 
 
 class HfssModeler(COMWrapper):
@@ -1249,6 +1295,10 @@ class HfssModeler(COMWrapper):
         if entity.name in objects:
             self._modeler.Delete(["NAME:Selections", "Selections:=", entity.name])
 
+    # def delete_with_names(self, str_names):
+    #         # eg "box0,box1,box2"
+    #         self._modeler.Delete(["NAME:Selections", "Selections:=", str_names])
+
     def delete_all_objects(self):
         objects = [
             self._modeler.GetObjectName(str(ii))
@@ -1300,6 +1350,7 @@ class HfssModeler(COMWrapper):
                 points[i].append(0)
 
         points = parse_entry(points)
+        print(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
         #        print("final_points", points)
@@ -1634,6 +1685,11 @@ class HfssModeler(COMWrapper):
             ["NAME:IntersectParameters", "KeepOriginals:=", keep_originals],
         )
         return names[0]
+    
+    def intersect_with_names(self, str_names, keep_originals=False):
+        # eg "box0,box1"
+        self._modeler.Intersect(["NAME:Selections", "Selections:=", str_names],["NAME:IntersectParameters","KeepOriginals:=", keep_originals])
+
 
     #    def separate_bodies(self, name):
     #        self._modeler.SeparateBody(["NAME:Selections",
@@ -1722,8 +1778,7 @@ class HfssModeler(COMWrapper):
 
     def assign_perfect_E_faces(self,face_list,name):
         # get the face_list (tuple) you're interested in by using the get_face_ids function
-        # face_list is the list of face numbers, eg: ['17655','17656'] 
-        face_list = [face_list]
+        # face_list is the list of face numbers, eg: ('17655','17656')
         face_list = [int(i) for i in face_list]
         self._boundaries.AssignPerfectE(
             [
@@ -1734,6 +1789,18 @@ class HfssModeler(COMWrapper):
                 False,
             ]
         )
+
+    # def assign_perfect_with_names(self,str,name):
+    #     self._boundaries.AssignPerfectE(
+    #         [
+    #             "NAME:PerfE_%s"%name,
+    #             "Objects:=",
+    #             [str],
+    #             "InfGroundPlane:=",
+    #             False,
+    #         ]
+    #     )
+
 
     def assign_waveport(
         self,
@@ -1941,6 +2008,26 @@ class HfssModeler(COMWrapper):
             ["CreateGroupsForNewObjects:=", False],
         )
         return entity.name + "_ObjectFromFace1"
+    
+    # def create_object_from_face_with_names(self, entity, str_names):
+    #     # str_names = ['1209','1210'] ie associated number of the face.
+    #     # Get the numbers with get_face_ids() function
+    #     face_list = [int(ii) for ii in str_names]
+    #     self._modeler.CreateObjectFromFaces(
+    #         [
+    #             "NAME:Selections",
+    #             "Selections:=",
+    #             entity.name,
+    #             "NewPartsModelFlag:=",
+    #             "Unassigned",
+    #         ],
+    #         [
+    #             "NAME:Parameters",
+    #             ["NAME:BodyFromFaceToParameters", "FacesToDetach:=", face_list],
+    #         ],
+    #         ["CreateGroupsForNewObjects:=", False],
+    #     )
+    #     return entity.name + "_ObjectFromFace1"
 
     def eval_expr(self, expr, units="mm"):
         if not isinstance(expr, str):
@@ -2316,6 +2403,18 @@ class HfssModeler(COMWrapper):
         self._modeler.Subtract(
             selection_array, ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
         )
+    
+    def subtract_with_names(self, blank_entities_str, tool_entities_str, keep_originals=False):
+        selection_array = [
+            "NAME:Selections",
+            "Blank Parts:=",
+            blank_entities_str,
+            "Tool Parts:=",
+            tool_entities_str,
+        ]
+        self._modeler.Subtract(
+            selection_array, ["NAME:UniteParameters", "KeepOriginals:=", keep_originals]
+        )
 
     def delete_inside(self, poly1, poly2, keep_originals=False):
         pass
@@ -2384,6 +2483,10 @@ class HfssModeler(COMWrapper):
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals],
         )
         return entities.pop(0)
+    
+    # def unite_with_names(self, str_names,keep_originals=False):
+    #     # eg "box0,box1,box2"
+    #     self._modeler.Unite(["NAME:Selections", "Selections:=", str_names],["NAME:UniteParameters","KeepOriginals:=", keep_originals])
 
     def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
         if not isinstance(entities, list):
@@ -2659,7 +2762,7 @@ class CalcObject(COMWrapper):
 
     def write_stack(self):
         for fn, arg in self.stack:
-            if numpy.size(arg) > 1:
+            if np.size(arg) > 1:
                 getattr(self.calc_module, fn)(*arg)
             else:
                 getattr(self.calc_module, fn)(arg)
