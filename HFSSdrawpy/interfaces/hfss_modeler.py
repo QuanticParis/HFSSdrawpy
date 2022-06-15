@@ -1790,16 +1790,16 @@ class HfssModeler(COMWrapper):
             ]
         )
 
-    # def assign_perfect_with_names(self,str,name):
-    #     self._boundaries.AssignPerfectE(
-    #         [
-    #             "NAME:PerfE_%s"%name,
-    #             "Objects:=",
-    #             [str],
-    #             "InfGroundPlane:=",
-    #             False,
-    #         ]
-    #     )
+    def assign_perfect_with_names(self,str,name):
+        self._boundaries.AssignPerfectE(
+            [
+                "NAME:PerfE_%s"%name,
+                "Objects:=",
+                [str],
+                "InfGroundPlane:=",
+                False,
+            ]
+        )
 
 
     def assign_waveport(
@@ -2000,7 +2000,7 @@ class HfssModeler(COMWrapper):
                 entity.name,
                 "NewPartsModelFlag:=",
                 "Unassigned",
-            ],
+            ],t
             [
                 "NAME:Parameters",
                 ["NAME:BodyFromFaceToParameters", "FacesToDetach:=", [int(face)]],
@@ -2483,6 +2483,18 @@ class HfssModeler(COMWrapper):
             ["NAME:UniteParameters", "KeepOriginals:=", keep_originals],
         )
         return entities.pop(0)
+    
+    def unite_with_names(self,str_names,keep_originals = False):
+        self._modeler.Unite(
+        [
+		"NAME:Selections",
+		"Selections:="		, str_names
+        ], 
+        [
+            "NAME:UniteParameters",
+            "KeepOriginals:="	, keep_originals
+        ] 
+        )
     
     def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
         if not isinstance(entities, list):
