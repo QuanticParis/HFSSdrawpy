@@ -495,50 +495,50 @@ class HfssDesign(COMWrapper):
         )
         return HfssEMSetup(self, name)
 
-    # def create_optiparametric_sweep_linear_count(
-    #     self,
-    #     setup,
-    #     parameter,
-    #     min_value,
-    #     max_value,
-    #     n_values,
-    #     name="Parametric sweep",
-    #     save_fields = True,
-    #     copy_mesh = True,
-    #     solved_with_copied_mesh_only = True
-    # ):
-    #     self._optimetrics.InsertSetup(
-    #         "OptiParametric",
-    #         [
-	# 	"NAME:"+name,
-	# 	"IsEnabled:="		, True,
-	# 	[
-	# 		"NAME:ProdOptiSetupDataV2",
-	# 		"SaveFields:="		, save_fields,
-	# 		"CopyMesh:="		, copy_mesh,
-	# 		"SolveWithCopiedMeshOnly:=", solved_with_copied_mesh_only
-	# 	],
-	# 	[
-	# 		"NAME:StartingPoint"
-	# 	],
-	# 	"Sim. Setups:="		, [setup.name],
-	# 	[
-	# 		"NAME:Sweeps",
-	# 		[
-	# 			"NAME:SweepDefinition",
-	# 			"Variable:="		, parameter.name,
-	# 			"Data:="		, "LINC %smm %smm %s"%(min_value,max_value,n_values),
-	# 			"OffsetF1:="		, False,
-	# 			"Synchronize:="		, 0
-	# 		]
-	# 	],
-	# 	[
-	# 		"NAME:Sweep Operations"
-	# 	],
-	# 	[
-	# 		"NAME:Goals"
-	# 	]
-	# ])
+    def create_optiparametric_sweep_linear_count(
+        self,
+        setup,
+        parameter,
+        min_value,
+        max_value,
+        n_values,
+        name="Parametric sweep",
+        save_fields = True,
+        copy_mesh = True,
+        solved_with_copied_mesh_only = True
+    ):
+        self._optimetrics.InsertSetup(
+            "OptiParametric",
+            [
+		"NAME:"+name,
+		"IsEnabled:="		, True,
+		[
+			"NAME:ProdOptiSetupDataV2",
+			"SaveFields:="		, save_fields,
+			"CopyMesh:="		, copy_mesh,
+			"SolveWithCopiedMeshOnly:=", solved_with_copied_mesh_only
+		],
+		[
+			"NAME:StartingPoint"
+		],
+		"Sim. Setups:="		, [setup.name],
+		[
+			"NAME:Sweeps",
+			[
+				"NAME:SweepDefinition",
+				"Variable:="		, parameter.name,
+				"Data:="		, "LINC %smm %smm %s"%(min_value,max_value,n_values),
+				"OffsetF1:="		, False,
+				"Synchronize:="		, 0
+			]
+		],
+		[
+			"NAME:Sweep Operations"
+		],
+		[
+			"NAME:Goals"
+		]
+	])
 
     def delete_setup(self, name):
         if name in self.get_setup_names():
@@ -2484,10 +2484,6 @@ class HfssModeler(COMWrapper):
         )
         return entities.pop(0)
     
-    def unite_with_names(self, str_names,keep_originals=False):
-        # eg "box0,box1,box2"
-        self._modeler.Unite(["NAME:Selections", "Selections:=", str_names],["NAME:UniteParameters","KeepOriginals:=", keep_originals])
-
     def assign_impedance(self, entities, ResistanceSq, ReactanceSq, name="impedance"):
         if not isinstance(entities, list):
             entities = [entities]
