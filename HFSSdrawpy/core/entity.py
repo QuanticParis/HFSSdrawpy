@@ -25,6 +25,7 @@ class Entity:
         nonmodel=False,
         layer=DEFAULT,
         copy=None,
+        paste = None,
         name="entity_0",
         esc=False,
         **kwargs,
