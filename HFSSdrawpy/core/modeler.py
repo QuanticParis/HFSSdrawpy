@@ -104,7 +104,8 @@ class Modeler:
     ### Methods acting on list of entities
 
     def intersect(self, entities, keep_originals=False):
-        raise NotImplementedError()
+        intersect = self.intersect(self, entities, keep_originals=keep_originals)
+        return intersect
 
     def unite(self, entities, main=None, keep_originals=False, new_name=None):
         # main: name or entity that should be returned/preserved/final union
