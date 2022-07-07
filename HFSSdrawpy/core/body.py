@@ -803,7 +803,8 @@ class Body(Modeler):
         mesh_size=None,
         drop_mask=False,
         target_length=None,
-        editable_in_hfss=False  # obscur parameter to check that design will adjust fine in HFSS
+        editable_in_hfss=False,  # obscur parameter to check that design will adjust fine in HFSS
+        return_path=False,
     ):
         """
 
@@ -834,6 +835,9 @@ class Body(Modeler):
         -------
         length : TYPE
             DESCRIPTION.
+        or
+
+        total_path
 
         """
 
@@ -995,6 +999,9 @@ class Body(Modeler):
                 self.draw_bond(
                     total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb"
                 )
+
+            if return_path:
+                return total_path
 
             return length
 
