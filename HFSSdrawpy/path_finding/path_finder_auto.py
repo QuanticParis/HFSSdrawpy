@@ -52,6 +52,9 @@ class Meander(object):
                         # be along the segment
         self.stretch = stretch # should the meander run along all the segment
         
+        # TODO check that length > offset + 2*fillet, however I don't know how 
+        # to retrieve fillet value here. 
+        
 class PathAuto(object):
     
     def __init__(self, name, port_in, port_out, fillet, path=None,
@@ -106,6 +109,7 @@ class PathAuto(object):
         
         path_copy = self.path.copy()
         adjustable_path = [[None]]*len(path_copy)
+        adjustable_offset = [[None]]*len(path_copy)
         meanders.sort(key=meander_index, reverse=True)
         n_adj = 0 # number of nobs to tune the length
         
@@ -279,16 +283,23 @@ class PathAuto(object):
                         
                 if meander.n>0:
                     _points = [(pt1-pt0)*(jj/meander.n)+pt0 for jj in range(meander.n+1) for _ in (0, 1)][1:-1]
-                    points = [point + prev_path_ori*(meander_length*(-1)**(jj//2)+meander.offset) for jj, point in enumerate(_points)]
+                    if meander.length is not None:
+                        points = [point + prev_path_ori*(meander_length*(-1)**(jj//2)+meander.offset) for jj, point in enumerate(_points)]
+                    else:
+                        points = [point + prev_path_ori*(meander_length*(-1)**(jj//2)+0*meander.offset) for jj, point in enumerate(_points)]
+                    
                     if meander.length is None:
                         adjustable_points = [[prev_path_ori*(-1)**(jj//2)] for jj, point in enumerate(_points)]
+                        offset_points = [[prev_path_ori*meander.offset] for jj, point in enumerate(_points)]
                         adj_adapt0 = [[None]]*len(adapt0)
                         adj_adapt1 = [[None]]*len(adapt1)
                         n_adj += len(adjustable_points)
                     path_copy = path_copy[:ii] + adapt0 + points + adapt1 + path_copy[ii+2:]
                     if meander.length is None:
                         adjusted =  adj_adapt0 + adjustable_points + adj_adapt1
+                        adjusted_offset = adj_adapt0 + offset_points + adj_adapt1
                         adjustable_path = adjustable_path[:ii] + [adjustable_path[ii]+adjusted[0]]+ adjusted[1:-1] + [adjustable_path[ii+1]+adjusted[-1]] + adjustable_path[ii+2:]
+                        adjustable_offset = adjustable_offset[:ii] + [adjustable_offset[ii]+adjusted_offset[0]]+ adjusted_offset[1:-1] + [adjustable_offset[ii+1]+adjusted_offset[-1]] + adjustable_offset[ii+2:]
                 else:
                     print('Could not place a meander in segment %d.'%ii)
             else:
@@ -312,10 +323,10 @@ class PathAuto(object):
                     print('No nob was given to tune the cable length.')
                 else:
                     shift = (target_length-actual_length)/n_adj
-                    for jj, _adj in enumerate(adjustable_path):
-                        for adj in _adj:
+                    for jj, (_adj, _off) in enumerate(zip(adjustable_path, adjusted_offset)):
+                        for adj, off in zip(_adj, _off):
                             if adj is not None:
-                                path_copy[jj] = path_copy[jj] + adj*shift
+                                path_copy[jj] = path_copy[jj] + adj*shift + off
                             
                     self.path = path_copy  
                 
