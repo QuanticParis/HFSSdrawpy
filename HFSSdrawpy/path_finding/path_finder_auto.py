@@ -323,11 +323,12 @@ class PathAuto(object):
                     print('No nob was given to tune the cable length.')
                 else:
                     shift = (target_length-actual_length)/n_adj
-                    for jj, (_adj, _off) in enumerate(zip(adjustable_path, adjusted_offset)):
+                    for jj, (_adj, _off) in enumerate(zip(adjustable_path, adjustable_offset)):
                         for adj, off in zip(_adj, _off):
                             if adj is not None:
-                                path_copy[jj] = path_copy[jj] + adj*shift + off
-                            
+                                path_copy[jj] = path_copy[jj] + adj*shift
+                            if off is not None:
+                                path_copy[jj] = path_copy[jj] + off
                     self.path = path_copy  
                 
     def __add__(self, other):
