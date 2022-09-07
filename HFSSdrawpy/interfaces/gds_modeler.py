@@ -175,16 +175,26 @@ class GdsModeler:
         )
         bond1 = pos + ori.orth() * (ymax)
         bond2 = pos + ori.orth() * (ymin)
-        if ori.index(1) == 0:
-            bond_size = [bond_diam, abs(ymax) + abs(ymin)]
-        else:
-            bond_size = [abs(ymax) + abs(ymin), bond_diam]
-        self.rect_center(
-            pos,
-            bond_size,
-            layer=kwargs["layer_bond"],
-            name=kwargs["name"] + "connect",
+
+        cable = gdspy.FlexPath(
+            [bond1[0:2], bond2[0:2]],
+            [bond_diam],
+            gdsii_path=False,
+            tolerance=TOLERANCE,
+            layer=[kwargs["layer_bond"]],
+            max_points=0
         )
+        polygons = cable.get_polygons()
+        names = []
+        layers = []
+        for ii in range(len(polygons)):
+            poly = gdspy.Polygon(polygons[ii])
+            poly.layers = [kwargs["layer_bond"]]
+            current_name = kwargs["name"] + "connect"
+            names.append(current_name)
+            layers.append([kwargs["layer_bond"]])
+            self.gds_object_instances[current_name] = poly
+            self.cell.add(poly)
 
         self.disk(
             bond1,
