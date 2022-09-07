@@ -236,6 +236,35 @@ class Body(Modeler):
             radius = val(radius)
         self.interface.disk(pos, radius, axis, **kwargs)
         return Entity(2, self, **kwargs)
+        
+    @set_body
+    def circle(self, radius, sections = 12, name = 'circle_0', **kwargs):
+        '''
+        Draws a circle - non-closed ploygon.
+
+        Inputs:
+        -------
+        radius: radius of the circle
+        sections: number of sections
+        name: name of the entity
+
+        **kwargs include layer and name
+        Outputs:
+        -------
+        Entity
+        '''
+        name = check_name(Entity, name)
+        kwargs["name"] = name
+        dt = 1.0/sections
+        circle = 2*np.pi
+
+        count = 1
+        p=[[0, -radius]]
+        for m in range(sections+1):
+            count = count + 1
+            p.append([p[0][0]-radius*sp.sin(circle*dt*m) , p[0][1]-radius*sp.cos(circle*dt*m)+radius])
+        self.interface.polyline(p, name=name, closed=False)
+        return Entity(2, self, **kwargs)
 
     @set_body
     def polyline(self, points, closed=True, name="polyline_0", **kwargs):

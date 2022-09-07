@@ -272,6 +272,19 @@ class GdsModeler:
     def intersect(self, entities):
         raise NotImplementedError()
 
+    def scale(self, entities, factor, center):
+        if isinstance(entities, list):
+            for entity in entities:
+                self.scale(
+                    self,
+                    entity,
+                    factor,
+                    center
+                    )
+        else:
+            polygon = self.gds_object_instances[entities.name]
+            polygon.scale(factor, factor, center)
+
     def subtract(self, blank_entities, tool_entities, keep_originals=True):
         if isinstance(blank_entities, list):
             for blank_entity in blank_entities:

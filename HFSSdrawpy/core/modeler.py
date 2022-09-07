@@ -107,6 +107,12 @@ class Modeler:
         intersect = self.intersect(self, entities, keep_originals=keep_originals)
         return intersect
 
+    def scale(self, entities, factor, center=(0, 0)):
+        if self.mode == "gds":
+            if len(center) > 2:
+                center = center[0:1]
+            self.interface.scale(entities, factor, center)
+
     def unite(self, entities, main=None, keep_originals=False, new_name=None):
         # main: name or entity that should be returned/preserved/final union
         # if new_name (str) is provided, the original entities are kept and
