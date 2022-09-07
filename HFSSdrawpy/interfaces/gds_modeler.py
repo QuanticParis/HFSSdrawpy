@@ -169,26 +169,38 @@ class GdsModeler:
         self, pos, ori, ymax, ymin, height="0.1mm", **kwargs
     ):  # ori should be normed
         bond_diam = "20um"
-        pos, ori, ymax, ymin, heigth, bond_diam = parse_entry(
-            (pos, ori, ymax, ymin, height, bond_diam)
+        bond_pad= "150um"
+        pos, ori, ymax, ymin, heigth, bond_diam, bond_pad = parse_entry(
+            (pos, ori, ymax, ymin, height, bond_diam, bond_pad)
         )
-        bond1 = pos + ori.orth() * (ymax + 2 * bond_diam)
-        bond2 = pos + ori.orth() * (ymin - 2 * bond_diam)
+        bond1 = pos + ori.orth() * (ymax)
+        bond2 = pos + ori.orth() * (ymin)
+        if ori.index(1) == 0:
+            bond_size = [bond_diam, abs(ymax) + abs(ymin)]
+        else:
+            bond_size = [abs(ymax) + abs(ymin), bond_diam]
+        self.rect_center(
+            pos,
+            bond_size,
+            layer=kwargs["layer_bond"],
+            name=kwargs["name"] + "connect",
+        )
+
         self.disk(
             bond1,
-            bond_diam / 2,
+            bond_pad / 2,
             "Z",
             layer=kwargs["layer"],
             name=kwargs["name"] + "a",
-            number_of_points=6,
+            number_of_points=None,
         )
         self.disk(
             bond2,
-            bond_diam / 2,
+            bond_pad / 2,
             "Z",
             layer=kwargs["layer"],
             name=kwargs["name"] + "b",
-            number_of_points=6,
+            number_of_points=None,
         )
 
     def path(self, points, port, fillet, name="", corner="circular bend"):

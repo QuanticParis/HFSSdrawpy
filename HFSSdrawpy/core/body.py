@@ -6,7 +6,7 @@ from .modeler import Modeler
 from .move import BodyMover
 from .port import Port
 from .symmetry import BodyMirror
-from ..parameters import DEFAULT, MESH, PORT
+from ..parameters import DEFAULT, MESH, PORT, MASK, BOND
 from ..path_finding.path_finder import Path
 from ..path_finding.path_finder_auto import PathAuto
 from ..utils import (
@@ -301,19 +301,26 @@ class Body(Modeler):
         return self.rect(pos, size, name=name, **kwargs)
 
     @set_body
-    def wirebond(self, pos, ori, ymax, ymin, name="wb_0", **kwargs):
+    def wirebond(self, pos, ori, ymax, ymin, min_dist=250e-6, name="wb_0", **kwargs):
         pos, ymax, ymin = parse_entry(pos, ymax, ymin)
+        if abs(val(ymax))+abs(val(ymin)) < min_dist:
+            ymax = min_dist/2
+            ymin = -min_dist/2
         pos, ori = Vector(pos), Vector(ori)
         name = check_name(Entity, name)
         kwargs["name"] = name
         if self.mode == "gds":
+            kwargs["layer"] = MASK
+            kwargs["layer_bond"] = BOND
             pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
             self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
+            kwargs["name"] = name + "connect"
+            entity_connect = Entity(2, self, **kwargs)
             kwargs["name"] = name + "a"
             entity_a = Entity(2, self, **kwargs)
             kwargs["name"] = name + "b"
             entity_b = Entity(2, self, **kwargs)
-            return entity_a, entity_b
+            return entity_connect, entity_a, entity_b
         else:
             self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
             return Entity(3, self, **kwargs)
