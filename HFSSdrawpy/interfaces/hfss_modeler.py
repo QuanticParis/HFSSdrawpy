@@ -1577,8 +1577,8 @@ class HfssModeler(COMWrapper):
         bond_diam = "20um"
         params = parse_entry(pos, ori, ymax, ymin, height, bond_diam)
         pos, ori, ymax, ymin, heigth, bond_diam = params
-        bond1 = pos + ori.orth() * (ymax + 2 * bond_diam)
-        width = ymax - ymin + 4 * bond_diam
+        bond1 = pos + ori.orth() * ymax
+        width = ymax - ymin
         direction = -ori.orth()
         xpad, ypad, _ = bond1
         xdir, ydir, _ = direction
