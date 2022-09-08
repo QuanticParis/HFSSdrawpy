@@ -179,20 +179,17 @@ class GdsModeler:
         cable = gdspy.FlexPath(
             [bond1[0:2], bond2[0:2]],
             [bond_diam],
+            ends='round',
             gdsii_path=False,
             tolerance=TOLERANCE,
             layer=[kwargs["layer_bond"]],
             max_points=0
         )
         polygons = cable.get_polygons()
-        names = []
-        layers = []
         for ii in range(len(polygons)):
             poly = gdspy.Polygon(polygons[ii])
             poly.layers = [kwargs["layer_bond"]]
-            current_name = kwargs["name"] + "connect"
-            names.append(current_name)
-            layers.append([kwargs["layer_bond"]])
+            current_name = kwargs["name"] + "_connect"
             self.gds_object_instances[current_name] = poly
             self.cell.add(poly)
 
