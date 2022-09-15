@@ -1686,15 +1686,12 @@ class HfssModeler(COMWrapper):
         )
         return names[0]
     
-<<<<<<< HEAD
     def intersect_with_names(self, str_names, keep_originals=False):
         # eg "box0,box1"
         self._modeler.Intersect(["NAME:Selections", "Selections:=", str_names],["NAME:IntersectParameters","KeepOriginals:=", keep_originals])
-
-=======
+	
     def scale(self, entity, factor, center=(0, 0)):
         pass
->>>>>>> 29d2d00 (add scale to gds_modeler and polygon circle)
 
     #    def separate_bodies(self, name):
     #        self._modeler.SeparateBody(["NAME:Selections",
