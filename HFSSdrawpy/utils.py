@@ -4,6 +4,8 @@ import sympy
 from pint import UnitRegistry
 from sympy.parsing import sympy_parser
 
+import logging
+
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
@@ -154,7 +156,7 @@ def check_name(_class, name):
         number += 1
         new_name = radical + str(number)
     if new_name != name:
-        print("%s: changed '%s' name into '%s'" % (_class.__name__, name, new_name))
+        logging.info("%s: changed '%s' name into '%s'" % (_class.__name__, name, new_name))
     return new_name
 
 
