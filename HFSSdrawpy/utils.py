@@ -1,10 +1,10 @@
+import logging
+
 import numpy
 import numpy as np
-import sympy
+import pint
 from pint import UnitRegistry
 from sympy.parsing import sympy_parser
-
-import logging
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
@@ -156,7 +156,9 @@ def check_name(_class, name):
         number += 1
         new_name = radical + str(number)
     if new_name != name:
-        logging.info("%s: changed '%s' name into '%s'" % (_class.__name__, name, new_name))
+        logging.info(
+            "%s: changed '%s' name into '%s'" % (_class.__name__, name, new_name)
+        )
     return new_name
 
 
@@ -197,7 +199,7 @@ def extract_value_unit(expr, units):
     :return: float
     """
     try:
-        return Q(expr).to(units).magnitude
+        return Q(str(expr)).to(units).magnitude
     except Exception:
         try:
             return float(expr)
@@ -250,7 +252,7 @@ def _val(elt):
         elt, (int, float, numpy.int64, numpy.float64, numpy.int32, numpy.float32)
     ):
         return elt
-    elif isinstance(elt, str):
+    elif isinstance(elt, str) or isinstance(elt, pint.Quantity):
         if LENGTH == extract_value_dim(elt):
             unit = LENGTH_UNIT
         if INDUCTANCE == extract_value_dim(elt):
