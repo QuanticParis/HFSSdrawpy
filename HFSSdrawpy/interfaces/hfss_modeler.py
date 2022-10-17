@@ -1350,7 +1350,6 @@ class HfssModeler(COMWrapper):
                 points[i].append(0)
 
         points = parse_entry(points)
-        print(points)
         pointsStr = ["NAME:PolylinePoints"]
         indexsStr = ["NAME:PolylineSegments"]
         #        print("final_points", points)
