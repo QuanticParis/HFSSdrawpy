@@ -104,7 +104,7 @@ class GdsModeler:
         points_2D = []
         for point in points:
             points_2D.append([point[0], point[1]])
-
+            
         if closed:
             poly1 = gdspy.Polygon(points_2D, layer=layer)
         else:
@@ -124,7 +124,7 @@ class GdsModeler:
             (pos[0] + size[0], pos[1] + size[1]),
             (pos[0], pos[1] + size[1]),
         ]
-        poly1 = gdspy.Polygon(points, layer)
+        poly1 = gdspy.Polygon(points, layer, datatype=layer*10)
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
