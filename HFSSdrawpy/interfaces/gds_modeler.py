@@ -536,3 +536,44 @@ class GdsModeler:
         _rect_array = gdspy.PolygonSet(polygon_list, layer)
         self.cell.add(_rect_array)
         self.gds_object_instances[name] = _rect_array
+
+    def clean_hole_array(self, hole_array_result, hole_size, tolerance):
+        """
+        Removes holes that have been cut by the mask subtraction operation. If you call this before
+        `hole_array.subtract(chip.entities[MASK])`, it won't have any effect.
+        The criterion to decide whether to remove a square is to check if its area is not too far (up to float imprecision)
+        to the area the squares had before mask subtraction.
+        :param body: the chip on which clear the array
+        :param hole_array_result: the object returned by the `hole_array` function
+        :param hole_size: the size of the holes, given in parameter of `hole_array`
+        :param tolerance: the accepted difference in % between required hole surface
+        and the actual surface after subtraction
+        of a hole before it's removed
+        :return: nothing
+        """
+
+        def area(points):
+            """
+            :param points: a (Nx2) array of polygons edges
+            :return: the area of the polygon
+            """
+            # using the shoelace formula
+            # https://en.wikipedia.org/wiki/Shoelace_formula
+            x, y = points[:, 0], points[:, 1]
+            return np.abs(np.sum(np.roll(x, 1) * y - x * np.roll(y, 1)) * 0.5)
+
+        hole_size = parse_entry(hole_size)
+        hole_area = hole_size**2
+
+        # hole_array_gds is a `PolygonSet`
+        # https://gdspy.readthedocs.io/en/stable/reference.html#polygonset
+        hole_array_gds = self.gds_object_instances[hole_array_result.name]
+        areas = np.array(list(map(area, hole_array_gds.polygons)))
+
+        to_keep = abs(areas - hole_area) / hole_area < tolerance
+        polygons_to_keep = [
+            polygon for (polygon, keep) in zip(hole_array_gds.polygons, to_keep) if keep
+        ]
+        self.gds_object_instances[
+            hole_array_result.name
+        ].polygons = polygons_to_keep

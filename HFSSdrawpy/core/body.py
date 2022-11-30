@@ -1106,3 +1106,12 @@ class Body(Modeler):
 
         return sublist
 
+    def clean_hole_array(self, hole_array_result, hole_size="5um", tolerance=0.01, **kwargs):
+        if self.mode == "gds":
+            self.interface.clean_hole_array(
+                hole_array_result=hole_array_result,
+                hole_size=hole_size,
+                tolerance=tolerance
+                )
+        else:
+            pass
