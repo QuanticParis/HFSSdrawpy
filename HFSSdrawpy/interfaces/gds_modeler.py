@@ -537,7 +537,7 @@ class GdsModeler:
         self.cell.add(_rect_array)
         self.gds_object_instances[name] = _rect_array
 
-    def clean_hole_array(self, hole_array_result, hole_size="5um", tolerance=0.01):
+    def clean_hole_array(self, hole_array_result, hole_size, tolerance):
         """
         Removes holes that have been cut by the mask subtraction operation. If you call this before
         `hole_array.subtract(chip.entities[MASK])`, it won't have any effect.
