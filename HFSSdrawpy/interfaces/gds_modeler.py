@@ -198,7 +198,7 @@ class GdsModeler:
             bond_pad / 2,
             "Z",
             layer=kwargs["layer"],
-            name=kwargs["name"] + "a",
+            name=kwargs["name"] + "_a",
             number_of_points=None,
         )
         self.disk(
@@ -206,7 +206,7 @@ class GdsModeler:
             bond_pad / 2,
             "Z",
             layer=kwargs["layer"],
-            name=kwargs["name"] + "b",
+            name=kwargs["name"] + "_b",
             number_of_points=None,
         )
 

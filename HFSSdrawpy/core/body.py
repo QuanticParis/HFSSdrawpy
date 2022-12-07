@@ -343,9 +343,9 @@ class Body(Modeler):
             kwargs["layer_bond"] = BOND
             pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
             self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
-            kwargs["name"] = name + "a"
+            kwargs["name"] = name + "_a"
             entity_a = Entity(2, self, **kwargs)
-            kwargs["name"] = name + "b"
+            kwargs["name"] = name + "_b"
             entity_b = Entity(2, self, **kwargs)
             kwargs["name"] = name + "_connect"
             kwargs["layer"] = kwargs["layer_bond"]
