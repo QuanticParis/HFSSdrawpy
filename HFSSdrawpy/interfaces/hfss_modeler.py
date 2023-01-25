@@ -1621,6 +1621,87 @@ class HfssModeler(COMWrapper):
         )
         return name
 
+    @assert_name
+    def airbridge(
+        self, pos, ori, ymax, ymin, height="5um", airbridge_width = "30um", airbridge_pad= "30um", **kwargs
+    ):  # ori should be normed
+        thickness = 200e-9
+        params = parse_entry(pos, ori, ymax, ymin, height, airbridge_width,airbridge_pad, thickness)
+        pos, ori, ymax, ymin, height, airbridge_width,airbridge_pad, thickness = params
+
+        bond1 = pos + ori.orth() * ymax
+        length = ymax - ymin
+        direction = -ori.orth()
+        xpad, ypad, _ = bond1
+        xdir, ydir, _ = direction
+        kwargs["material"] = "perfect conductor"
+        kwargs["solve_inside"] = False
+        kwargs["MaterialValue"] = kwargs["material"]
+        points=[
+            #x,y,z
+            (xpad, ypad, thickness/2),
+            (
+                xpad + xdir * airbridge_pad/2,
+                ypad + ydir * airbridge_pad/2,
+                thickness/2
+                ),
+            (
+                xpad + xdir * (airbridge_pad/2 + length/10) ,
+                ypad + ydir * (airbridge_pad/2 + length/10) ,
+                thickness/2 + height
+                ),
+            (
+                xpad + xdir * (length - (airbridge_pad/2 + length/10)) ,
+                ypad + ydir * (length - (airbridge_pad/2 + length/10)) ,
+                thickness/2 + height
+                ),
+            (
+                xpad + xdir * (length - (airbridge_pad/2)) ,
+                ypad + ydir * (length - (airbridge_pad/2)) ,
+                thickness/2
+                ),
+            (
+                xpad + xdir * (length) ,
+                ypad + ydir * (length) ,
+                thickness/2
+                ),
+
+        ]
+        name = self.polyline(
+            points=points,
+            closed=False,
+            **kwargs)
+
+        self._modeler.oeditor.ChangeProperty(
+            [
+                "NAME:AllTabs",
+                [
+                    "NAME:Geometry3DCmdTab",
+                    [
+                        "NAME:PropServers",
+                        f"{name}:CreatePolyline:1"
+                    ],
+                    [
+                        "NAME:ChangedProps",
+                        [
+                            "NAME:Type",
+                            "Value:="		, "Rectangle"
+                        ],
+                        [
+                            "NAME:Width/Diameter",
+                            "Value:="		, thickness
+                        ],
+                        [
+                            "NAME:Height",
+                            "Value:="		, airbridge_width
+                        ]
+                    ]
+                ]
+            ],
+            )
+
+        return name
+
     def sweep_along_path(self, entity_to_sweep, path_entity):
         #        name_temp = path_entity.name
         #        self.rename_entity(path_entity, path_entity.name+'_path')
