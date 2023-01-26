@@ -210,6 +210,71 @@ class GdsModeler:
             number_of_points=None,
         )
 
+    def airbridge(
+        self, pos, ori, ymax, ymin, height="5um", airbridge_width = "30um", airbridge_pad= "30um", **kwargs
+    ):  # ori should be normed
+        pos, ori, ymax, ymin, heigth, airbridge_width, airbridge_pad = parse_entry(
+            (pos, ori, ymax, ymin, height, airbridge_width, airbridge_pad)
+        )
+        bond1 = pos + ori.orth() * (ymax)
+        bond2 = pos + ori.orth() * (ymin)
+
+        bridge_dim1 = airbridge_width * ori
+        bridge_dim2 = (abs(ymax)+abs(ymin)) * ori.orth()
+        bridge_dim = bridge_dim1 + bridge_dim2
+
+        self.rect_center(
+            pos,
+            list(bridge_dim[0:2]),
+            layer=kwargs["layer_bond"],
+            name=kwargs["name"] + "_connect",
+        )
+
+        polygons = self.gds_object_instances[kwargs["name"] + "_connect"][0]
+        polygons.fillet(10e-6, tolerance=TOLERANCE)
+
+        polygons = []
+
+        dim1 = airbridge_pad * ori.orth()
+        dim2 = airbridge_pad * 2 * ori
+        dim = dim1 + dim2
+        self.rect_center(
+            bond1,
+            list(dim[0:2]),
+            layer=kwargs["layer_pad"],
+            name=kwargs["name"] + "_a_pad",
+        )
+        self.rect_center(
+            bond2,
+            list(dim[0:2]),
+            layer=kwargs["layer_pad"],
+            name=kwargs["name"] + "_b_pad",
+        )
+        polygons += self.gds_object_instances[kwargs["name"] + "_a_pad"]
+        polygons += self.gds_object_instances[kwargs["name"] + "_b_pad"]
+
+        dim1 = (airbridge_pad + 10e-6) * ori.orth()
+        dim2 = (airbridge_pad * 2  + 10e-6) * ori
+        dim = dim1 + dim2
+        self.rect_center(
+            bond1,
+            list(dim[0:2]),
+            layer=kwargs["layer"],
+            name=kwargs["name"] + "_a_mask",
+        )
+
+        self.rect_center(
+            bond2,
+            list(dim[0:2]),
+            layer=kwargs["layer"],
+            name=kwargs["name"] + "_b_mask",
+        )
+        polygons += self.gds_object_instances[kwargs["name"] + "_a_mask"]
+        polygons += self.gds_object_instances[kwargs["name"] + "_b_mask"]
+
+        for poly in polygons:
+            poly.fillet(4e-6, tolerance=TOLERANCE)
+
     def path(self, points, port, fillet, name="", corner="circular bend"):
 
         # TODO, this is a dirty fixe cause of Vector3D

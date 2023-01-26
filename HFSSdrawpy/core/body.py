@@ -356,6 +356,42 @@ class Body(Modeler):
             return Entity(3, self, **kwargs)
 
     @set_body
+    def airbridge(self, pos, ori, ymax, ymin, min_dist=30e-6, airbridge_width = 30e-6, airbridge_pad = 30e-6, name="ab_0", **kwargs):
+        pos, ymax, ymin,min_dist = parse_entry(pos, ymax, ymin,min_dist)
+        ymax += airbridge_pad/2
+        ymin -= airbridge_pad/2
+        if abs(val(ymax))+abs(val(ymin)) < min_dist + airbridge_pad:
+            ymax = min_dist/2 + airbridge_pad/2
+            ymin = -min_dist/2 - airbridge_pad/2
+        pos, ori = Vector(pos), Vector(ori)
+        name = check_name(Entity, name)
+        kwargs["name"] = name
+        if self.mode == "gds":
+            entities = []
+            kwargs["layer"] = MASK
+            kwargs["layer_bond"] = BOND
+            kwargs["layer_pad"] = 406
+            pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
+            self.interface.airbridge(pos, ori, ymax, ymin, **kwargs)
+            kwargs["name"] = name + "_a_mask"
+            entities.append(Entity(2, self, **kwargs))
+            kwargs["name"] = name + "_b_mask"
+            entities.append(Entity(2, self, **kwargs))
+            kwargs["name"] = name + "_connect"
+            kwargs["layer"] = kwargs["layer_bond"]
+            entities.append(Entity(2, self, **kwargs))
+            kwargs["name"] = name + "_a_pad"
+            kwargs["layer"] = kwargs["layer_pad"]
+            entities.append(Entity(2, self, **kwargs))
+            kwargs["name"] = name + "_b_pad"
+            kwargs["layer"] = kwargs["layer_pad"]
+            entities.append(Entity(2, self, **kwargs))
+            return entities
+        else:
+            self.interface.airbridge(pos, ori, ymax, ymin, **kwargs)
+            return Entity(3, self, **kwargs)
+
+    @set_body
     def text(self, pos, size, text, angle=0, horizontal=True, name="text_0", **kwargs):
         """
         Place text in GDS layout.
@@ -832,6 +868,7 @@ class Body(Modeler):
         *ports,
         fillet="0.3mm",
         is_bond=False,
+        is_airbridge=False,
         mid=0.5,
         meanders=None,
         reverse_adaptor=False,
@@ -855,6 +892,8 @@ class Body(Modeler):
         fillet : TYPE, optional
             DESCRIPTION. The default is "0.3mm".
         is_bond : TYPE, optional
+            DESCRIPTION. The default is False.
+        is_airbridge : TYPE, optional
             DESCRIPTION. The default is False.
         is_mesh : TYPE, optional
             DESCRIPTION. The default is False.
@@ -1032,9 +1071,13 @@ class Body(Modeler):
                         entity.assign_mesh_length(mesh_size)
 
             # if bond, plot bonds
-            if is_bond:
+            if is_bond or is_airbridge:
+                if is_bond:
+                    type_bridge='bond'
+                else:
+                    type_bridge='air'
                 self.draw_bond(
-                    total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb"
+                    total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb",type_bridge=type_bridge,
                 )
 
             if return_path:
@@ -1042,7 +1085,7 @@ class Body(Modeler):
 
             return length
 
-    def draw_bond(self, to_bond, ymax, ymin, min_dist="0.5mm", name="wb_0"):
+    def draw_bond(self, to_bond, ymax, ymin, min_dist="0.5mm", name="wb_0", type_bridge='bond'):
         # to_bond list of segments
         ymax, ymin, min_dist = parse_entry(ymax, ymin, min_dist)
 
@@ -1064,9 +1107,14 @@ class Body(Modeler):
             spacing = (B - A).norm() / n_bond
             pos = A + ori * spacing / 2
             for ii in range(n_bond):
-                self.wirebond(
-                    pos, ori, ymax, ymin, layer=PORT, name=name + "_%d" % (bond_number)
-                )
+                if type_bridge == 'bond':
+                    self.wirebond(
+                        pos, ori, ymax, ymin, layer=PORT, name=name + "_%d" % (bond_number)
+                    )
+                else:
+                    self.airbridge(
+                        pos, ori, ymax + 5e-6, ymin - 5e-6, layer=PORT, name=name + "_%d" % (bond_number)
+                    )
                 bond_number += 1
                 pos = pos + ori * spacing
             jj += 1
