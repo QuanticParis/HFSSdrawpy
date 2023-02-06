@@ -3,6 +3,7 @@ import numpy as np
 from gdspy import FlexPath
 
 from ..core.symmetry import compute_translation_rotation
+from ..parameters import DEFAULT
 from ..utils import Vector, parse_entry, val, points_on_line_tangent_to, check_name
 
 TOLERANCE = 1e-9  # for arcs
@@ -96,7 +97,7 @@ class GdsModeler:
         # TODO sace of open path
         # size is the thickness of the polyline for gds, must be a 2D-list with idential elements
         name = kwargs["name"]
-        layer = kwargs["layer"]
+        layer = kwargs.get("layer", DEFAULT)
         points = parse_entry(points)
 
         # TODO, this is a dirty fixe cause of Vector3D

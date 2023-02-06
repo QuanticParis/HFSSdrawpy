@@ -25,7 +25,7 @@ class Entity:
         nonmodel=False,
         layer=DEFAULT,
         copy=None,
-        paste = None,
+        paste=None,
         name="entity_0",
         esc=False,
         **kwargs,
@@ -398,7 +398,7 @@ class Entity:
             self, r, l, c, point_0, point_1, name="RLC"
         )
 
-    def assign_lumped_port(self, points):
+    def assign_lumped_port(self, points, **kwargs):
 
         points = parse_entry(points)
         given_point_0, given_point_1 = Vector(points[0]), Vector(points[1])

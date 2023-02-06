@@ -273,10 +273,13 @@ class Body(Modeler):
             count = count + 1
             p.append(
                 [
-                    p[0][0] - radius * sp.sin(circle * dt * m),
-                    p[0][1] - radius * sp.cos(circle * dt * m) + radius,
+                    p[0][0] - radius * np.sin(circle * dt * m),
+                    p[0][1] - radius * np.cos(circle * dt * m) + radius,
                 ]
             )
+
+        if self.mode == "gds":
+            p = val(p)
         self.interface.polyline(p, name=name, closed=False)
         return Entity(2, self, **kwargs)
 
