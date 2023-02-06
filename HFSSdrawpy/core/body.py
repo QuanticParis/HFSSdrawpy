@@ -139,13 +139,22 @@ class Body(Modeler):
         """
         pos_x = 0
         pos_y = 0
-        rotation_matrix = np.array([[1,0],[0,1]])
+        rotation_matrix = np.array([[1, 0], [0, 1]])
         for coor in self.cursors:
-            pos_x += np.matmul(np.linalg.inv(rotation_matrix),np.array(val(coor[0]))[:-1])[0]
-            pos_y += np.matmul(np.linalg.inv(rotation_matrix),np.array(val(coor[0]))[:-1])[1] 
-            
-            #update rotation matrix
-            new_matrix = np.array([[val(coor[1][0]),-val(coor[1][1])],[val(coor[1][1]),val(coor[1][0])]])
+            pos_x += np.matmul(
+                np.linalg.inv(rotation_matrix), np.array(val(coor[0]))[:-1]
+            )[0]
+            pos_y += np.matmul(
+                np.linalg.inv(rotation_matrix), np.array(val(coor[0]))[:-1]
+            )[1]
+
+            # update rotation matrix
+            new_matrix = np.array(
+                [
+                    [val(coor[1][0]), -val(coor[1][1])],
+                    [val(coor[1][1]), val(coor[1][0])],
+                ]
+            )
             rotation_matrix = np.matmul(new_matrix, rotation_matrix)
 
         return pos_x, pos_y
@@ -236,10 +245,10 @@ class Body(Modeler):
             radius = val(radius)
         self.interface.disk(pos, radius, axis, **kwargs)
         return Entity(2, self, **kwargs)
-        
+
     @set_body
-    def circle(self, radius, sections = 12, name = 'circle_0', **kwargs):
-        '''
+    def circle(self, radius, sections=12, name="circle_0", **kwargs):
+        """
         Draws a circle - non-closed ploygon.
 
         Inputs:
@@ -252,17 +261,25 @@ class Body(Modeler):
         Outputs:
         -------
         Entity
-        '''
+        """
         name = check_name(Entity, name)
         kwargs["name"] = name
-        dt = 1.0/sections
-        circle = 2*np.pi
+        dt = 1.0 / sections
+        circle = 2 * np.pi
 
         count = 1
-        p=[[0, -radius]]
-        for m in range(sections+1):
+        p = [[0, -radius]]
+        for m in range(sections + 1):
             count = count + 1
-            p.append([p[0][0]-radius*sp.sin(circle*dt*m) , p[0][1]-radius*sp.cos(circle*dt*m)+radius])
+            p.append(
+                [
+                    p[0][0] - radius * np.sin(circle * dt * m),
+                    p[0][1] - radius * np.cos(circle * dt * m) + radius,
+                ]
+            )
+
+        if self.mode == "gds":
+            p = val(p)
         self.interface.polyline(p, name=name, closed=False)
         return Entity(2, self, **kwargs)
 
@@ -332,9 +349,9 @@ class Body(Modeler):
     @set_body
     def wirebond(self, pos, ori, ymax, ymin, min_dist=250e-6, name="wb_0", **kwargs):
         pos, ymax, ymin = parse_entry(pos, ymax, ymin)
-        if abs(val(ymax))+abs(val(ymin)) < min_dist:
-            ymax = min_dist/2
-            ymin = -min_dist/2
+        if abs(val(ymax)) + abs(val(ymin)) < min_dist:
+            ymax = min_dist / 2
+            ymin = -min_dist / 2
         pos, ori = Vector(pos), Vector(ori)
         name = check_name(Entity, name)
         kwargs["name"] = name
@@ -356,13 +373,24 @@ class Body(Modeler):
             return Entity(3, self, **kwargs)
 
     @set_body
-    def airbridge(self, pos, ori, ymax, ymin, min_dist=30e-6, airbridge_width = 30e-6, airbridge_pad = 30e-6, name="ab_0", **kwargs):
-        pos, ymax, ymin,min_dist = parse_entry(pos, ymax, ymin,min_dist)
-        ymax += airbridge_pad/2
-        ymin -= airbridge_pad/2
-        if abs(val(ymax))+abs(val(ymin)) < min_dist + airbridge_pad:
-            ymax = min_dist/2 + airbridge_pad/2
-            ymin = -min_dist/2 - airbridge_pad/2
+    def airbridge(
+        self,
+        pos,
+        ori,
+        ymax,
+        ymin,
+        min_dist=30e-6,
+        airbridge_width=30e-6,
+        airbridge_pad=30e-6,
+        name="ab_0",
+        **kwargs,
+    ):
+        pos, ymax, ymin, min_dist = parse_entry(pos, ymax, ymin, min_dist)
+        ymax += airbridge_pad / 2
+        ymin -= airbridge_pad / 2
+        if abs(val(ymax)) + abs(val(ymin)) < min_dist + airbridge_pad:
+            ymax = min_dist / 2 + airbridge_pad / 2
+            ymin = -min_dist / 2 - airbridge_pad / 2
         pos, ori = Vector(pos), Vector(ori)
         name = check_name(Entity, name)
         kwargs["name"] = name
@@ -635,7 +663,7 @@ class Body(Modeler):
         name="cable_0",
         mesh_size=None,
         slanted=False,
-        drop_mask=False
+        drop_mask=False,
     ):
         """
         Parameters
@@ -759,7 +787,7 @@ class Body(Modeler):
                         reverse_adaptor=bool(ii),
                         mesh_size=mesh_size,
                         slope=slope,
-                        name=name + "_%d" % ii
+                        name=name + "_%d" % ii,
                     )
                 print('Total Cable "%s" length = %.3f mm' % (name, length * 1000))
                 return length
@@ -1073,11 +1101,14 @@ class Body(Modeler):
             # if bond, plot bonds
             if is_bond or is_airbridge:
                 if is_bond:
-                    type_bridge='bond'
+                    type_bridge = "bond"
                 else:
-                    type_bridge='air'
+                    type_bridge = "air"
                 self.draw_bond(
-                    total_path.to_bond(), *ports[0].bond_params(), name=name + "_wb",type_bridge=type_bridge,
+                    total_path.to_bond(),
+                    *ports[0].bond_params(),
+                    name=name + "_wb",
+                    type_bridge=type_bridge,
                 )
 
             if return_path:
@@ -1085,7 +1116,9 @@ class Body(Modeler):
 
             return length
 
-    def draw_bond(self, to_bond, ymax, ymin, min_dist="0.5mm", name="wb_0", type_bridge='bond'):
+    def draw_bond(
+        self, to_bond, ymax, ymin, min_dist="0.5mm", name="wb_0", type_bridge="bond"
+    ):
         # to_bond list of segments
         ymax, ymin, min_dist = parse_entry(ymax, ymin, min_dist)
 
@@ -1107,13 +1140,23 @@ class Body(Modeler):
             spacing = (B - A).norm() / n_bond
             pos = A + ori * spacing / 2
             for ii in range(n_bond):
-                if type_bridge == 'bond':
+                if type_bridge == "bond":
                     self.wirebond(
-                        pos, ori, ymax, ymin, layer=PORT, name=name + "_%d" % (bond_number)
+                        pos,
+                        ori,
+                        ymax,
+                        ymin,
+                        layer=PORT,
+                        name=name + "_%d" % (bond_number),
                     )
                 else:
                     self.airbridge(
-                        pos, ori, ymax + 5e-6, ymin - 5e-6, layer=PORT, name=name + "_%d" % (bond_number)
+                        pos,
+                        ori,
+                        ymax + 5e-6,
+                        ymin - 5e-6,
+                        layer=PORT,
+                        name=name + "_%d" % (bond_number),
                     )
                 bond_number += 1
                 pos = pos + ori * spacing
@@ -1127,7 +1170,7 @@ class Body(Modeler):
             self.entities.pop(layer)
 
     def entity_finder(self, keylist, match_case=True):
-        '''
+        """
         Finding entities base on its name or part of it
 
         Inputs:
@@ -1139,27 +1182,29 @@ class Body(Modeler):
         Returns:
             sublist: list
                 list of entities
-        '''
+        """
 
         if not isinstance(keylist, list):
             keylist = [keylist]
 
-        sublist=[]
+        sublist = []
         for idx in self.entities:
             for key in keylist:
                 if match_case:
-                    sublist+=[s for s in self.entities[idx] if key == s.name]
+                    sublist += [s for s in self.entities[idx] if key == s.name]
                 else:
-                    sublist+=[s for s in self.entities[idx] if key in s.name]
+                    sublist += [s for s in self.entities[idx] if key in s.name]
 
         return sublist
 
-    def clean_hole_array(self, hole_array_result, hole_size="5um", tolerance=0.01, **kwargs):
+    def clean_hole_array(
+        self, hole_array_result, hole_size="5um", tolerance=0.01, **kwargs
+    ):
         if self.mode == "gds":
             self.interface.clean_hole_array(
                 hole_array_result=hole_array_result,
                 hole_size=hole_size,
-                tolerance=tolerance
-                )
+                tolerance=tolerance,
+            )
         else:
             pass
