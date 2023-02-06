@@ -169,7 +169,7 @@ class GdsModeler:
         self, pos, ori, ymax, ymin, height="0.1mm", **kwargs
     ):  # ori should be normed
         bond_diam = "20um"
-        bond_pad= "150um"
+        bond_pad = "150um"
         pos, ori, ymax, ymin, heigth, bond_diam, bond_pad = parse_entry(
             (pos, ori, ymax, ymin, height, bond_diam, bond_pad)
         )
@@ -179,11 +179,11 @@ class GdsModeler:
         cable = gdspy.FlexPath(
             [bond1[0:2], bond2[0:2]],
             [bond_diam],
-            ends='round',
+            ends="round",
             gdsii_path=False,
             tolerance=TOLERANCE,
             layer=[kwargs["layer_bond"]],
-            max_points=0
+            max_points=0,
         )
         polygons = cable.get_polygons()
         for ii in range(len(polygons)):
@@ -211,7 +211,15 @@ class GdsModeler:
         )
 
     def airbridge(
-        self, pos, ori, ymax, ymin, height="5um", airbridge_width = "30um", airbridge_pad= "30um", **kwargs
+        self,
+        pos,
+        ori,
+        ymax,
+        ymin,
+        height="5um",
+        airbridge_width="30um",
+        airbridge_pad="30um",
+        **kwargs,
     ):  # ori should be normed
         pos, ori, ymax, ymin, heigth, airbridge_width, airbridge_pad = parse_entry(
             (pos, ori, ymax, ymin, height, airbridge_width, airbridge_pad)
@@ -220,7 +228,7 @@ class GdsModeler:
         bond2 = pos + ori.orth() * (ymin)
 
         bridge_dim1 = airbridge_width * ori
-        bridge_dim2 = (abs(ymax)+abs(ymin)) * ori.orth()
+        bridge_dim2 = (abs(ymax) + abs(ymin)) * ori.orth()
         bridge_dim = bridge_dim1 + bridge_dim2
 
         self.rect_center(
@@ -254,7 +262,7 @@ class GdsModeler:
         polygons += self.gds_object_instances[kwargs["name"] + "_b_pad"]
 
         dim1 = (airbridge_pad + 10e-6) * ori.orth()
-        dim2 = (airbridge_pad * 2  + 10e-6) * ori
+        dim2 = (airbridge_pad * 2 + 10e-6) * ori
         dim = dim1 + dim2
         self.rect_center(
             bond1,
@@ -359,12 +367,7 @@ class GdsModeler:
     def scale(self, entities, factor, center):
         if isinstance(entities, list):
             for entity in entities:
-                self.scale(
-                    self,
-                    entity,
-                    factor,
-                    center
-                    )
+                self.scale(self, entity, factor, center)
         else:
             polygon = self.gds_object_instances[entities.name]
             polygon.scale(factor, factor, center)
@@ -639,6 +642,4 @@ class GdsModeler:
         polygons_to_keep = [
             polygon for (polygon, keep) in zip(hole_array_gds.polygons, to_keep) if keep
         ]
-        self.gds_object_instances[
-            hole_array_result.name
-        ].polygons = polygons_to_keep
+        self.gds_object_instances[hole_array_result.name].polygons = polygons_to_keep
