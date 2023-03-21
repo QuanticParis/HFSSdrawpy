@@ -46,10 +46,12 @@ class Modeler:
             self.modeler.delete_all_objects()
             desktop.clear_all_messages()
             self.interface = self.modeler
+            self.name = self.mode
         elif mode == "gds":
             from ..interfaces import gds_modeler
 
             self.interface = gds_modeler.GdsModeler()
+            self.name = self.interface.package
         else:
             print("Mode should be either hfss or gds")
 
@@ -61,6 +63,9 @@ class Modeler:
 
         # The list of bodies pointing to the current Modeler
         self.bodies = []
+
+    def __name__(self):
+        return self.name
 
     ### Utils methods
 
