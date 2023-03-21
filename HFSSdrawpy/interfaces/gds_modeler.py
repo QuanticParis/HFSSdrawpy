@@ -19,7 +19,7 @@ class GdsModeler:
     def __init__(self, unit=1.0e-6, precision=1.0e-9):
         self.unit = unit
         self.precision = precision
-        self.package = gdstk.__name__
+        self.package = gdspy.__name__
         gdspy.current_library = gdspy.GdsLibrary()
 
     @classmethod
