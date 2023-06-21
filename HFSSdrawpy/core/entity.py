@@ -348,7 +348,9 @@ class Entity:
         mesh_length = parse_entry(mesh_length)
         self.body.interface.assign_mesh_length(self, mesh_length)
 
-    def assign_lumped_RLC(self, points, rlc):
+    def assign_lumped_RLC(self, points, rlc, name="RLC"):
+
+
 
         points = parse_entry(points)
         given_point_0, given_point_1 = Vector(points[0]), Vector(points[1])
@@ -395,7 +397,7 @@ class Entity:
         r, l, c = rlc
 
         self.body.interface.assign_lumped_rlc(
-            self, r, l, c, point_0, point_1, name="RLC"
+            self, r, l, c, point_0, point_1, name=name
         )
 
     def assign_lumped_port(self, points, **kwargs):
