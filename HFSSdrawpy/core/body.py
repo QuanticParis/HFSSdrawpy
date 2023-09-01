@@ -21,7 +21,6 @@ from ..utils import (
 
 
 class Body(Modeler):
-
     dict_instances = {}
 
     def __init__(self, pm=None, name=None, rel_coor=None, ref_name="Global"):  # network
@@ -321,7 +320,6 @@ class Body(Modeler):
     def rect_array(
         self, pos, size, columns, rows, spacing, name="rect_array_0", **kwargs
     ):
-
         pos, size, spacing = parse_entry(Vector(pos), Vector(size), spacing)
 
         if self.mode == "gds":
@@ -509,7 +507,6 @@ class Body(Modeler):
     def duplicate_along_line(
         self, entity, vec, n=2, new_obj=False, duplicate_assign=False, **kwargs
     ):
-
         if self.mode == "hfss":
             vec, n = parse_entry(vec, n)
             self.interface.duplicate_along_line(
@@ -518,6 +515,18 @@ class Body(Modeler):
             return entity
         else:
             pass
+
+    # @set_body
+    def thicken_path(self, path, width, name=None, layer=DEFAULT, **kwargs):
+        print(width)
+        width = parse_entry(width)
+        print(width)
+        if self.mode == "hfss":
+            name = self.interface.thicken_path(path, width, name)
+            return Entity(2, self, name=name, layer=layer)
+        elif self.mode == "gds":
+            name = self.interface.thicken_path(path, width, name, layer)
+            return Entity(2, self, name=name, layer=layer)
 
     ### Advanced methods
 
@@ -747,7 +756,6 @@ class Body(Modeler):
             pass
 
         if not slanted:  # slanted cables are specific
-
             # first determine the intermediate non constrain ports
             _ports = [[ports[0]]]
             for port in ports[1:-1]:

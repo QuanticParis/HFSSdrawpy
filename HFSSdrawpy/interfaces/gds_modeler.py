@@ -286,7 +286,6 @@ class GdsModeler:
             poly.fillet(4e-6, tolerance=TOLERANCE)
 
     def path(self, points, port, fillet, name="", corner="circular bend"):
-
         # TODO, this is a dirty fixe cause of Vector3D
 
         points_2D = []
@@ -332,7 +331,6 @@ class GdsModeler:
         self.gds_object_instances[new_name] = polygon
 
     def unite(self, entities, keep_originals=True):
-
         blank_entity = entities.pop(0)
         blank_polygon = self.gds_object_instances.pop(blank_entity.name)
         self.cell = self.gds_cells[blank_entity.body.name]
@@ -515,6 +513,31 @@ class GdsModeler:
                 vector[2],
             ],
         )
+
+    def thicken_path(self, path, width, name=None, layer=DEFAULT, **kwargs):
+        gds_path = self.gds_object_instances[path.name]
+        gds_flexpath = gdspy.FlexPath(
+            points=gds_path.points,
+            width=width,
+            layer=layer,
+            gdsii_path=False,
+            tolerance=TOLERANCE,
+            max_points=0,
+        )  # tolerance (meter) is highly important here should be smaller than the smallest dim typ. 100nm
+
+        polygons = gds_flexpath.get_polygons()[0]  # first element because singlet path
+        polygons = np.roll(
+            polygons, -1, 0
+        )  # necessary to match vertex labelling of hfss
+        poly = gdspy.Polygon(polygons, layer)
+        if name is None:
+            poly_name = path.name + "_thick"
+        else:
+            poly_name = name
+        self.gds_object_instances[poly_name] = poly
+        self.cell.add(poly)
+
+        return poly_name
 
     def thicken_sheet(self, sheet, thickness, bothsides=False):
         self._modeler.ThickenSheet(
