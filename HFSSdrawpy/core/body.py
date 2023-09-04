@@ -518,9 +518,7 @@ class Body(Modeler):
 
     # @set_body
     def thicken_path(self, path, width, name=None, layer=DEFAULT, **kwargs):
-        print(width)
         width = parse_entry(width)
-        print(width)
         if self.mode == "hfss":
             name = self.interface.thicken_path(path, width, name)
             return Entity(2, self, name=name, layer=layer)
