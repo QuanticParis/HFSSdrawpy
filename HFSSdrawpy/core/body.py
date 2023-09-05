@@ -502,7 +502,7 @@ class Body(Modeler):
     def draw_cable(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None,
                    meander_length=0, meander_offset=0,
                    reverse_adaptor=False, slope=0.5, name='cable_0', mesh_size=None,
-                   slanted = False):
+                   slanted = False, Only_Bonds=False):
         """
 
 
@@ -671,14 +671,16 @@ class Body(Modeler):
 
             total_path.clean()
             # plot cable
-            cable=self.path(total_path.points, total_path.port_in, total_path.fillet,
-                      name=name)
-
-            #assign mesh_size to the mesh layer in the new cable
-            if mesh_size is not None:
-                for entity in cable:
-                    if entity.layer==MESH:
-                        entity.assign_mesh_length(mesh_size)
+            if Only_Bonds==False:
+                cable=self.path(total_path.points, total_path.port_in, total_path.fillet,
+                          name=name)
+                cable[-1].assign_mesh_length(total_path.port_in.widths[1])
+    
+                #assign mesh_size to the mesh layer in the new cable
+                if mesh_size is not None:
+                    for entity in cable:
+                        if entity.layer==MESH:
+                            entity.assign_mesh_length(mesh_size)
 
             # if bond plot bonds
             if is_bond:
@@ -744,3 +746,318 @@ class Body(Modeler):
                 bond_number += 1
                 pos = pos + ori*spacing
             jj+=1
+
+
+    @move_port
+    def draw_cableAB(self, *ports, fillet="0.3mm", is_bond=False, to_meander=None,
+                   meander_length=0, meander_offset=0,
+                   reverse_adaptor=False, slope=0.5, name='cable_0', mesh_size=None,
+                   slanted = False, Only_Bonds=False,AirbridgeBaseDistance=0,AirbridgeBaseWidth=0,ABlength=0,ABwidth=0,ABdistance=0):
+        """
+
+
+        Parameters
+        ----------
+        name : TYPE
+            DESCRIPTION.
+        *ports : TYPE
+            DESCRIPTION.
+        fillet : TYPE, optional
+            DESCRIPTION. The default is "0.3mm".
+        is_bond : TYPE, optional
+            DESCRIPTION. The default is False.
+        to_meander : TYPE, optional
+            DESCRIPTION. The default is [[]].
+        meander_length : TYPE, optional
+            DESCRIPTION. The default is 0.
+        meander_offset : TYPE, optional
+            DESCRIPTION. The default is 0.
+        is_mesh : TYPE, optional
+            DESCRIPTION. The default is False.
+        reverse_adaptor : TYPE, optional
+            DESCRIPTION. The default is False.
+
+        Raises
+        ------
+        IndentationError
+            DESCRIPTION.
+        ValueError
+            DESCRIPTION.
+
+        Returns
+        -------
+        length : TYPE
+            DESCRIPTION.
+
+        """
+
+        meander_length, meander_offset, fillet, mesh_size = parse_entry(meander_length, meander_offset, fillet, mesh_size)
+        # to_meander should be a list of list
+        # meander_length, meander_offset should be lists
+        if to_meander is None:
+            to_meander = [[]]
+        if not isinstance(to_meander[0], list):
+            to_meander = [to_meander]
+        if not isinstance(meander_length, list):
+            meander_length = [meander_length]*len(to_meander)
+        if not isinstance(meander_offset, list):
+            meander_offset = [meander_offset]*len(to_meander)
+
+        ports = list(ports)
+
+        if self.is_mask:
+            for port_ in ports:
+                port_.widths.append(port_.widths[-1] + 2*self.gap_mask)
+                port_.offsets.append(0.0)
+                port_.N += 1
+                if port_.subnames[-1] != 'mask':
+                    port_.layers.append(MASK)
+                    port_.subnames.append('mask')
+
+        do_not_beyong = [port.name for port in ports if port.body != self]
+        if do_not_beyong:
+            raise ValueError('%s ports do not beyond to %s'%(do_not_beyong, self))
+
+        indent_level = find_corresponding_list(ports[0], self.ports_to_move)
+        if indent_level is not None:
+            if indent_level:  # the found list
+                for port in ports:
+                    if not port in indent_level:
+                        msg = 'Trying to connect ports from different \
+                                indentation levels: port %s'%(port.name)
+                        raise IndentationError(msg)
+
+        # asserts neither in nor out port are constraint_ports
+        if ports[0].constraint_port and ports[-1].constraint_port:
+            raise ValueError('At least the first (%s) or last port (%s) \
+                             should define the port parameters'%(ports[0].name,
+                                                             ports[-1].name))
+        elif ports[0].constraint_port:
+            ports[0].widths = ports[-1].widths
+            ports[0].offsets = ports[-1].offsets
+            ports[0].layers = ports[-1].layers
+            ports[0].subnames = ports[-1].subnames
+            ports[0].N = ports[-1].N
+            ports[0].constraint_port = False  # ports[0] is now defined
+        elif ports[-1].constraint_port:
+            ports[-1].widths = ports[0].widths
+            ports[-1].offsets = ports[0].offsets
+            ports[-1].layers = ports[0].layers
+            ports[-1].subnames = ports[0].subnames
+            ports[-1].N = ports[0].N
+            ports[-1].constraint_port = False  # ports[-1] is now defined
+        else:
+            pass
+        # recursive approach if there are intermediate non_constraint ports
+
+        if not slanted: # slanted cables are specific
+            cable_portion = 0
+            _ports = [ports[0]]
+            for port in ports[1:-1]:
+                _ports.append(port)
+                if not port.constraint_port:
+                    print(to_meander[cable_portion])
+                    print(meander_length[cable_portion])
+                    self.draw_cable(*_ports,
+                                    fillet=fillet, is_bond=is_bond,
+                                    to_meander=[to_meander[cable_portion]],
+                                    meander_length=[meander_length[cable_portion]],
+                                    meander_offset=[meander_offset[cable_portion]],
+                                    reverse_adaptor=reverse_adaptor,
+                                    mesh_size=mesh_size,
+                                    name=name+'_%d'%cable_portion)
+                    cable_portion += 1
+                    _ports = [port.r]
+
+            if cable_portion != 0:
+                name = name+'_%d'%cable_portion
+                to_meander = [to_meander[cable_portion]]
+                meander_length = [meander_length[cable_portion]]
+                meander_offset = [meander_offset[cable_portion]]
+            _ports.append(ports[-1])
+
+            # at this stage first and last port are not constraint_port and all
+            # intermediate port should be constraint_port
+
+            ports = _ports
+
+            # find and plot adaptor geometry
+            if reverse_adaptor:
+                points, length_adaptor = ports[-1].compare(ports[0], self.pm,
+                                                           slope=slope)
+                index_modified = -1
+            else:
+                points, length_adaptor = ports[0].compare(ports[-1], self.pm,
+                                                          slope=slope)
+                index_modified = 0
+
+            # plot adaptors
+            for jj, pts in enumerate(points):
+                self.polyline(pts, name=ports[index_modified].name+'_'+ports[index_modified].subnames[jj]+'_adapt', layer=ports[index_modified].layers[jj])
+
+            # define the constraint_port parameters
+            for port in ports[1:-1]:
+                port.widths = ports[0].widths
+                port.offsets = ports[0].offsets
+                port.layers = ports[0].layers
+                port.subnames = ports[0].subnames
+                port.N = ports[0].N
+
+            # find all intermediate paths
+            total_path = None
+            for ii in range(len(ports)-1):
+                path = Path(name, ports[ii], ports[ii+1], fillet)
+                if total_path is None:
+                    total_path = path
+                else:
+                    total_path += path
+                ports[ii+1] = ports[ii+1].r # reverse the last port
+
+            total_path.clean()
+
+            # do meandering (not supported for even partially slanted cables)
+            if not total_path.is_slanted:
+                total_path.meander(to_meander[0], meander_length[0], meander_offset[0])
+
+            total_path.clean()
+            # plot cable
+            if Only_Bonds==False:
+                cable=self.path(total_path.points, total_path.port_in, total_path.fillet,
+                          name=name)
+                cable[-1].assign_mesh_length(total_path.port_in.widths[1])
+    
+                #assign mesh_size to the mesh layer in the new cable
+                if mesh_size is not None:
+                    for entity in cable:
+                        if entity.layer==MESH:
+                            entity.assign_mesh_length(mesh_size)
+
+            # if bond plot bonds
+            if is_bond:
+                self.draw_bondAB(total_path.to_bond(), *ports[0].bond_params(),AirbridgeBaseDistance=AirbridgeBaseDistance,AirbridgeBaseWidth=AirbridgeBaseWidth,ABlength=ABlength,ABwidth=ABwidth,ABdistance=ABdistance, name=name+'_wb')
+
+            ports[0].revert()
+            ports[-1].revert()
+
+            # mask
+    #        if self.is_mask:
+    #            ports_mask = np.copy(ports)
+    #            for port_ in ports_mask:
+    #                port_.widths = port_.widths[1] + 2*self.gap_mask
+    #                port_.layers = MASK
+    #
+    #            print(ports_mask)
+    #
+    #            self.draw_cable(*ports_mask, fillet=fillet, is_bond=is_bond,
+    #                            to_meander=to_meander, meander_length=meander_length,
+    #                            meander_offset=meander_offset, reverse_adaptor=reverse_adaptor,
+    #                            slope=slope, name=name+'_mask')
+
+            length = total_path.length() + length_adaptor
+            print('Cable "%s" length = %.3f mm'%(name, length*1000))
+            return length
+        else:
+            if len(ports)>2:
+                raise Exception('Constraint_ports are not supported with slanted cables')
+            path = Path(name, ports[0], ports[1], fillet, is_slanted=True)
+            cable=self.path(path.points, path.port_in, path.fillet,
+                      name=name)
+            #assign mesh_size to the mesh layer in the new cable
+            if mesh_size is not None:
+                for entity in cable:
+                    if entity.layer==MESH:
+                        entity.assign_mesh_length(mesh_size)
+            if is_bond:
+                raise Exception('Bonding is not supported with slanted cables')
+
+    def draw_bondAB(self, to_bond, ymax, ymin,AirbridgeBaseDistance,AirbridgeBaseWidth,ABlength,ABwidth,ABdistance, min_dist='0.3mm', name='wb_0'):
+        # to_bond list of segments
+        ymax, ymin, min_dist = parse_entry(ymax, ymin, min_dist)
+
+        min_dist = val(min_dist)
+        n_segments = len(to_bond)
+        jj=0
+        bond_number = 0
+        while jj<n_segments:
+            elt = to_bond[jj]
+            A = elt[0]
+            B = elt[1]
+            if jj+1 < n_segments and to_bond[jj+1][0] == B:
+                B = to_bond[jj+1][1]
+                jj+=1
+            val_BA = val(B-A)
+            ori = way(val_BA)
+            length = Vector(val_BA).norm()
+            n_bond = int(length/val(min_dist))+1
+            spacing = (B-A).norm()/n_bond
+            pos = A+ori*spacing/2
+            if n_bond>1:
+                for ii in range(n_bond):
+                    self.airbridge(pos, ori, ymax, ymin,AirbridgeBaseDistance,AirbridgeBaseWidth,ABlength,ABwidth,ABdistance, ii, n_bond, spacing, name=name+'_%d'%(bond_number))
+                    bond_number += 1
+                    pos = pos + ori*spacing
+            jj+=1
+            
+    @set_body
+    def airbridge(self, pos, ori, ymax, ymin,AirbridgeBaseDistance,AirbridgeBaseWidth,ABlength,ABwidth,ABdistance, ii, n_bond, spacing, name='wb_0', **kwargs):
+        pos, ymax, ymin = parse_entry(pos, ymax, ymin)
+        name = check_name(Entity, name)
+        kwargs['name'] = name
+        if self.mode=='gds':
+            pos, ori, ymax, ymin = val(pos, ori, ymax, ymin)
+            if np.abs(ori[0])==1:
+                ABdimensions=[ABlength,ABwidth]
+                """
+                if ii==0:
+                    self.rect_center([pos[0]+ori[0]*spacing,pos[1]+AirbridgeBaseDistance+AirbridgeBaseWidth/2], [spacing,AirbridgeBaseWidth],
+                           layer=40, name='ABbasisRight') 
+                    self.rect_center([pos[0]+ori[0]*spacing,pos[1]-AirbridgeBaseDistance-AirbridgeBaseWidth/2], [spacing,AirbridgeBaseWidth],
+                           layer=40, name='ABbasisLeft') 
+                elif ii==n_bond-1:                    
+                    self.rect_center([pos[0]-ori[0]*spacing,pos[1]+AirbridgeBaseDistance+AirbridgeBaseWidth/2], [spacing,AirbridgeBaseWidth],
+                           layer=40, name='ABbasisRight') 
+                    self.rect_center([pos[0]-ori[0]*spacing,pos[1]-AirbridgeBaseDistance-AirbridgeBaseWidth/2], [spacing,AirbridgeBaseWidth],
+                           layer=40, name='ABbasisLeft') 
+                else:
+                """
+                self.rect_center([pos[0],pos[1]+AirbridgeBaseDistance+AirbridgeBaseWidth/2], [spacing,AirbridgeBaseWidth],
+                       layer=40, name='ABbasisRight') 
+                self.rect_center([pos[0],pos[1]-AirbridgeBaseDistance-AirbridgeBaseWidth/2], [spacing,AirbridgeBaseWidth],
+                       layer=40, name='ABbasisLeft') 
+            else:
+                ABdimensions=[ABwidth,ABlength]
+                """
+                if ii==0:
+                    self.rect_center([pos[0]+AirbridgeBaseDistance+AirbridgeBaseWidth/2,pos[1]], [AirbridgeBaseWidth,spacing],
+                           layer=40, name='ABbasisRight') 
+                    self.rect_center([pos[0]-AirbridgeBaseDistance-AirbridgeBaseWidth/2,pos[1]], [AirbridgeBaseWidth,spacing],
+                           layer=40, name='ABbasisLeft') 
+                elif ii==n_bond-1:
+                    self.rect_center([pos[0]+AirbridgeBaseDistance+AirbridgeBaseWidth/2,pos[1]], [AirbridgeBaseWidth,spacing],
+                           layer=40, name='ABbasisRight') 
+                    self.rect_center([pos[0]-AirbridgeBaseDistance-AirbridgeBaseWidth/2,pos[1]], [AirbridgeBaseWidth,spacing],
+                           layer=40, name='ABbasisLeft') 
+                
+                else:
+                """
+                self.rect_center([pos[0]+AirbridgeBaseDistance+AirbridgeBaseWidth/2,pos[1]], [AirbridgeBaseWidth,spacing],
+                       layer=40, name='ABbasisRight') 
+                self.rect_center([pos[0]-AirbridgeBaseDistance-AirbridgeBaseWidth/2,pos[1]], [AirbridgeBaseWidth,spacing],
+                       layer=40, name='ABbasisLeft') 
+            #self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
+            self.rect_center(pos, ABdimensions,
+                       layer=39, name='AB')  
+            kwargs['name'] = name+'a'
+            entity_a = Entity(2, self, **kwargs)
+            kwargs['name'] = name+'b'
+            entity_b = Entity(2, self, **kwargs)
+            return entity_a, entity_b
+        else:
+            #self.interface.wirebond(pos, ori, ymax, ymin, **kwargs)
+            if np.abs(ori[0])==1:
+                ABdimensions=[ABlength,ABwidth]
+            else:
+                ABdimensions=[ABwidth,ABlength]
+            self.rect_center(pos, ABdimensions,
+                      layer=39, name='AB') 
+            return Entity(3, self, **kwargs)
