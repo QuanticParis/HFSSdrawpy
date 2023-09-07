@@ -524,6 +524,7 @@ class Body(Modeler):
             return Entity(2, self, name=name, layer=layer)
         elif self.mode == "gds":
             name = self.interface.thicken_path(path, width, name, layer)
+            path.delete()
             return Entity(2, self, name=name, layer=layer)
 
     ### Advanced methods

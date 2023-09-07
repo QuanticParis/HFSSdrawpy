@@ -323,8 +323,16 @@ class GdsModeler:
         pass
 
     def delete(self, entity):
-        self.cell.polygons.remove(self.gds_object_instances[entity.name])
-        self.gds_object_instances.pop(entity.name)
+        name = entity.name
+        gds_instance = self.gds_object_instances[name]
+        if gds_instance in self.cell.polygons:
+            self.cell.polygons.remove(gds_instance)
+            self.gds_object_instances.pop(name)
+        elif gds_instance in self.cell.paths:
+            self.cell.paths.remove(gds_instance)
+            self.gds_object_instances.pop(name)
+        else:
+            raise ValueError("Cannot find entity to be deleted")
 
     def rename_entity(self, old_name, new_name):
         polygon = self.gds_object_instances.pop(old_name)
