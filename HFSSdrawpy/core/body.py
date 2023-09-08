@@ -518,7 +518,7 @@ class Body(Modeler):
 
     # @set_body
     def thicken_path(self, path, width, name=None, layer=DEFAULT, **kwargs):
-        width = parse_entry(width)
+        width = parse_entry(width)  # is it necessary?
         if self.mode == "hfss":
             name = self.interface.thicken_path(path, width, name)
             return Entity(2, self, name=name, layer=layer)
@@ -526,6 +526,16 @@ class Body(Modeler):
             name = self.interface.thicken_path(path, width, name, layer)
             path.delete()
             return Entity(2, self, name=name, layer=layer)
+
+    def scale(self, entity, factor, center):
+        factor = parse_entry(factor)
+        center = parse_entry(center)
+        if self.mode == "hfss":
+            self.interface.scale(entity, factor, center)
+            return entity
+        elif self.mode == "gds":
+            self.interface.scale(entity, factor, center)
+            return entity
 
     ### Advanced methods
 
