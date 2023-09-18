@@ -373,6 +373,7 @@ class GdsModeler:
         raise NotImplementedError()
 
     def scale(self, entities, factor, center):
+        factor = val(factor)
         if isinstance(entities, list):
             for entity in entities:
                 self.scale(self, entity, factor, center)
@@ -526,7 +527,7 @@ class GdsModeler:
         gds_path = self.gds_object_instances[path.name]
         gds_flexpath = gdspy.FlexPath(
             points=gds_path.points,
-            width=width,
+            width=val(width),
             layer=layer,
             gdsii_path=False,
             tolerance=TOLERANCE,
