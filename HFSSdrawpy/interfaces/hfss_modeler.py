@@ -1826,20 +1826,12 @@ class HfssModeler(COMWrapper):
         )
 
     def scale(self, entities, factor, center):
+
         if not isinstance(entities, list):
             entities = [entities]
         names = [entity.name for entity in entities]
 
-        # translate the entities to the center of the transformation
-        vertices = [self.get_vertices(entity) for entity in entities]
-        xmean = np.mean([np.mean(vertex, 0)[0] for vertex in vertices])
-        ymean = np.mean([np.mean(vertex, 0)[1] for vertex in vertices])
-        xmean *= 1e-3
-        ymean *= 1e-3
-        vector = (-xmean, -ymean, 0)
-        self.translate(entities, vector)
-
-        # scale radially because centered on 0
+        self.translate(entities, (-center[0], -center[1], 0))
         self._modeler.Scale(
             self._selections_array(*names),
             [
@@ -1852,14 +1844,7 @@ class HfssModeler(COMWrapper):
                 "1",
             ],
         )
-
-        # translate the entities to their scaled mean position
-        vector = (
-            (xmean - center[0]) * factor,
-            (ymean - center[1]) * factor,
-            0,
-        )
-        self.translate(entities, vector)
+        self.translate(entities, (center[0], center[1], 0))
 
     # def separate_bodies(self, name):
     #     self._modeler.SeparateBody(
