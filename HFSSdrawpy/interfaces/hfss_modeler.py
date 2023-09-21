@@ -1826,7 +1826,6 @@ class HfssModeler(COMWrapper):
         )
 
     def scale(self, entities, factor, center):
-
         if not isinstance(entities, list):
             entities = [entities]
         names = [entity.name for entity in entities]

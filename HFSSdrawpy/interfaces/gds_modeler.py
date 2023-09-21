@@ -374,6 +374,7 @@ class GdsModeler:
 
     def scale(self, entities, factor, center):
         factor = val(factor)
+        center = (val(center[0]), val(center[1]))
         if isinstance(entities, list):
             for entity in entities:
                 self.scale(self, entity, factor, center)
