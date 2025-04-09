@@ -14,3 +14,4 @@ MASK = 3
 RLC = 4
 MESH = 5
 PORT = 6
+ELEC = 7
