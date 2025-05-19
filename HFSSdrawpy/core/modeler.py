@@ -165,7 +165,7 @@ class Modeler:
             union_entity = entities[0]
 
         if new_name:
-            union_entity.rename_entity(
+            union_entity.rename(
                 new_name,
             )
 
@@ -235,7 +235,7 @@ class Modeler:
     def rotate(self, entities, angle=0):
         if isinstance(angle, (list, np.ndarray)):
             if len(angle) == 2:
-                angle = np.math.atan2(
+                angle = np.arctan2(
                     np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle)
                 )
                 angle = angle / np.pi * 180

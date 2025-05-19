@@ -2,15 +2,15 @@ import math
 
 import numpy as np
 
+from ..parameters import MASK
 from ..utils import (
     Vector,
     check_name,
     find_last_list,
     parse_entry,
-    val,
     points_on_line_tangent_to,
+    val,
 )
-from ..parameters import MASK
 
 
 class Port:
@@ -235,7 +235,7 @@ class Port:
     def rotate_ports(ports, angle):
         if isinstance(angle, list):
             if len(angle) == 2:
-                new_angle = np.math.atan2(
+                new_angle = np.arctan2(
                     np.linalg.det([[1, 0], angle]), np.dot([1, 0], angle)
                 )
                 new_angle = new_angle / np.pi * 180

@@ -9,12 +9,19 @@ from sympy.parsing import sympy_parser
 ureg = UnitRegistry()
 Q = ureg.Quantity
 
-LENGTH = "[length]"
-INDUCTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2"
-CAPACITANCE = "[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]"
-RESISTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3"
-FREQUENCY = "1 / [time]"
-DIMENSIONLESS = "dimensionless"
+# LENGTH = "[length]"
+# INDUCTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 2"
+# CAPACITANCE = "[current] ** 2 * [time] ** 4 / [length] ** 2 / [mass]"
+# RESISTANCE = "[length] ** 2 * [mass] / [current] ** 2 / [time] ** 3"
+# FREQUENCY = "1 / [time]"
+# DIMENSIONLESS = "dimensionless"
+
+DIM_LENGTH = Q("1 meter").dimensionality
+DIM_INDUCTANCE = Q("1 nH").dimensionality
+DIM_CAPACITANCE = Q("1 nF").dimensionality
+DIM_RESISTANCE = Q("1 ohm").dimensionality
+DIM_FREQUENCY = Q("1 GHz").dimensionality
+DIM_DIMENSIONLESS = Q("1").dimensionality
 
 LENGTH_UNIT = "meter"
 INDUCTANCE_UNIT = "nH"
@@ -22,6 +29,7 @@ CAPACITANCE_UNIT = "nF"
 RESISTANCE_UNIT = "ohm"
 FREQUENCY_UNIT = "GHz"
 DIMENSIONLESS_UNIT = ""
+
 
 ### List handling
 # Useful function to manipulate to_move entities and ports
@@ -208,13 +216,10 @@ def extract_value_unit(expr, units):
 
 
 def extract_value_dim(expr):
-    """
-    type expr: str
-    """
     try:
-        return str(Q(expr).dimensionality)
+        return Q(expr).dimensionality
     except Exception:
-        return DIMENSIONLESS
+        return Q("1").dimensionality  # i.e. dimensionless
 
 
 def parse_entry(*entries, marker=True):
@@ -253,18 +258,21 @@ def _val(elt):
     ):
         return elt
     elif isinstance(elt, str) or isinstance(elt, pint.Quantity):
-        if LENGTH == extract_value_dim(elt):
+        dim = extract_value_dim(elt)
+        if dim == DIM_LENGTH:
             unit = LENGTH_UNIT
-        if INDUCTANCE == extract_value_dim(elt):
+        elif dim == DIM_INDUCTANCE:
             unit = INDUCTANCE_UNIT
-        if CAPACITANCE == extract_value_dim(elt):
+        elif dim == DIM_CAPACITANCE:
             unit = CAPACITANCE_UNIT
-        if RESISTANCE == extract_value_dim(elt):
+        elif dim == DIM_RESISTANCE:
             unit = RESISTANCE_UNIT
-        if FREQUENCY == extract_value_dim(elt):
+        elif dim == DIM_FREQUENCY:
             unit = FREQUENCY_UNIT
-        if DIMENSIONLESS == extract_value_dim(elt):
+        elif dim == DIM_DIMENSIONLESS:
             unit = DIMENSIONLESS_UNIT
+        else:
+            raise ValueError(f"Unknown dimension: {dim} (from expression: {elt})")
         return extract_value_unit(elt, unit)
     else:
         return float(elt.evalf(subs=variables))
@@ -326,24 +334,23 @@ variables = {}
 
 def store_variable(symbol, value):  # put value in SI
     if isinstance(value, str):
-        if LENGTH == extract_value_dim(value):
+        if DIM_LENGTH == extract_value_dim(value):
             unit = LENGTH_UNIT
-        if INDUCTANCE == extract_value_dim(value):
+        if DIM_INDUCTANCE == extract_value_dim(value):
             unit = INDUCTANCE_UNIT
-        if CAPACITANCE == extract_value_dim(value):
+        if DIM_CAPACITANCE == extract_value_dim(value):
             unit = CAPACITANCE_UNIT
-        if RESISTANCE == extract_value_dim(value):
+        if DIM_RESISTANCE == extract_value_dim(value):
             unit = RESISTANCE_UNIT
-        if FREQUENCY == extract_value_dim(value):
+        if DIM_FREQUENCY == extract_value_dim(value):
             unit = FREQUENCY_UNIT
-        if DIMENSIONLESS == extract_value_dim(value):
+        if DIM_DIMENSIONLESS == extract_value_dim(value):
             unit = DIMENSIONLESS_UNIT
         value = extract_value_unit(value, unit)
     variables[symbol] = value
 
 
 class Vector(numpy.ndarray):
-
     """
     Vector is a custom 3D vector class, alowing for opperations optimized to
     interface properly with HFSS.
@@ -379,7 +386,6 @@ class Vector(numpy.ndarray):
 
     @staticmethod
     def check(elt):
-
         """
         Utility function to check if an element is compatible with vectors
         opperations. It only requiers to be iterable and of len=3.
@@ -476,7 +482,6 @@ class Vector(numpy.ndarray):
     #             raise TypeError('Could not perform dot operation')
 
     def cross(self, other):
-
         """
         This function returns the cross product beteween self and other.
 
@@ -498,7 +503,6 @@ class Vector(numpy.ndarray):
             raise TypeError("Could not perform dot operation")
 
     def scalar_cross(self, other, ref=None):
-
         """
         This function is a bit cryptic. It computes the signed magnitude of
         the cross product between self and other, assuming they both are in
@@ -538,7 +542,6 @@ class Vector(numpy.ndarray):
     #         return numpy.array([self[0], self[1], self[2]], dtype=object)
 
     def rot(self, other, ref=None):
-
         """
         This function is just completly cryptic, Ulysse wrote it a long time ago.
         Here is what it is doing: we assume that self is expressed in x=(100), y=(010), z=(001)
