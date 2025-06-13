@@ -17,7 +17,7 @@ class GdsModeler:
     # coor_systems = {'Global':[[0,0,0],[1,0]]}
     # coor_system = coor_systems['Global']
 
-    def __init__(self, unit=1.0e-6, precision=1.0e-9):
+    def __init__(self, unit=1.0e-6, precision=0.5e-9):
         self.unit = unit
         self.precision = precision
         self.package = gdspy.__name__
