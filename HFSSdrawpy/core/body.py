@@ -198,7 +198,7 @@ class Body(Modeler):
         """
         pos, size = parse_entry(pos, size)
         pos = [p - s / 2 for p, s in zip(pos, size)]
-        return self.rect(pos, size, name=name, **kwargs)
+        return self.box(pos, size, name=name, **kwargs)
 
     @set_body
     def cylinder(
