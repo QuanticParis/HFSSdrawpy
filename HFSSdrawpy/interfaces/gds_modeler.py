@@ -9,6 +9,11 @@ from ..utils import Vector, parse_entry, val, points_on_line_tangent_to, check_n
 TOLERANCE = 1e-9  # for arcs
 print("gdspy_version : ", gdspy.__version__)
 
+def get_layer_datatype_from_string(layer_str):
+    if isinstance(layer_str, str) and "/" in layer_str:
+        layer, datatype = layer_str.split("/")
+        return int(layer), int(datatype)
+    return int(layer_str), 0
 
 class GdsModeler:
     gds_object_instances = {}
@@ -55,8 +60,11 @@ class GdsModeler:
         return new_name
 
     def relayer(self, entity, layer):
+        layer, datatype = get_layer_datatype_from_string(layer) 
         obj = self.gds_object_instances[entity.name]
         obj.layers = [layer] * len(obj.layers)
+        obj.datatypes = [datatype] *len(obj.datatypes)
+        
 
     def generate_gds(self, file, max_points):
         for instance in self.gds_object_instances.keys():
@@ -118,7 +126,8 @@ class GdsModeler:
     def rect(self, pos, size, **kwargs):
         pos, size = parse_entry(pos, size)
         name = kwargs["name"]
-        layer = kwargs["layer"]
+        layer, datatype = get_layer_datatype_from_string(kwargs["layer"])            
+
         # This function neglects the z coordinate
         points = [
             (pos[0], pos[1]),
@@ -126,7 +135,7 @@ class GdsModeler:
             (pos[0] + size[0], pos[1] + size[1]),
             (pos[0], pos[1] + size[1]),
         ]
-        poly1 = gdspy.Polygon(points, layer)
+        poly1 = gdspy.Polygon(points, layer, datatype=datatype)
 
         self.gds_object_instances[name] = poly1
         self.cell.add(poly1)
@@ -354,6 +363,7 @@ class GdsModeler:
                 tool_polygons.append(tool_polygon)
 
         # 2 unite operation
+        layer, datatype = get_layer_datatype_from_string(blank_entity.layer)
         tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer=blank_entity.layer)
         united = gdspy.boolean(
             blank_polygon,
@@ -361,7 +371,8 @@ class GdsModeler:
             "or",
             precision=TOLERANCE,
             max_points=0,
-            layer=blank_entity.layer,
+            layer=layer,
+            datatype= datatype
         )
 
         self.gds_object_instances[blank_entity.name] = united
@@ -408,13 +419,16 @@ class GdsModeler:
 
             # 2 subtract operation
             tool_polygon_set = gdspy.PolygonSet(tool_polygons, layer=blank_entity.layer)
+            layer, datatype = get_layer_datatype_from_string(blank_entity.layer) 
+
             subtracted = gdspy.boolean(
                 blank_polygon,
                 tool_polygon_set,
                 "not",
                 precision=TOLERANCE,
                 max_points=0,
-                layer=blank_entity.layer,
+                layer=layer,
+                datatype= datatype
             )
             if subtracted is not None:
                 # 3 At last we update the cell and the gds_object_instance
