@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from ..parameters import MASK
+from ..parameters import MASK, MASK_NEGATIVE
 from ..utils import (
     Vector,
     check_name,
@@ -165,7 +165,7 @@ class Port:
         _widths = []
         _offsets = []
         for ii in range(self.N):
-            if self.subnames[ii] == "mask" and drop_mask:
+            if self.subnames[ii] in ("mask", "mask_negative") and drop_mask:
                 pass
             else:
                 width = self.widths[ii]
@@ -278,10 +278,13 @@ class Port:
             splitnames = self.subnames
             leftovers = False
         elif splitnames == -1:
-            if self.subnames[-1] == "mask":
-                splitnames = self.subnames[:-2]
-            else:
-                splitnames = self.subnames[:-1]
+            helper_count = 0
+            for subname in reversed(self.subnames):
+                if subname in ("mask", "mask_negative"):
+                    helper_count += 1
+                else:
+                    break
+            splitnames = self.subnames[: -(helper_count + 1)]
             leftovers = False
 
         if not all(sub in self.subnames for sub in splitnames):
@@ -363,25 +366,26 @@ class Port:
         None.
 
         """
-        outter_top_exp = self.widths[0] / 2 + self.offsets[0]
-        outter_bot_exp = -self.widths[0] / 2 + self.offsets[0]
-
-        top_exp = outter_top_exp
-        top = val(top_exp)
-        bot_exp = outter_bot_exp
-        bot = val(bot_exp)
+        outer_top = self.widths[0] / 2 + self.offsets[0]
+        outer_bottom = -self.widths[0] / 2 + self.offsets[0]
         for ii in range(1, self.N):
-            top_exp = self.widths[ii] / 2 + self.offsets[ii]
-            bot_exp = -self.widths[ii] / 2 + self.offsets[ii]
+            top = self.widths[ii] / 2 + self.offsets[ii]
+            bottom = -self.widths[ii] / 2 + self.offsets[ii]
+            if val(top) > val(outer_top):
+                outer_top = top
+            if val(bottom) < val(outer_bottom):
+                outer_bottom = bottom
 
-            if val(top_exp) > top:
-                outter_top_exp = top_exp
-
-            if val(bot_exp) < bot:
-                outter_bot_exp = bot_exp
-
-        self.widths.append(outter_top_exp - outter_bot_exp + 2 * gap_mask)
-        self.offsets.append((outter_top_exp + outter_bot_exp) / 2)
+        # Broad protection region. The negative track region is removed from it
+        # near the end of chip generation.
+        self.widths.append(self.widths[1] + 1 * gap_mask)
+        self.offsets.append(self.offsets[1])
         self.layers.append(layer)
         self.subnames.append("mask")
+        self.N += 1
+
+        self.widths.append(self.widths[0] - 1 * gap_mask)
+        self.offsets.append(self.offsets[0])
+        self.layers.append(MASK_NEGATIVE)
+        self.subnames.append("mask_negative")
         self.N += 1

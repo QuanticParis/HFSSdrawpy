@@ -15,3 +15,8 @@ RLC = 4
 MESH = 5
 PORT = 6
 BOND = 7
+FINE_EXPOSURE = 8
+COARSE_EXPOSURE = 9
+
+# Temporary construction layer subtracted from MASK before GDS export.
+MASK_NEGATIVE = 253
